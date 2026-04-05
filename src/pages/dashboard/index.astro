@@ -1,7 +1,7 @@
 ---
 import AppLayout from "@/layouts/AppLayout.astro";
 import Button from "@starwind/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@starwind/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@starwind/card";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@starwind/input-group";
 import Progress from "@starwind/progress";
 import { Icon } from "astro-icon/components";
@@ -31,7 +31,7 @@ const STATS = [
 ]
 ---
 
-<AppLayout>
+<AppLayout size="max-w-5xl">
   <hgroup class="space-y-1" slot="header">
     <h1 class="text-2xl lg:text-3xl font-extrabold">Panel de rifas</h1>
     <p class="text-sm text-primary-foreground/70">Gestioná y seguí el progreso de todas tus rifas</p>
@@ -40,6 +40,7 @@ const STATS = [
     slot="header"
     variant="secondary"
     size="sm"
+    href="/dashboard/raffle/create"
   >
     <Icon name="lucide:plus" class="size-4" />
     <span class="font-bold">Crear rifa</span>
