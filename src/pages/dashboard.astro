@@ -47,7 +47,7 @@ const STATS = [
 
   <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
     {STATS.map(({ title, value, icon, highlight }) => (
-      <Card class="gap-2 py-4 rounded-2xl">
+      <Card class="gap-2 py-4 rounded-2xl shadow-card">
         <CardHeader class="flex items-center gap-2 px-4">
           <span class="p-1.5 rounded-2xl bg-muted">
             <Icon
@@ -75,8 +75,8 @@ const STATS = [
   </section>
 
   <section class="flex flex-col sm:items-center sm:flex-row gap-3 mb-6">
-    <InputGroup>
-      <InputGroupInput placeholder="Buscar rifa..." />
+    <InputGroup class="h-9">
+      <InputGroupInput type="search" placeholder="Buscar rifa..." />
       <InputGroupAddon>
         <Icon name="lucide:search" />
       </InputGroupAddon>
@@ -97,7 +97,7 @@ const STATS = [
 
   <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
     <a href="" class="group">
-      <Card size="sm">
+      <Card size="sm" class="shadow-card group-hover:shadow-card-hover">
         <CardHeader class="flex">
           <hgroup class="flex-1 min-w-0">
             <CardTitle class="font-bold truncate group-hover:text-primary transition-colors">Rifa del Barrio - TV 50 pulgadas</CardTitle>
