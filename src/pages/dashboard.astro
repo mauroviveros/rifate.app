@@ -1,0 +1,152 @@
+---
+import AppLayout from "@/layouts/AppLayout.astro";
+import Button from "@starwind/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@starwind/card";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@starwind/input-group";
+import Progress from "@starwind/progress";
+import { Icon } from "astro-icon/components";
+
+const STATS = [
+  {
+    title: "Rifas",
+    value: "2",
+    icon: "lucide:hash",
+  },
+  {
+    title: "Números vendidos",
+    value: "43/150",
+    icon: "lucide:trending-up",
+  },
+  {
+    title: "Recaudado",
+    value: "$19.400",
+    icon: "lucide:dollar-sign",
+    highlight: true,
+  },
+  {
+    title: "Progreso global",
+    value: "28%",
+    icon: "lucide:calendar-days",
+  }
+]
+---
+
+<AppLayout>
+  <hgroup class="space-y-1" slot="header">
+    <h1 class="text-2xl lg:text-3xl font-extrabold">Panel de rifas</h1>
+    <p class="text-sm text-primary-foreground/70">Gestioná y seguí el progreso de todas tus rifas</p>
+  </hgroup>
+  <Button
+    slot="header"
+    variant="secondary"
+    size="sm"
+  >
+    <Icon name="lucide:plus" class="size-4" />
+    <span class="font-bold">Crear rifa</span>
+  </Button>
+
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
+    {STATS.map(({ title, value, icon, highlight }) => (
+      <Card class="gap-2 py-4 rounded-2xl">
+        <CardHeader class="flex items-center gap-2 px-4">
+          <span class="p-1.5 rounded-2xl bg-muted">
+            <Icon
+              name={icon}
+              class:list={[
+                "size-4",
+                highlight ? "text-accent" : "text-primary"
+              ]}
+            />
+          </span>
+          <CardTitle class="text-xs text-muted-foreground font-semibold">{title}</CardTitle>
+        </CardHeader>
+        <CardContent class="px-4">
+          <p
+            class:list={[
+              "text-lg lg:text-xl font-extrabold",
+              highlight ? "text-accent" : "text-foreground"
+            ]}
+          >
+            {value}
+          </p>
+        </CardContent>
+      </Card>
+    ))}
+  </section>
+
+  <section class="flex flex-col sm:items-center sm:flex-row gap-3 mb-6">
+    <InputGroup>
+      <InputGroupInput placeholder="Buscar rifa..." />
+      <InputGroupAddon>
+        <Icon name="lucide:search" />
+      </InputGroupAddon>
+    </InputGroup>
+
+    <div class="flex gap-2">
+      {["Todas", "Activas", "Finalizadas"].map((filter, index) => (
+        <Button
+          type="button"
+          variant={index === 0 ? "primary" : "outline"}
+          size="sm"
+        >
+          {filter}
+        </Button>
+      ))}
+    </div>
+  </section>
+
+  <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <a href="" class="group">
+      <Card size="sm">
+        <CardHeader class="flex">
+          <hgroup class="flex-1 min-w-0">
+            <CardTitle class="font-bold truncate group-hover:text-primary transition-colors">Rifa del Barrio - TV 50 pulgadas</CardTitle>
+            <CardDescription class="text-xs! text-muted-foreground line-clamp-1">Gran rifa para juntar fondos para el club del barrio</CardDescription>
+          </hgroup>
+          <span
+            class:list={[
+              "text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap",
+              "bg-secondary/30 text-secondary-foreground"
+            ]}
+          >
+            🟢 Activa
+          </span>
+        </CardHeader>
+        <CardContent>
+          <article class="flex gap-0.5 mb-3 overflow-hidden h-2 rounded-full bg-muted">
+            {Array.from({ length: 40 }).map(() => Math.random() < 0.5).map((bool) => (
+              <span
+                class:list={[
+                  "flex-1 min-w-0.5 max-w-4 rounded-full",
+                  bool ? "bg-accent" : "bg-primary/20"
+
+                ]}
+              ></span>
+            ))}
+          </article>
+
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm text-muted-foreground font-medium">36/100 vendidos</span>
+            <span class="text-sm font-bold text-primary">36%</span>
+          </div>
+
+          <Progress value={36} variant="primary" class="h-1.5 rounded-full mb-4" />
+
+          <div class="flex items-center justify-between pt-3 border-t">
+            <span class="flex items-center gap-1 text-sm text-muted-foreground">
+              <Icon name="lucide:calendar-days" class="size-3.5" />
+              14 de Abril, 2026
+            </span>
+
+            <div class="flex items-center gap-1">
+              <Icon name="lucide:dollar-sign" class="size-3.5 text-accent" />
+              <span class="font-extrabold text-foreground">
+                18.000
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </a>
+  </section>
+</AppLayout>

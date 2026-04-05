@@ -26,5 +26,16 @@
   --color-input: oklch(0.9133 0.0089 84.57);
   --color-ring: oklch(0.6548 0.1085 176.31);
 
+
+  --background-image-hero: linear-gradient(
+    135deg,
+    oklch(0.6548 0.1085 176.31),
+    oklch(0.5377 0.0877 176.53)
+  );
+
   --font-nunito: var(--fontsource-nunito);
+}
+
+@layer base {
+  * { @apply border-border ring-ring; }
 }
