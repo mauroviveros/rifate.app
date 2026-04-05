@@ -6,7 +6,11 @@ interface Props extends BodyProps, HTMLAttributes<'main'> {}
 const { title, description, class: className, ...props } = Astro.props;
 ---
 
-<Body title={title} description={description}>
+<Body title={title} description={description} class="min-h-dvh">
+  <header class="gradient-hero px-6 pt-6 pb-14 lg:pb-16">
+
+  </header>
+
   <main class:list={[className]} {...props}>
     <slot />
   </main>
