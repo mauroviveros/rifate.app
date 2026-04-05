@@ -1,0 +1,30 @@
+---
+import '@/global.css';
+import type { HTMLAttributes } from 'astro/types';
+import { Font } from 'astro:assets';
+
+export interface BodyProps {
+  title?: string | null;
+  description?: string | null;
+}
+
+interface Props extends BodyProps, HTMLAttributes<'body'> {}
+const { title, description = '', class: className, ...props } = Astro.props;
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>{title ? `${title} | Rifate.app` : 'Rifate.app'}</title>
+    <meta name="description" content={description} />
+    <Font cssVariable="--fontsource-nunito" />
+    <slot name="head" />
+  </head>
+  <body class:list={["bg-background text-foreground font-nunito", className]} {...props}>
+    <slot />
+  </body>
+</html>
