@@ -1,15 +1,18 @@
 {
   "name": "rifate.app",
+  "description": "Create raffles, sell tickets, and share your progress with your buyers. Ideal for neighborhoods, schools, clubs, and events.",
+  "author": "Mauro Daniel Viveros <maurod.viveros@gmail.com> (TRY Ubbe)",
   "type": "module",
-  "version": "0.0.1",
-  "engines": {
-    "node": ">=22.12.0"
-  },
+  "private": true,
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mauroviveros/rifate.app.git"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
