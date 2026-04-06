@@ -1,0 +1,14 @@
+---
+import AppLayout from "@/layouts/AppLayout.astro";
+import { Icon } from "astro-icon/components";
+---
+
+<AppLayout size="3xl">
+ <hgroup class="flex items-center gap-3" slot="header">
+   <span class="bg-primary-foreground/20 text-primary-foreground size-10 flex items-center justify-center rounded-xl">
+     <Icon name="lucide:ticket" class="size-5" />
+   </span>
+   <h1 class="text-2xl lg:text-3xl font-extrabold text-primary-foreground">Nueva rifa</h1>
+
+ </hgroup>
+</AppLayout>
