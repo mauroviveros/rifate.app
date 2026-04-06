@@ -1,0 +1,32 @@
+---
+import type { StatsProps } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle, CardVariants } from "@starwind/card";
+import { Icon } from "astro-icon/components";
+import type { HTMLAttributes } from "astro/types";
+import type { VariantProps } from "tailwind-variants";
+
+interface Props extends StatsProps, HTMLAttributes<"div">, VariantProps<typeof CardVariants.card> {}
+const { name, value, icon, highlight, class:className, ...props } = Astro.props as Props;
+---
+
+<Card class:list={["gap-2 py-4 rounded-2xl shadow-card", className]} {...props}>
+  <CardHeader class="flex items-center gap-2 px-4">
+    <span class="p-1.5 rounded-2xl bg-muted">
+      <Icon
+        name={icon}
+        class:list={["size-4", highlight ? "text-accent" : "text-primary"]}
+      />
+    </span>
+    <CardTitle class="text-xs text-muted-foreground font-semibold">{name}</CardTitle>
+  </CardHeader>
+  <CardContent class="px-4">
+    <p
+      class:list={[
+        "text-lg lg:text-xl font-extrabold",
+        highlight ? "text-accent" : "text-foreground"
+      ]}
+    >
+      {value}
+    </p>
+  </CardContent>
+</Card>

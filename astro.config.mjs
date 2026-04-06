@@ -11,11 +11,13 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()]
   },
-
   fonts: [{
     provider: fontProviders.fontsource(),
     name: "Nunito",
     cssVariable: "--fontsource-nunito",
     weights: [400, 500, 600, 700, 800, 900]
   }],
+  redirects: {
+    "/dashboard": "/dashboard/raffle"
+  }
 });
