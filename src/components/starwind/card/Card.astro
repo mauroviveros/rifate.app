@@ -6,9 +6,9 @@ type Props = HTMLAttributes<"div"> & VariantProps<typeof card>;
 
 export const card = tv({
   base: [
-    "bg-card text-card-foreground group/card ring-border flex flex-col rounded-xl ring-1",
+    "bg-card text-card-foreground group/card flex flex-col rounded-2xl shadow-card",
     "has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0",
-    "*:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+    "*:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl",
   ],
   variants: {
     size: {

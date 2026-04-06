@@ -1,5 +1,11 @@
 ---
 import AppLayout from "@/layouts/AppLayout.astro";
+import { Button } from "@starwind/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@starwind/card";
+import { Input } from "@starwind/input";
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@starwind/input-group";
+import { Label } from "@starwind/label";
+import { Textarea } from "@starwind/textarea";
 import { Icon } from "astro-icon/components";
 ---
 
@@ -11,4 +17,104 @@ import { Icon } from "astro-icon/components";
    <h1 class="text-2xl lg:text-3xl font-extrabold text-primary-foreground">Nueva rifa</h1>
 
  </hgroup>
+
+  <section class="grid lg:grid-cols-[1fr_18rem] gap-6">
+    <Card>
+      <CardContent>
+        <form action="#" method="POST" class="space-y-5">
+          <div class="space-y-2">
+            <Label for="raffle-title">Título</Label>
+            <Input
+              id="raffle-title"
+              type="text"
+              placeholder="Ej: Rifa del barrio - TV 50 pulgadas"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <Label for="raffle-description">Descripción</Label>
+            <Textarea
+              id="raffle-description"
+              placeholder="Ej: Rifa del barrio - TV 50 pulgadas"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <Label for="raffle-price">Precio por número</Label>
+              <InputGroup id="raffle-price">
+                <InputGroupInput type="number" placeholder="0.00" />
+                <InputGroupAddon align="inline-start">
+                  <InputGroupText>$</InputGroupText>
+                </InputGroupAddon>
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>ARS</InputGroupText>
+                </InputGroupAddon>
+              </InputGroup>
+            </div>
+
+            <div class="space-y-2">
+              <Label for="raffle-quantity">Cantidad de números</Label>
+              <Input
+                id="raffle-quantity"
+                type="number"
+                placeholder="Ej: 100"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <Label for="raffle-draw_date">Fecha del sorteo</Label>
+            <Input
+              id="raffle-draw_date"
+              type="date"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            size="lg",
+            variant="primary"
+            class="w-full"
+          >
+            Crear rifa
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+
+    <div class="space-y-4">
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle class="font-bold text-sm flex items-center gap-2 text-foreground"><!-- mb-3 -->
+            <Icon name="lucide:info" class="size-4 text-primary" />
+            Resumen
+          </CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-3 text-sm">
+          <div class="flex justify-between items-baseline">
+            <span class="text-muted-foreground">Números</span>
+            <span class="font-bold text-foreground">100</span>
+          </div>
+          <div class="flex justify-between items-baseline">
+            <span class="text-muted-foreground">Precio c/u</span>
+            <span class="font-bold text-foreground">$ 100.00 ARS</span>
+          </div>
+          <div class="border-t border-border pt-3 flex justify-between items-baseline">
+            <span class="text-muted-foreground font-semibold">Total potencial</span>
+            <span class="font-extrabold text-primary text-lg">$ 10,000.00 ARS</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card size="sm" class="bg-secondary/20 border-0">
+        <CardContent>
+          <p class="text-sm text-muted-foreground leading-relaxed">
+            <strong>Tip:</strong> Elegí una cantidad de números que sea fácil de vender. 100 números es un buen punto de partida
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  </section>
+
 </AppLayout>
