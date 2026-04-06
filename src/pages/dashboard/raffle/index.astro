@@ -1,34 +1,14 @@
 ---
+import Stats from "@/components/Stats.astro";
 import AppLayout from "@/layouts/AppLayout.astro";
+import { mapRaffleListStats } from "@/mappers";
 import Button from "@starwind/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@starwind/card";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@starwind/input-group";
 import Progress from "@starwind/progress";
 import { Icon } from "astro-icon/components";
 
-const STATS = [
-  {
-    title: "Rifas",
-    value: "2",
-    icon: "lucide:hash",
-  },
-  {
-    title: "Números vendidos",
-    value: "43/150",
-    icon: "lucide:trending-up",
-  },
-  {
-    title: "Recaudado",
-    value: "$19.400",
-    icon: "lucide:dollar-sign",
-    highlight: true,
-  },
-  {
-    title: "Progreso global",
-    value: "28%",
-    icon: "lucide:calendar-days",
-  }
-]
+const STATS = mapRaffleListStats({ raffles: 2, sold: 43, total: 150, revenue: 19400 });
 ---
 
 <AppLayout size="5xl">
@@ -47,31 +27,8 @@ const STATS = [
   </Button>
 
   <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
-    {STATS.map(({ title, value, icon, highlight }) => (
-      <Card class="gap-2 py-4 rounded-2xl shadow-card">
-        <CardHeader class="flex items-center gap-2 px-4">
-          <span class="p-1.5 rounded-2xl bg-muted">
-            <Icon
-              name={icon}
-              class:list={[
-                "size-4",
-                highlight ? "text-accent" : "text-primary"
-              ]}
-            />
-          </span>
-          <CardTitle class="text-xs text-muted-foreground font-semibold">{title}</CardTitle>
-        </CardHeader>
-        <CardContent class="px-4">
-          <p
-            class:list={[
-              "text-lg lg:text-xl font-extrabold",
-              highlight ? "text-accent" : "text-foreground"
-            ]}
-          >
-            {value}
-          </p>
-        </CardContent>
-      </Card>
+    {STATS.map((props) => (
+      <Stats {...props} />
     ))}
   </section>
 
@@ -97,7 +54,7 @@ const STATS = [
   </section>
 
   <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-    <a href="" class="group">
+    <a href="/dashboard/raffle/1" class="group">
       <Card size="sm" class="shadow-card group-hover:shadow-card-hover">
         <CardHeader class="flex">
           <hgroup class="flex-1 min-w-0">
