@@ -1,0 +1,43 @@
+---
+import { getUniqueRandomNumbers } from "@/lib/utils";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@starwind/card";
+import RaffleGridCell from "./RaffleGridCell.astro";
+import { formatCurrency, formatPercentage, formatRaffleNumber } from "@/lib/formatters";
+import RaffleGridLegend from "./RaffleGridLegend.astro";
+import { undefined } from "astro:schema";
+
+const length = 50;
+const percentage_sold = 0.3;
+const numbers = getUniqueRandomNumbers(length, Math.floor(length * percentage_sold));
+---
+
+<Card size="sm" class="rounded-3xl overflow-hidden gap-2">
+  <CardHeader class="flex items-center">
+    <hgroup class="flex-1">
+      <CardTitle class="font-extrabold text-foreground text-base">Rifa</CardTitle>
+      <CardDescription class="text-sm text-muted-foreground">{formatCurrency(500, false)} por número</CardDescription>
+    </hgroup>
+    <span class="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">{formatPercentage(percentage_sold, 0)} vendido</span>
+  </CardHeader>
+
+  <CardContent
+    class:list={[
+      "grid grid-cols-10 gap-1",
+      "pointer-events-none"
+    ]}
+  >
+    {Array.from({ length: 50 }, (_, i) => {
+      const isSold = numbers.includes(i);
+      return (
+        <RaffleGridCell
+          number={formatRaffleNumber(i, 2)}
+          isSold={isSold}
+        />
+      )
+    })}
+  </CardContent>
+  <CardFooter class="bg-card border-0 flex items-center justify-between text-sm pt-0! flex-wrap">
+    <RaffleGridLegend />
+    <span class="font-bold text-primary ml-auto">{formatCurrency(9500, false)}</span>
+  </CardFooter>
+</Card>

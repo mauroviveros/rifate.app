@@ -2,7 +2,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@starwind/card";
 import RaffleGridCell from "./RaffleGridCell.astro";
 import { formatRaffleNumber } from "@/lib/formatters";
-import { getNumberLength } from "@/utils";
+import { getNumberLength } from "@/lib/utils";
+import RaffleGridLegend from "./RaffleGridLegend.astro";
 export interface RaffleGridProps {
   editable?: boolean;
   length: number;
@@ -16,20 +17,7 @@ const number_padding = getNumberLength(length);
 <Card>
   <CardHeader class="flex items-center justify-between mb-4 flex-wrap">
     <CardTitle class="font-bold text-lg text-foreground flex-1">Números</CardTitle>
-    <ul class="flex items-center gap-2 text-xs text-muted-foreground ml-auto">
-      <li class="flex items-center gap-1">
-        <span class="size-2.5 rounded bg-raffle-available inline-block"></span>
-        <p>Disponible</p>
-      </li>
-      <li class="flex items-center gap-1">
-        <span class="size-2.5 rounded bg-raffle-sold inline-block"></span>
-        <p>Vendido</p>
-      </li>
-      <li class="flex items-center gap-1">
-        <span class="size-2.5 rounded bg-raffle-selected inline-block"></span>
-        <p>Seleccionado</p>
-      </li>
-    </ul>
+    <RaffleGridLegend class="ml-auto"/>
   </CardHeader>
   <CardContent
     class:list={[

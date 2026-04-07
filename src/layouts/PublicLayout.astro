@@ -1,0 +1,25 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import Body, { type BodyProps } from "./components/Body.astro";
+interface Props extends BodyProps, HTMLAttributes<'main'> {};
+const { title, description, class: className, ...props } = Astro.props;
+---
+
+<Body title={title} description={description} class="min-h-dvh flex flex-col">
+  <header class="bg-hero text-primary-foreground px-6 pt-6 pb-14 lg:pb-16">
+    <div class="mx-auto flex flex-col sm:flex-row sm:items-end sm:justify-between gap-x-4 gap-y-2 max-w-4xl">
+      <slot name="header" />
+    </div>
+  </header>
+
+  <main class:list={["px-4 sm:px-6 -mt-8 mx-auto max-w-4xl flex-1 w-full", className]} {...props}>
+    <slot />
+  </main>
+
+  <!-- mt-auto -->
+  <footer class="mx-auto max-w-4xl text-center py-6">
+    <a href="/" class="text-sm font-semibold text-foreground/70 hover:text-foreground transition-colors">
+      rifate.app
+    </a>
+  </footer>
+</Body>
