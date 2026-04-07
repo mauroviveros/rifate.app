@@ -1,13 +1,13 @@
-export const formatCurrency = (value: number) => {
+export const formatCurrency = (value: number, showCurrency: boolean = true) => {
   const formatter = new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: 'ARS',
+    currency: "ARS",
   });
-  return `${formatter.format(value)} ARS`;
+  return `${formatter.format(value)} ${showCurrency ? "ARS" : ""}`.trim();
 }
 
-export const formatPercentage = (value: number): string => {
-  return `${(value * 100).toFixed(2)}%`;
+export const formatPercentage = (value: number, decimals: number = 2): string => {
+  return `${(value * 100).toFixed(decimals)}%`;
 }
 
 export const formatDate = (date: Date, options?: Intl.DateTimeFormatOptions) => {

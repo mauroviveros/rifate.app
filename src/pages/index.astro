@@ -1,8 +1,52 @@
 ---
-import Layout from "@/layouts/Layout.astro";
-
+import { RaffleGridExample } from "@/components/raffle/grid";
+import LandingLayout from "@/layouts/LandingLayout.astro";
+import Button from "@starwind/button";
+import { Icon } from "astro-icon/components";
 ---
+<LandingLayout>
+  <section
+    class:list={[
+      "min-h-[calc(100dvh-4rem)]",
+      "container max-w-6xl mx-auto",
+      "flex items-center"
+    ]}
+  >
+    <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center h-full">
+      <hgroup>
+        <h1 class="text-4xl md:text-5xl xl:text-6xl font-black text-foreground mb-6">
+          Tu rifa digital, <br/> <span class="text-primary">lista en minutos</span>
+        </h1>
+        <p class="text-lg text-muted-foreground max-w-lg leading-relaxed mb-8">
+          Creá rifas, vendé números y compartí el progreso con tus compradores. Ideal para barrios, escuelas, clubes y eventos.
+        </p>
 
-<Layout>
-  asd
-</Layout>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <Button
+            variant="primary"
+            size="lg"
+            class="rounded-full font-bold"
+          >
+            Empezar ahora
+            <Icon name="lucide:arrow-right" class="size-5" />
+          </Button>
+        </div>
+
+        <div class="flex items-center gap-6 mt-8 text-sm text-muted-foreground">
+          {["Sin registros largos", "Compartí por WhatsApp"].map((tip) => (
+            <span class="flex items-center gap-1.5">
+              <Icon name="lucide:check-circle-2" class="size-4 text-primary" />
+              {tip}
+            </span>
+          ))}
+        </div>
+      </hgroup>
+
+      <div class="relative">
+        <RaffleGridExample />
+      </div>
+    </div>
+  </section>
+
+  <!-- <section> <div class="container max-w-6xl mx-auto"></div> </section> -->
+</LandingLayout>

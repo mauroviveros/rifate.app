@@ -1,13 +1,42 @@
 ---
 import type { HTMLAttributes } from "astro/types";
 import Body, { type BodyProps } from "./components/Body.astro";
+import { Icon } from "astro-icon/components";
+import Button from "@starwind/button";
 
 interface Props extends BodyProps, HTMLAttributes<'main'> {}
 const { title, description, class: className, ...props } = Astro.props;
 ---
 
 <Body title={title} description={description}>
-  <main class:list={[className]} {...props}>
+  <header class="h-16 flex items-center">
+    <div class="container mx-auto max-w-6xl flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 group">
+        <span class="size-9 rounded-xl bg-hero flex items-center justify-center">
+          <Icon name="lucide:ticket" class="size-5 text-primary-foreground" />
+        </span>
+        <span class="text-xl font-extrabold text-foreground tracking-tight group-hover:hover:text-primary transition-colors">rifate.app</span>
+      </a>
+
+      <nav class="flex items-center gap-3">
+        <Button
+          variant="primary"
+          class="rounded-full font-bold px-6"
+        >
+          Ingresar
+        </Button>
+      </nav>
+    </div>
+  </header>
+
+  <main
+    class:list={[
+      "[&>section]:px-6 [&>section]:py-20",
+      "[&>section]:even:bg-red-500",
+      className
+    ]}
+    {...props}
+  >
     <slot />
   </main>
 </Body>

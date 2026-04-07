@@ -1,0 +1,20 @@
+---
+import type { HTMLAttributes } from 'astro/types'
+
+interface Props extends HTMLAttributes<'ul'> {}
+const { class: className, ...props } = Astro.props as Props;
+---
+<ul class:list={["flex items-center gap-2 text-xs text-muted-foreground", className]} {...props}>
+  <li class="flex items-center gap-1">
+    <span class="size-2.5 rounded bg-raffle-available inline-block"></span>
+    <p>Disponible</p>
+  </li>
+  <li class="flex items-center gap-1">
+    <span class="size-2.5 rounded bg-raffle-sold inline-block"></span>
+    <p>Vendido</p>
+  </li>
+  <li class="flex items-center gap-1">
+    <span class="size-2.5 rounded bg-raffle-selected inline-block"></span>
+    <p>Seleccionado</p>
+  </li>
+</ul>

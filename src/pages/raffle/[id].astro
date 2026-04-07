@@ -1,0 +1,44 @@
+---
+import { RaffleGrid } from '@/components/raffle/grid';
+import PublicLayout from '@/layouts/PublicLayout.astro';
+import Button from '@starwind/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@starwind/card';
+import { Icon } from 'astro-icon/components';
+
+export function getStaticPaths() {
+  return [{ params: { id: "1" } }];
+}
+---
+<PublicLayout>
+  <hgroup slot="header">
+    <h1 class="text-2xl lg:text-3xl font-extrabold text-primary-foreground mb-1">Rifa del Barrio - TV 50 pulgadas</h1>
+    <p class="text-primary-foreground/70 text-sm max-w-lg">Gran rifa para juntar fondos para el club del barrio</p>
+  </hgroup>
+
+  <section class="grid lg:grid-cols-[1fr_19rem] gap-6">
+    <RaffleGrid editable={true} />
+
+    <div class="space-y-4">
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle class="font-bold text-foreground">¿Querés comprar?</CardTitle>
+          <CardDescription class="text-sm text-muted-foreground">Seleccioná los números que te interesan y contactá al organizador por WhatsApp.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="primary" class="w-full">
+            <Icon name="lucide:message-circle"/>
+            Contactar al organizador
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card size="sm" class="bg-secondary/20 border-0">
+        <CardContent>
+          <p class="text-sm text-muted-foreground leading-relaxed">
+            <strong>Tip:</strong> Tocá los números disponibles para seleccionar los que te interesan antes de contactar al organizador.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  </section>
+</PublicLayout>
