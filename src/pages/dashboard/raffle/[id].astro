@@ -21,12 +21,12 @@ const STATS = mapRaffleDetailStats({ sold: 43, total: 150, price: 5000, date: ne
     <h1 class="text-2xl lg:text-3xl font-extrabold text-primary-foreground mb-1">Rifa del Barrio - TV 50 pulgadas</h1>
     <p class="text-primary-foreground/70 text-sm max-w-lg">Gran rifa para juntar fondos para el club del barrio</p>
   </hgroup>
-  <nav class="flex flex-wrap gap-2" slot="header">
+  <div class="flex flex-wrap gap-2" slot="header">
     <Button variant="outline-primary" size="sm" disabled>
       <Icon name="lucide:link" />
       Link público
     </Button>
-  </nav>
+  </div>
 
   <article class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
     {STATS.map((props) => (
