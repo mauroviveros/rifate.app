@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { createServerClient } from "@/lib/supabase/server";
 
-export const GET = (async ({ cookies, request, url, redirect }) => {
+export const POST = (async ({ cookies, request, url, redirect }) => {
   const supabase = createServerClient({ cookies, request});
   const redirectTo = new URL("/api/auth/callback", url).toString();
   const { data, error } = await supabase.auth.signInWithOAuth({
