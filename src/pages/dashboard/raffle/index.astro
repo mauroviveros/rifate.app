@@ -26,11 +26,9 @@ const STATS = mapRaffleListStats({ raffles: 2, sold: 43, total: 150, revenue: 19
     <span class="font-bold">Crear rifa</span>
   </Button>
 
-  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
-    {STATS.map((props) => (
-      <Stats {...props} />
-    ))}
-  </section>
+  <article class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
+    {STATS.map((props) => <Stats {...props} />)}
+  </article>
 
   <section class="flex flex-col sm:items-center sm:flex-row gap-3 mb-6">
     <InputGroup class="h-9">

@@ -1,0 +1,76 @@
+---
+import { RaffleGrid } from '@/components/raffle/grid';
+import Stats from '@/components/Stats.astro';
+import AppLayout from '@/layouts/AppLayout.astro';
+import { mapRaffleDetailStats } from '@/mappers';
+import Button from '@starwind/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@starwind/card';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@starwind/input-group';
+import Progress from '@starwind/progress';
+import { Icon } from 'astro-icon/components';
+
+export function getStaticPaths() {
+  return [{ params: { id: "1" } }];
+}
+
+const STATS = mapRaffleDetailStats({ sold: 43, total: 150, price: 5000, date: new Date("2023-10-10") });
+---
+
+<AppLayout size="6xl">
+  <hgroup slot="header">
+    <h1 class="text-2xl lg:text-3xl font-extrabold text-primary-foreground mb-1">Rifa del Barrio - TV 50 pulgadas</h1>
+    <p class="text-primary-foreground/70 text-sm max-w-lg">Gran rifa para juntar fondos para el club del barrio</p>
+  </hgroup>
+  <nav class="flex flex-wrap gap-2" slot="header">
+    <Button variant="outline-primary" size="sm" disabled>
+      <Icon name="lucide:link" />
+      Link público
+    </Button>
+  </nav>
+
+  <article class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+    {STATS.map((props) => (
+      <Stats class:list={[props.highlight ? "col-span-2 lg:col-span-1" : ""]} {...props} />
+    ))}
+  </article>
+
+  <Progress value={(43/150) * 100} class="h-2 rounded-full mb-6" variant="primary" />
+
+  <section class="grid lg:grid-cols-[1fr_23rem] gap-6">
+    <RaffleGrid editable={true} />
+
+
+    <Card size="sm" class="h-fit">
+      <CardHeader class="flex items-center">
+        <CardTitle class="font-bold text-lg text-foreground flex items-center gap-2 flex-1">
+          <Icon name="lucide:users" class="size-4 text-primary" />
+          Compradores
+        </CardTitle>
+        <span class="text-xs font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+          36
+        </span>
+      </CardHeader>
+      <CardContent class="space-y-3">
+        <InputGroup>
+          <InputGroupInput type="search" placeholder="Buscar rifa..." />
+          <InputGroupAddon>
+            <Icon name="lucide:search" />
+          </InputGroupAddon>
+        </InputGroup>
+
+        <ul class="space-y-1.5 max-h-100 overflow-y-auto pr-2">
+          <!-- TODO: hover:bg-muted transition-colors -->
+          <li class="flex items-center gap-3 bg-muted/50 rounded-xl p-3">
+            <span class="size-10 rounded-2xl bg-raffle-sold flex items-center justify-center text-raffle-sold-foreground font-bold text-sm shrink-0">
+              00
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-foreground text-sm truncate">Mauro Daniel Viveros</p>
+              <p class="text-xs text-muted-foreground">+54 9 11 1234 5678</p>
+            </div>
+          </li>
+        </ul>
+      </CardContent>
+    </Card>
+  </section>
+</AppLayout>

@@ -1,0 +1,31 @@
+---
+interface Props {
+  editable?: boolean;
+  isSold?: boolean;
+  isSelected?: boolean;
+  number: string;
+}
+const { editable = false, isSold, isSelected, number } = Astro.props;
+---
+<label
+  class:list={[
+    "relative aspect-square",
+    "has-disabled:cursor-not-allowed",
+    "cursor-pointer"
+  ]}
+>
+  <input type="checkbox" class="peer sr-only" checked={isSelected} disabled={isSold} />
+  <span
+    class:list={[
+      "font-bold transition-all select-none",
+      "flex items-center justify-center size-full",
+      "text-xs lg:text-base rounded-lg lg:rounded-2xl",
+      "peer-checked:bg-raffle-selected peer-checked:text-raffle-selected-foreground",
+      "peer-disabled:bg-raffle-sold peer-disabled:text-raffle-sold-foreground",
+      "bg-raffle-available text-raffle-available-foreground",
+      editable ? "" : "pointer-events-none"
+    ]}
+  >
+    {number}
+  </span>
+</label>
