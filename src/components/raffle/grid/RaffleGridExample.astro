@@ -4,20 +4,30 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import RaffleGridCell from "./RaffleGridCell.astro";
 import { formatCurrency, formatPercentage, formatRaffleNumber } from "@/lib/formatters";
 import RaffleGridLegend from "./RaffleGridLegend.astro";
-import { undefined } from "astro:schema";
 
 const length = 50;
 const percentage_sold = 0.3;
+const ticketPrice = 500;
 const numbers = getUniqueRandomNumbers(length, Math.floor(length * percentage_sold));
+const initialTotal = numbers.length * ticketPrice;
 ---
 
-<Card size="sm" class="rounded-3xl overflow-hidden gap-2">
+<Card
+  size="sm"
+  class="rounded-3xl overflow-hidden gap-2"
+  data-raffle-grid
+  data-length={String(length)}
+  data-ticket-price={String(ticketPrice)}
+  data-initial-sold={JSON.stringify(numbers)}
+>
   <CardHeader class="flex items-center">
     <hgroup class="flex-1">
       <CardTitle class="font-extrabold text-foreground text-base">Rifa</CardTitle>
-      <CardDescription class="text-sm text-muted-foreground">{formatCurrency(500, false)} por número</CardDescription>
+      <CardDescription class="text-sm text-muted-foreground">{formatCurrency(ticketPrice, false)} por número</CardDescription>
     </hgroup>
-    <span class="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">{formatPercentage(percentage_sold, 0)} vendido</span>
+    <span class="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full" data-raffle-percentage>
+      {formatPercentage(percentage_sold, 0)} vendido
+    </span>
   </CardHeader>
 
   <CardContent
@@ -25,6 +35,7 @@ const numbers = getUniqueRandomNumbers(length, Math.floor(length * percentage_so
       "grid grid-cols-10 gap-1",
       "pointer-events-none"
     ]}
+    data-raffle-cells
   >
     {Array.from({ length: 50 }, (_, i) => {
       const isSold = numbers.includes(i);
@@ -38,6 +49,135 @@ const numbers = getUniqueRandomNumbers(length, Math.floor(length * percentage_so
   </CardContent>
   <CardFooter class="bg-card border-0 flex items-center justify-between text-sm pt-0! flex-wrap">
     <RaffleGridLegend />
-    <span class="font-bold text-primary ml-auto">{formatCurrency(9500, false)}</span>
+    <span class="font-bold text-primary ml-auto transition-all duration-300" data-raffle-total>
+      {formatCurrency(initialTotal, false)}
+    </span>
   </CardFooter>
 </Card>
+
+<script>
+  import { getUniqueRandomNumbers } from "@/lib/utils";
+
+  const ANIMATION_SPEED = 1.35;
+  const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+  const wait = (ms: number) => sleep(ms * ANIMATION_SPEED);
+
+  const formatCurrencyNoSymbol = (value: number) => {
+    const formatter = new Intl.NumberFormat("es-AR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return formatter.format(value);
+  };
+
+  const formatSoldPercentage = (soldCount: number, totalCount: number) => {
+    if (!totalCount) return "0% vendido";
+    const value = ((soldCount / totalCount) * 100).toFixed(0);
+    return `${value}% vendido`;
+  };
+
+  const parseInitialSold = (raw: string | null): number[] => {
+    try {
+      const parsed = JSON.parse(raw ?? "[]");
+      return Array.isArray(parsed) ? parsed.filter((item) => Number.isInteger(item)) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const bootstrapRaffleGridAnimation = () => {
+    const root = document.querySelector("[data-raffle-grid]");
+    if (!root) return;
+
+    const cellsRoot = root.querySelector("[data-raffle-cells]");
+    const totalElement = root.querySelector("[data-raffle-total]");
+    const percentageElement = root.querySelector("[data-raffle-percentage]");
+    if (!cellsRoot || !totalElement || !percentageElement) return;
+
+    const inputs = Array.from(cellsRoot.querySelectorAll<HTMLInputElement>("input[type='checkbox']"));
+    if (!inputs.length) return;
+
+    const totalCount = Number(root.getAttribute("data-length") ?? inputs.length);
+    const ticketPrice = Number(root.getAttribute("data-ticket-price") ?? 500);
+    const initialSold = parseInitialSold(root.getAttribute("data-initial-sold"));
+
+    let soldSet = new Set(initialSold);
+    let currentTotal = soldSet.size * ticketPrice;
+
+    const renderBoard = () => {
+      inputs.forEach((input, index) => {
+        const sold = soldSet.has(index);
+        input.checked = false;
+        input.disabled = sold;
+      });
+      totalElement.textContent = formatCurrencyNoSymbol(currentTotal);
+      percentageElement.textContent = formatSoldPercentage(soldSet.size, totalCount);
+    };
+
+    const animateTotalTo = async (target: number) => {
+      totalElement.classList.add("scale-125", "text-lg", "text-accent");
+      totalElement.classList.remove("text-primary");
+      while (currentTotal < target) {
+        currentTotal += Math.min(100, target - currentTotal);
+        totalElement.textContent = formatCurrencyNoSymbol(currentTotal);
+        await wait(45);
+      }
+      await wait(180);
+      totalElement.classList.remove("scale-125", "text-lg", "text-accent");
+      totalElement.classList.add("text-primary");
+    };
+
+    const runCycle = async () => {
+      const available = [];
+      for (let i = 0; i < totalCount; i += 1) {
+        if (!soldSet.has(i)) available.push(i);
+      }
+
+      if (!available.length) {
+        await wait(500);
+        soldSet = new Set(getUniqueRandomNumbers(totalCount, Math.floor(totalCount * 0.3)));
+        currentTotal = soldSet.size * ticketPrice;
+        renderBoard();
+        await wait(450);
+        return;
+      }
+
+      const picks = getUniqueRandomNumbers(
+        totalCount,
+        Math.min(3, available.length),
+        Array.from(soldSet),
+      );
+      for (const index of picks) {
+        const input = inputs[index];
+        if (!input) continue;
+        input.checked = true;
+        await wait(260);
+      }
+
+      const target = currentTotal + picks.length * ticketPrice;
+      await animateTotalTo(target);
+
+      for (const index of picks) {
+        soldSet.add(index);
+        const input = inputs[index];
+        if (!input) continue;
+        input.checked = false;
+        input.disabled = true;
+      }
+
+      percentageElement.textContent = formatSoldPercentage(soldSet.size, totalCount);
+      await wait(380);
+    };
+
+    renderBoard();
+    const loop = async () => {
+      while (true) {
+        await runCycle();
+      }
+    };
+
+    loop();
+  };
+
+  bootstrapRaffleGridAnimation();
+</script>
