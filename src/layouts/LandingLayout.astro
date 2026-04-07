@@ -2,7 +2,8 @@
 import type { HTMLAttributes } from "astro/types";
 import Body, { type BodyProps } from "./components/Body.astro";
 import { Icon } from "astro-icon/components";
-import SigninDialog from "@/components/dialogs/SigninDialog.astro";
+import AuthBtn from "@/components/auth/AuthBtn.astro";
+import Button from "@starwind/button";
 
 interface Props extends BodyProps, HTMLAttributes<'main'> {}
 const { title, description, class: className, ...props } = Astro.props;
@@ -19,7 +20,13 @@ const { title, description, class: className, ...props } = Astro.props;
       </a>
 
       <nav class="flex items-center gap-3">
-        <SigninDialog />
+        <Button
+            href="/dashboard"
+            variant="primary"
+            class="rounded-full font-bold px-6"
+          >
+            Ingresar
+        </Button>
       </nav>
     </div>
   </header>
