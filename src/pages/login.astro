@@ -1,0 +1,58 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { Button } from "@starwind/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@starwind/card";
+import { Icon } from "astro-icon/components";
+export const prerender = true;
+---
+
+<Layout class="h-dvh flex items-center justify-center w-full max-w-md p-4 mx-auto">
+  <Card class="w-full border bg-secondary/10 text-secondary-foreground">
+    <CardHeader class="flex flex-col items-center space-y-1 text-center">
+      <span class="size-14 rounded-2xl bg-gradient-hero flex items-center justify-center">
+        <Icon name="lucide:ticket" class="size-7 text-primary-foreground"/>
+      </span>
+      <CardTitle class="text-xl font-extrabold">Ingresá a rifate.app</CardTitle>
+      <CardDescription class="text-sm text-muted-foreground">Organizá y administrá tus rifas de forma simple</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <form
+        action="/api/auth/signin/google"
+        method="POST"
+        class="space-y-3"
+      >
+
+        <input type="hidden" name="next">
+
+        <Button
+          type="submit"
+          variant="outline-accent"
+          size="lg"
+          class="w-full rounded-xl font-semibold text-base gap-3"
+        >
+          <Icon name="devicon:google" class="size-5" />
+          Continuar con Google
+        </Button>
+
+        <p class="text-xs text-center text-muted-foreground">
+          Al ingresar aceptás los términos y condiciones
+        </p>
+      </form>
+    </CardContent>
+    <CardFooter class="justify-center">
+      <a
+        href="/"
+        class="text-sm text-muted-foreground hover:text-primary transition-colors"
+      >
+        Volver al inicio
+      </a>
+    </CardFooter>
+  </Card>
+</Layout>
+
+<script>
+  const input = document.querySelector('input[name="next"]') as HTMLInputElement;
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get('next');
+  if(next) input.value = next;
+</script>
