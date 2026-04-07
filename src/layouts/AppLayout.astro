@@ -2,9 +2,8 @@
 import type { HTMLAttributes } from "astro/types";
 import Body, { type BodyProps } from "./components/Body.astro";
 import { Icon } from 'astro-icon/components'
-import { Button } from "@starwind/button";
 import { tv, type VariantProps } from "tailwind-variants";
-// import { tv, type VariantProps } from "tailwind-variants";
+import AuthMenu from "@/components/auth/AuthMenu.astro";
 
 const layout = tv({
   variants: {
@@ -26,24 +25,13 @@ const { title, description, size= "5xl", class: className, ...props } = Astro.pr
 <Body title={title} description={description} class="min-h-dvh">
   <header class="bg-gradient-hero text-primary-foreground px-6 pt-6 pb-14 lg:pb-16 ">
     <div class:list={["mx-auto", layout({ size })]}>
-      <nav class="flex items-center justify-between mb-4">
+      <nav class="flex items-center justify-between mb-4 h-10">
         <a class="flex items-center gap-2" href="/dashboard">
           <Icon name="lucide:ticket" class="size-6" />
           <span class="text-lg font-extrabold text-primary-foreground">rifate.app</span>
         </a>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          class:list={[
-            "hover:text-primary-foreground hover:bg-primary-foreground/10",
-            "rounded-full"
-          ]}
-        >
-          <Icon name="lucide:log-out" class="size-4" />
-          Salir
-        </Button>
+        <AuthMenu server:defer/>
       </nav>
 
       <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-x-4 gap-y-2">

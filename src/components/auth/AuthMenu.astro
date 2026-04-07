@@ -1,0 +1,48 @@
+---
+import { createServerClient } from "@/lib/supabase/server";
+import { Avatar, AvatarFallback, AvatarImage } from "@starwind/avatar";
+import Button from "@starwind/button";
+import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparator, DropdownTrigger } from "@starwind/dropdown";
+import { Icon } from "astro-icon/components";
+
+const supabase = createServerClient({ request: Astro.request, cookies: Astro.cookies });
+const { data, error } = await supabase.auth.getUser();
+if(!data || error) return;
+const user = data.user;
+---
+
+<Dropdown>
+  <DropdownTrigger asChild>
+    <Button
+      variant="ghost"
+      size="sm"
+      class:list={[
+        "hover:text-primary-foreground hover:bg-primary-foreground/5",
+        "border-primary-foreground/20 border",
+        "bg-primary-foreground/10",
+        "rounded-full"
+      ]}
+    >
+      <Avatar class="size-7 border-0!">
+        <AvatarImage src={user.user_metadata.avatar_url} alt={user.user_metadata.full_name} />
+        <AvatarFallback class="bg-primary/50 size-7 top-0 left-0 text-primary-foreground text-xs font-bold">MV</AvatarFallback>
+      </Avatar>
+
+      <span class="hidden sm:inline text-sm font-medium">{user.user_metadata.full_name}</span>
+      <Icon name="lucide:chevron-down" class="size-3.5 opacity-70" />
+    </Button>
+  </DropdownTrigger>
+  <DropdownContent align="end" class="min-w-40">
+    <DropdownLabel class="flex flex-col space-y-1 min-w-0">
+      <span class="text-sm text-foreground font-semibold leading-none truncate">{user.user_metadata.full_name}</span>
+      <span class="text-xs text-muted-foreground leading-none truncate">{user.email}</span>
+    </DropdownLabel>
+
+    <DropdownSeparator />
+
+    <DropdownItem variant="destructive">
+      <Icon name="lucide:log-out" />
+      Cerrar sesión
+    </DropdownItem>
+  </DropdownContent>
+</Dropdown>
