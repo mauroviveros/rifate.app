@@ -1,5 +1,6 @@
+import type { StatsProps } from "@/components/Stats.astro";
 import { formatCurrency, formatPercentage } from "@/lib/formatters";
-import type { RaffleListStats, StatsProps } from "@/types";
+import type { RaffleListStats } from "@/types";
 
 export const mapRaffleListStats = ({ raffles, sold, total, revenue }: RaffleListStats): StatsProps[] => {
   return [
@@ -17,7 +18,7 @@ export const mapRaffleListStats = ({ raffles, sold, total, revenue }: RaffleList
       name: "Recaudado",
       value: formatCurrency(revenue),
       icon: "lucide:dollar-sign",
-      highlight: true,
+      highlight: "accent",
     },
     {
       name: "Progreso global",

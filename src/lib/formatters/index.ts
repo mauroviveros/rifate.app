@@ -13,3 +13,7 @@ export const formatPercentage = (value: number): string => {
 export const formatDate = (date: Date, options?: Intl.DateTimeFormatOptions) => {
   return Intl.DateTimeFormat("es-AR", options).format(date);
 }
+
+export const formatRaffleNumber = (number: number, pad: number): string => {
+  return String(number).padStart(pad, "0");
+}

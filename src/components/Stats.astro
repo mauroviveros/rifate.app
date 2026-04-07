@@ -1,31 +1,44 @@
 ---
-import type { StatsProps } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardVariants } from "@starwind/card";
 import { Icon } from "astro-icon/components";
 import type { HTMLAttributes } from "astro/types";
-import type { VariantProps } from "tailwind-variants";
+import { tv, type VariantProps } from "tailwind-variants";
+export interface Stats {
+  name: string;
+  value: string;
+  icon: string;
+}
 
+const stats = tv({
+  base: "gap-2 py-4 rounded-2xl shadow-card",
+  variants: {
+    highlight: {
+      default: "[&_svg]:text-primary",
+      accent: "[&_svg]:text-accent [&_p]:text-accent",
+      primary: "[&_svg]:text-primary [&_p]:text-primary",
+    }
+  },
+  defaultVariants: {
+    highlight: "default"
+  }
+})
+export interface StatsProps extends Stats, VariantProps<typeof stats> {}
 interface Props extends StatsProps, HTMLAttributes<"div">, VariantProps<typeof CardVariants.card> {}
-const { name, value, icon, highlight, class:className, ...props } = Astro.props as Props;
+const { name, value, icon, highlight="default", class:className, ...props } = Astro.props as Props;
 ---
 
-<Card class:list={["gap-2 py-4 rounded-2xl shadow-card", className]} {...props}>
+<Card
+  class:list={[stats({ highlight }), className]}
+  {...props}
+>
   <CardHeader class="flex items-center gap-2 px-4">
     <span class="p-1.5 rounded-2xl bg-muted">
-      <Icon
-        name={icon}
-        class:list={["size-4", highlight ? "text-accent" : "text-primary"]}
-      />
+      <Icon name={icon} class="size-4" />
     </span>
     <CardTitle class="text-xs text-muted-foreground font-semibold">{name}</CardTitle>
   </CardHeader>
   <CardContent class="px-4">
-    <p
-      class:list={[
-        "text-lg lg:text-xl font-extrabold",
-        highlight ? "text-accent" : "text-foreground"
-      ]}
-    >
+    <p class="text-lg lg:text-xl font-extrabold text-right">
       {value}
     </p>
   </CardContent>

@@ -36,6 +36,14 @@
     oklch(0.5377 0.0877 176.53)
   );
 
+
+  --color-raffle-available: oklch(0.9487 0.0214 160.47);
+  --color-raffle-sold: oklch(0.6487 0.1712 38.38);
+  --color-raffle-selected: oklch(0.6548 0.1085 176.31);
+
+  --color-raffle-available-foreground: oklch(0.4601 0.0675 156.84);
+  --color-raffle-sold-foreground: oklch(1 0 0);
+  --color-raffle-selected-foreground: oklch(1 0 0);
 }
 
 @layer base {

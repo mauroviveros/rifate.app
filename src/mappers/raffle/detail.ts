@@ -1,5 +1,6 @@
+import type { StatsProps } from "@/components/Stats.astro";
 import { formatCurrency, formatDate, formatPercentage } from "@/lib/formatters";
-import type { RaffleDetailStats, StatsProps } from "@/types";
+import type { RaffleDetailStats } from "@/types";
 
 export const mapRaffleDetailStats = ({ sold, total, price, date }: RaffleDetailStats): StatsProps[] => {
   return [
@@ -17,17 +18,18 @@ export const mapRaffleDetailStats = ({ sold, total, price, date }: RaffleDetailS
       name: "Recaudado",
       value: formatCurrency(sold * price),
       icon: "lucide:dollar-sign",
-      highlight: true,
+      highlight: "accent",
     },
     {
       name: "Sorteo",
-      value: formatDate(date),
+      value: formatDate(date, { dateStyle: "medium" }),
       icon: "lucide:calendar-days",
     },
     {
       name: "Disponibles",
       value: `${total - sold}`,
       icon: "lucide:users",
+      highlight: "primary"
     }
   ]
 }

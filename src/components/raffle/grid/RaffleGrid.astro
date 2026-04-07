@@ -1,0 +1,15 @@
+---
+import Button from "@starwind/button";
+import RaffleGridCard from "./RaffleGridCard.astro";
+interface Props { editable?: boolean; }
+const { editable = false } = Astro.props as Props;
+---
+<form class="space-y-4">
+  <RaffleGridCard editable={editable} length={100} numbers={[0]} />
+
+  <footer class="sticky bottom-6 z-10 hidden">
+    <Button variant="primary" class="w-full">
+      Vender número(s)
+    </Button>
+  </footer>
+</form>
