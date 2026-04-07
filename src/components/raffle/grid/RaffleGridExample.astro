@@ -56,19 +56,12 @@ const initialTotal = numbers.length * ticketPrice;
 </Card>
 
 <script>
+  import { formatCurrency } from "@/lib/formatters";
   import { getUniqueRandomNumbers } from "@/lib/utils";
 
   const ANIMATION_SPEED = 1.35;
   const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
   const wait = (ms: number) => sleep(ms * ANIMATION_SPEED);
-
-  const formatCurrencyNoSymbol = (value: number) => {
-    const formatter = new Intl.NumberFormat("es-AR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return formatter.format(value);
-  };
 
   const formatSoldPercentage = (soldCount: number, totalCount: number) => {
     if (!totalCount) return "0% vendido";
@@ -110,7 +103,7 @@ const initialTotal = numbers.length * ticketPrice;
         input.checked = false;
         input.disabled = sold;
       });
-      totalElement.textContent = formatCurrencyNoSymbol(currentTotal);
+      totalElement.textContent = formatCurrency(currentTotal, false);
       percentageElement.textContent = formatSoldPercentage(soldSet.size, totalCount);
     };
 
@@ -119,7 +112,7 @@ const initialTotal = numbers.length * ticketPrice;
       totalElement.classList.remove("text-primary");
       while (currentTotal < target) {
         currentTotal += Math.min(100, target - currentTotal);
-        totalElement.textContent = formatCurrencyNoSymbol(currentTotal);
+        totalElement.textContent = formatCurrency(currentTotal, false);
         await wait(45);
       }
       await wait(180);
