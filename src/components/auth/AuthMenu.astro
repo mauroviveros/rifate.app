@@ -40,9 +40,20 @@ const user = data.user;
 
     <DropdownSeparator />
 
-    <DropdownItem variant="destructive">
-      <Icon name="lucide:log-out" />
-      Cerrar sesión
-    </DropdownItem>
+    <form
+      action="/api/auth/logout"
+      method="POST"
+      class="flex flex-col"
+    >
+      <DropdownItem
+        as="button"
+        type="submit"
+        variant="destructive"
+        class="flex items-center gap-2"
+      >
+        <Icon name="lucide:log-out" />
+        Cerrar sesión
+      </DropdownItem>
+    </form>
   </DropdownContent>
 </Dropdown>
