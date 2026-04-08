@@ -1,18 +1,27 @@
 ---
 import { RaffleForm } from "@/components/raffle/RaffleForm";
 import AppLayout from "@/layouts/AppLayout.astro";
+import Button from "@starwind/button";
 import { Icon } from "astro-icon/components";
 
 const user = Astro.locals.user;
 ---
 
 <AppLayout size="3xl" class="pb-4 sm:pb-6">
-  <hgroup class="flex items-center gap-3" slot="header">
-    <span class="bg-primary-foreground/20 text-primary-foreground size-10 flex items-center justify-center rounded-xl">
-      <Icon name="lucide:ticket" class="size-5" />
-    </span>
-    <h1 class="text-2xl lg:text-3xl font-extrabold text-primary-foreground">Nueva rifa</h1>
+  <hgroup class="flex items-center justify-between w-full" slot="header">
+    <div class="flex items-center gap-3">
+      <span class="bg-primary-foreground/20 text-primary-foreground size-10 flex items-center justify-center rounded-xl">
+        <Icon name="lucide:ticket" class="size-5" />
+      </span>
+      <h1 class="text-2xl lg:text-3xl font-extrabold text-primary-foreground">Nueva rifa</h1>
+    </div>
+
+    <Button href="/dashboard/raffle" variant="secondary" size="sm">
+      <Icon name="lucide:arrow-left" class="size-4" />
+      <span class="font-bold">Volver</span>
+    </Button>
   </hgroup>
+
 
   <RaffleForm
     client:only="react"
