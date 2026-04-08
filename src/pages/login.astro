@@ -3,7 +3,9 @@ import Layout from "@/layouts/Layout.astro";
 import { Button } from "@starwind/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@starwind/card";
 import { Icon } from "astro-icon/components";
-export const prerender = true;
+
+const next = Astro.url.searchParams.get("next");
+const error = Astro.url.searchParams.get("error");
 ---
 
 <Layout class="h-dvh flex items-center justify-center w-full max-w-md p-4 mx-auto">
@@ -16,22 +18,31 @@ export const prerender = true;
       <CardDescription class="text-sm text-muted-foreground">Organizá y administrá tus rifas de forma simple</CardDescription>
     </CardHeader>
     <CardContent>
+      {error && (
+        <p class="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          No pudimos iniciar sesión. Intentalo de nuevo.
+        </p>
+      )}
+
       <form
         action="/api/auth/signin/google"
         method="POST"
-        class="space-y-3"
+        class="space-y-3 group"
+        aria-busy="false"
       >
 
-        <input type="hidden" name="next">
+        <input type="hidden" name="next" value={next}>
 
         <Button
           type="submit"
           variant="outline-accent"
           size="lg"
-          class="w-full rounded-xl font-semibold text-base gap-3"
+          class="w-full rounded-xl font-semibold text-base gap-3 relative"
         >
           <Icon name="devicon:google" class="size-5" />
           Continuar con Google
+
+          <Icon name="lucide:loader-2" class="animate-spin hidden group-aria-busy:block absolute right-4" aria-hidden="true"/>
         </Button>
 
         <p class="text-xs text-center text-muted-foreground">
@@ -51,8 +62,12 @@ export const prerender = true;
 </Layout>
 
 <script>
-  const input = document.querySelector('input[name="next"]') as HTMLInputElement;
-  const params = new URLSearchParams(window.location.search);
-  const next = params.get('next');
-  if(next) input.value = next;
+  const form = document.querySelector('form') as HTMLFormElement;
+
+  form.addEventListener('submit', () => {
+    form.setAttribute('aria-busy', 'true');
+    form.querySelectorAll('button').forEach(btn => (
+      btn.setAttribute('disabled', 'true')
+    ));
+  });
 </script>
