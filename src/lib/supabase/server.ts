@@ -1,4 +1,5 @@
 import { createServerClient as createSupabaseServerClient, parseCookieHeader } from "@supabase/ssr";
+import type { Database } from "@/types";
 import type { AstroCookies } from "astro";
 
 const getSupabaseEnv = () => {
@@ -15,7 +16,7 @@ const getSupabaseEnv = () => {
 
 export function createServerClient({ request, cookies }: { request: Request; cookies: AstroCookies }) {
   const { url, anonKey } = getSupabaseEnv();
-  return createSupabaseServerClient(url, anonKey, {
+  return createSupabaseServerClient<Database>(url, anonKey, {
     cookies: {
       getAll() {
         return parseCookieHeader(request.headers.get("Cookie") ?? "")

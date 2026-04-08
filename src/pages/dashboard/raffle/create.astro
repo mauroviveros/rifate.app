@@ -43,7 +43,13 @@ import { Icon } from "astro-icon/components";
             <div class="space-y-2">
               <Label for="raffle-price">Precio por número</Label>
               <InputGroup id="raffle-price">
-                <InputGroupInput type="number" placeholder="0.00" />
+                <InputGroupInput
+                  type="number"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  max="1000000"
+                />
                 <InputGroupAddon align="inline-start">
                   <InputGroupText>$</InputGroupText>
                 </InputGroupAddon>
@@ -59,6 +65,9 @@ import { Icon } from "astro-icon/components";
                 id="raffle-quantity"
                 type="number"
                 placeholder="Ej: 100"
+                min="0"
+                max="1000"
+                step="10"
               />
             </div>
           </div>
@@ -68,6 +77,7 @@ import { Icon } from "astro-icon/components";
             <Input
               id="raffle-draw_date"
               type="date"
+              min={new Date().toISOString().split("T")[0]}
             />
           </div>
 
