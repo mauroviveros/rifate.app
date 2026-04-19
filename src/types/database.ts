@@ -97,8 +97,8 @@ export type Database = {
       raffles: {
         Row: {
           created_at: string
-          description: string
-          draw_at: string
+          description: string | null
+          draw_date: string
           id: string
           owner_id: string
           price: number
@@ -109,8 +109,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          description: string
-          draw_at: string
+          description?: string | null
+          draw_date: string
           id?: string
           owner_id?: string
           price: number
@@ -121,8 +121,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          description?: string
-          draw_at?: string
+          description?: string | null
+          draw_date?: string
           id?: string
           owner_id?: string
           price?: number

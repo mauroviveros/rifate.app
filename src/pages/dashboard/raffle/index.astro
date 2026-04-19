@@ -1,7 +1,9 @@
 ---
 import Stats from "@/components/Stats.astro";
 import AppLayout from "@/layouts/AppLayout.astro";
+import { formatCurrency } from "@/lib/formatters";
 import { mapRaffleListStats } from "@/lib/mappers";
+import { createServerClient } from "@/lib/supabase/server";
 import Button from "@starwind/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@starwind/card";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@starwind/input-group";
@@ -9,6 +11,9 @@ import Progress from "@starwind/progress";
 import { Icon } from "astro-icon/components";
 
 const STATS = mapRaffleListStats({ raffles: 2, sold: 43, total: 150, revenue: 19400 });
+const supbase = createServerClient({ cookies: Astro.cookies, request: Astro.request });
+const raffles = await supbase.from("raffles").select("*");
+console.log(raffles);
 ---
 
 <AppLayout size="5xl">
@@ -52,57 +57,63 @@ const STATS = mapRaffleListStats({ raffles: 2, sold: 43, total: 150, revenue: 19
   </section>
 
   <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-    <a href="/dashboard/raffle/1" class="group">
-      <Card size="sm" class="shadow-card group-hover:shadow-card-hover">
-        <CardHeader class="flex">
-          <hgroup class="flex-1 min-w-0">
-            <CardTitle class="font-bold truncate group-hover:text-primary transition-colors">Rifa del Barrio - TV 50 pulgadas</CardTitle>
-            <CardDescription class="text-xs! text-muted-foreground line-clamp-1">Gran rifa para juntar fondos para el club del barrio</CardDescription>
-          </hgroup>
-          <span
-            class:list={[
-              "text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap",
-              "bg-secondary/30 text-secondary-foreground"
-            ]}
-          >
-            🟢 Activa
-          </span>
-        </CardHeader>
-        <CardContent>
-          <article class="flex gap-0.5 mb-3 overflow-hidden h-2 rounded-full bg-muted">
-            {Array.from({ length: 40 }).map(() => Math.random() < 0.5).map((bool) => (
-              <span
-                class:list={[
-                  "flex-1 min-w-0.5 max-w-4 rounded-full",
-                  bool ? "bg-accent" : "bg-primary/20"
+    {raffles.data?.map(({ id, title, description, price }) => (
 
-                ]}
-              ></span>
-            ))}
-          </article>
 
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-sm text-muted-foreground font-medium">36/100 vendidos</span>
-            <span class="text-sm font-bold text-primary">36%</span>
-          </div>
-
-          <Progress value={36} variant="primary" class="h-1.5 rounded-full mb-4" />
-
-          <div class="flex items-center justify-between pt-3 border-t">
-            <span class="flex items-center gap-1 text-sm text-muted-foreground">
-              <Icon name="lucide:calendar-days" class="size-3.5" />
-              14 de Abril, 2026
+      <a href={`/dashboard/raffle/${id}`} class="group">
+        <Card size="sm" class="shadow-card group-hover:shadow-card-hover">
+          <CardHeader class="flex">
+            <hgroup class="flex-1 min-w-0">
+              <CardTitle class="font-bold truncate group-hover:text-primary transition-colors">{title}</CardTitle>
+              {description && (
+                <CardDescription class="text-xs! text-muted-foreground line-clamp-1">{description}</CardDescription>
+              )}
+            </hgroup>
+            <span
+              class:list={[
+                "text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap",
+                "bg-secondary/30 text-secondary-foreground"
+              ]}
+            >
+              🟢 Activa
             </span>
+          </CardHeader>
+          <CardContent>
+            <article class="flex gap-0.5 mb-3 overflow-hidden h-2 rounded-full bg-muted">
+              {Array.from({ length: 40 }).map(() => Math.random() < 0.5).map((bool) => (
+                <span
+                  class:list={[
+                    "flex-1 min-w-0.5 max-w-4 rounded-full",
+                    bool ? "bg-accent" : "bg-primary/20"
 
-            <div class="flex items-center gap-1">
-              <Icon name="lucide:dollar-sign" class="size-3.5 text-accent" />
-              <span class="font-extrabold text-foreground">
-                18.000
-              </span>
+                  ]}
+                ></span>
+              ))}
+            </article>
+
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm text-muted-foreground font-medium">36/100 vendidos</span>
+              <span class="text-sm font-bold text-primary">36%</span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </a>
+
+            <Progress value={36} variant="primary" class="h-1.5 rounded-full mb-4" />
+
+            <div class="flex items-center justify-between pt-3 border-t">
+              <span class="flex items-center gap-1 text-sm text-muted-foreground">
+                <Icon name="lucide:calendar-days" class="size-3.5" />
+                14 de Abril, 2026
+              </span>
+
+              <div class="flex items-center gap-1">
+                <Icon name="lucide:dollar-sign" class="size-3.5 text-accent" />
+                <span class="font-extrabold text-foreground">
+                  {formatCurrency(price)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </a>
+    ))}
   </section>
 </AppLayout>
