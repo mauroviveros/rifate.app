@@ -7,6 +7,7 @@ import { RaffleSchema, type RaffleInput } from "@/schemas/raffle";
 import { Input } from "@shadcn/input";
 import { Textarea } from "@shadcn/textarea";
 import { Field } from "@/components/Field";
+import { ActionError, actions } from "astro:actions";
 
 export type RafflePreviewState = Pick<RaffleInput, "price" | "total_numbers">;
 
@@ -19,6 +20,7 @@ interface RaffleFormComponentProps {
 
 export function RaffleFormComponent({ owner_id, price, total_numbers, onPreviewChange }: RaffleFormComponentProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<ActionError | null>(null);
   const today = new Date().toISOString().split("T")[0];
   const defaultDrawDate = (() => {
     const date = new Date();
@@ -41,9 +43,23 @@ export function RaffleFormComponent({ owner_id, price, total_numbers, onPreviewC
     },
   });
 
-  const handleSubmit: FormSubmitHandler<RaffleInput> = async () => {
+  const handleSubmit: FormSubmitHandler<RaffleInput> = async ({ data }) => {
     setIsSubmitting(true);
-    console.log("Submitting form with values:", methods.getValues());
+    setErrors(null);
+
+    try {
+      const { error } = await actions.createRaffle(data)
+      if(error){
+        setErrors(error);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        window.location.assign(`/dashboard/raffle`);
+      }
+    } catch (error) {
+      setErrors({ message: 'Ocurrio un error inesperado. Intentalo nuevamente.' } as ActionError);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   useEffect(() => {
@@ -158,6 +174,7 @@ export function RaffleFormComponent({ owner_id, price, total_numbers, onPreviewC
             >
               {isSubmitting ? "Creando rifa..." : "Crear rifa"}
             </Button>
+
           </Form>
         </FormProvider>
       </CardContent>
