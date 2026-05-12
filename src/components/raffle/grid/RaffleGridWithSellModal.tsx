@@ -1,20 +1,18 @@
 import { useRaffle } from "@/hooks/useRaffle";
 import { RaffleGrid } from "./react";
-import { useEffect } from "react";
+import type { Tables } from "@/types";
 
-export function RaffleGridWithSellModal() {
+export function RaffleGridWithSellModal(
+  { numbers }: { numbers: Tables<'raffle_numbers'>[] }
+) {
   const { raffle, toggleNumber } = useRaffle({
     length: 100,
     initials: {
-      solds: [1, 2, 3, 4, 5],
+      solds: numbers
+        .filter(n => n.status === 'SOLD')
+        .map(n => n.number),
     }
   });
-
-  console.log('Raffle data initialized:', raffle);
-
-  useEffect(() => {
-    console.log(raffle)
-  }, [raffle]);
 
   return (
     <article className="space-y-4">
