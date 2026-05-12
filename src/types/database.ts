@@ -14,12 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
-      raffle_entries: {
+      raffle_buyers: {
         Row: {
           created_at: string
           id: string
           name: string
-          note: string
+          note: string | null
           phone: string | null
           raffle_id: string
           socials: Json | null
@@ -28,7 +28,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
-          note: string
+          note?: string | null
           phone?: string | null
           raffle_id: string
           socials?: Json | null
@@ -37,7 +37,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
-          note?: string
+          note?: string | null
           phone?: string | null
           raffle_id?: string
           socials?: Json | null
@@ -54,24 +54,24 @@ export type Database = {
       }
       raffle_numbers: {
         Row: {
+          buyer_id: string
           created_at: string
-          entry_id: string
           number: number
           raffle_id: string
           status: Database["public"]["Enums"]["RAFFLE_NUMBER_STATUS"]
           updated_at: string | null
         }
         Insert: {
+          buyer_id: string
           created_at?: string
-          entry_id: string
           number: number
           raffle_id: string
           status?: Database["public"]["Enums"]["RAFFLE_NUMBER_STATUS"]
           updated_at?: string | null
         }
         Update: {
+          buyer_id?: string
           created_at?: string
-          entry_id?: string
           number?: number
           raffle_id?: string
           status?: Database["public"]["Enums"]["RAFFLE_NUMBER_STATUS"]
@@ -80,9 +80,9 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "raffle_numbers_entry_id_fkey"
-            columns: ["entry_id"]
+            columns: ["buyer_id"]
             isOneToOne: false
-            referencedRelation: "raffle_entries"
+            referencedRelation: "raffle_buyers"
             referencedColumns: ["id"]
           },
           {
