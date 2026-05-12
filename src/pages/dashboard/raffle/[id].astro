@@ -1,5 +1,5 @@
 ---
-import { RaffleGrid } from '@/components/raffle/grid';
+import { RaffleGridWithSellModal } from '@/components/raffle/grid/RaffleGridWithSellModal';
 import Stats from '@/components/Stats.astro';
 import AppLayout from '@/layouts/AppLayout.astro';
 import { mapRaffleDetailStats } from '@/lib/mappers';
@@ -37,7 +37,8 @@ const STATS = mapRaffleDetailStats({ sold: 43, total: 150, price: 5000, date: ne
   <Progress value={(43/150) * 100} class="h-2 rounded-full mb-6" variant="primary" />
 
   <section class="grid lg:grid-cols-[1fr_23rem] gap-6">
-    <RaffleGrid editable={true} />
+    <RaffleGridWithSellModal client:idle />
+
 
 
     <Card size="sm" class="h-fit">
