@@ -19,10 +19,10 @@ const { data: raffle, error } = await supabase
   .from("raffles")
   .select(`
     *,
-    buyers:raffle_entries(*),
+    buyers:raffle_buyers(*),
     numbers:raffle_numbers(
       *,
-      buyer:raffle_entries(*)
+      buyer:raffle_buyers(*)
     )
   `)
   .eq("id", Astro.params.id)
