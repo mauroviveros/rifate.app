@@ -50,6 +50,7 @@ export default defineAction({
       const existingAvailableNumbers = (existingNumbers ?? [])
         .filter((entry) => entry.status === "AVAILABLE")
         .map((entry) => entry.number);
+      const existingAvailableNumbersSet = new Set(existingAvailableNumbers);
 
       if (existingAvailableNumbers.length > 0) {
         const { error: updateError } = await supabase
@@ -68,7 +69,7 @@ export default defineAction({
       }
 
       const missingNumbers = selectedNumbers.filter(
-        (number) => !existingAvailableNumbers.includes(number),
+        (number) => !existingAvailableNumbersSet.has(number),
       );
 
       if (missingNumbers.length > 0) {

@@ -83,7 +83,8 @@ export function RaffleGridWithSellModal(
 
       setOpen(false);
       window.location.reload();
-    } catch {
+    } catch (error) {
+      console.error("Error selling raffle numbers from dialog:", error);
       setErrorMessage("Ocurrió un error inesperado. Inténtalo nuevamente.");
     } finally {
       setIsSubmitting(false);
