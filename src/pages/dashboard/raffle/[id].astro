@@ -70,6 +70,9 @@ const STATS = mapRaffleDetailStats({
 
   <section class="grid lg:grid-cols-[1fr_23rem] gap-6">
     <RaffleGridWithSellModal
+      raffleId={raffle.id}
+      rafflePrice={raffle.price}
+      totalNumbers={raffle.total_numbers}
       numbers={raffle.numbers}
       client:idle
     />
