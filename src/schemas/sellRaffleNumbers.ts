@@ -1,24 +1,26 @@
 import { z } from "zod";
 
+export const SellRaffleBuyerSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .max(120, "El nombre no puede superar los 120 caracteres"),
+  phone: z
+    .string()
+    .trim()
+    .max(50, "El teléfono no puede superar los 50 caracteres")
+    .optional(),
+  note: z
+    .string()
+    .trim()
+    .max(250, "La nota no puede superar los 250 caracteres")
+    .optional(),
+});
+
 export const SellRaffleNumbersSchema = z.object({
   raffle_id: z.uuid("ID de rifa inválido"),
-  buyer: z.object({
-    name: z
-      .string()
-      .trim()
-      .min(2, "El nombre debe tener al menos 2 caracteres")
-      .max(120, "El nombre no puede superar los 120 caracteres"),
-    phone: z
-      .string()
-      .trim()
-      .max(50, "El teléfono no puede superar los 50 caracteres")
-      .optional(),
-    note: z
-      .string()
-      .trim()
-      .max(250, "La nota no puede superar los 250 caracteres")
-      .optional(),
-  }),
+  buyer: SellRaffleBuyerSchema,
   numbers: z
     .array(
       z
@@ -33,4 +35,5 @@ export const SellRaffleNumbersSchema = z.object({
     }),
 });
 
+export type SellRaffleBuyerInput = z.infer<typeof SellRaffleBuyerSchema>;
 export type SellRaffleNumbersInput = z.infer<typeof SellRaffleNumbersSchema>;
