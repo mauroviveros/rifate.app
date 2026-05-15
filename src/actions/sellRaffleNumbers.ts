@@ -50,6 +50,7 @@ export default defineAction({
       const existingAvailableNumbers = (existingNumbers ?? [])
         .filter((entry) => entry.status === "AVAILABLE")
         .map((entry) => entry.number);
+      const allExistingNumbersSet = new Set((existingNumbers ?? []).map((entry) => entry.number));
       const existingAvailableNumbersSet = new Set(existingAvailableNumbers);
 
       if (existingAvailableNumbers.length > 0) {
@@ -69,7 +70,8 @@ export default defineAction({
       }
 
       const missingNumbers = selectedNumbers.filter(
-        (number) => !existingAvailableNumbersSet.has(number),
+        (number) =>
+          !existingAvailableNumbersSet.has(number) && !allExistingNumbersSet.has(number),
       );
 
       if (missingNumbers.length > 0) {
