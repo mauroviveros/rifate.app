@@ -39,7 +39,7 @@ export function RaffleGridWithSellModal(
   const [buyerNote, setBuyerNote] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { raffle, toggleNumber } = useRaffle({
+  const { raffle, toggleNumber, markNumbersAsSold } = useRaffle({
     length: totalNumbers,
     initials: {
       solds: numbers
@@ -81,8 +81,11 @@ export function RaffleGridWithSellModal(
         return;
       }
 
+      markNumbersAsSold(selectedNumbers);
+      setBuyerName("");
+      setBuyerPhone("");
+      setBuyerNote("");
       setOpen(false);
-      window.location.reload();
     } catch (error) {
       console.error("Error selling raffle numbers from dialog:", error);
       setErrorMessage("Ocurrió un error inesperado. Inténtalo nuevamente.");

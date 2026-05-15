@@ -22,6 +22,24 @@ export function useRaffle({
     });
   }, [length, solds, selecteds]);
 
+  const markNumbersAsSold = useCallback((numbers: number[]) => {
+    if (!numbers.length) return;
+
+    const validNumbers = numbers.filter(
+      (number) => Number.isInteger(number) && number >= 0 && number < length,
+    );
+    if (!validNumbers.length) return;
+
+    setSolds((current) => {
+      return [...new Set([...current, ...validNumbers])].sort((a, b) => a - b);
+    });
+
+    setSelecteds((current) => {
+      const soldSet = new Set(validNumbers);
+      return current.filter((number) => !soldSet.has(number));
+    });
+  }, [length]);
+
   const raffle = useMemo(() => {
     return {
       length,
@@ -42,6 +60,7 @@ export function useRaffle({
 
   return {
     raffle,
-    toggleNumber
+    toggleNumber,
+    markNumbersAsSold,
   }
 }

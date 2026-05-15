@@ -59,7 +59,6 @@ export default defineAction({
           .update({
             buyer_id: buyer.id,
             status: "SOLD",
-            updated_at: new Date().toISOString(),
           })
           .eq("raffle_id", input.raffle_id)
           .in("number", existingAvailableNumbers);
