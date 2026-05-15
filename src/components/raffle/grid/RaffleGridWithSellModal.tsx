@@ -95,7 +95,7 @@ export function RaffleGridWithSellModal(
   };
 
   return (
-    <article className="flex flex-col gap-4">
+    <article className="space-y-4">
       <RaffleGrid
         length={raffle.length}
         editable={true}
