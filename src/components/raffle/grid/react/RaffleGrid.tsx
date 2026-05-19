@@ -12,7 +12,7 @@ interface Props {
   selectedNumbers?: number[]
   title?: string
   numberPadding?: number
-  onToggleNumber?: (number: number) => void
+  onToggleSelectedNumber?: (number: number) => void
 }
 
 export function RaffleGrid({
@@ -20,7 +20,7 @@ export function RaffleGrid({
   length,
   soldNumbers = [],
   selectedNumbers = [],
-  onToggleNumber,
+  onToggleSelectedNumber,
 }: Props) {
   const soldSet = new Set(soldNumbers);
   const selectedSet = new Set(selectedNumbers);
@@ -46,7 +46,7 @@ export function RaffleGrid({
               isSold={soldSet.has(index)}
               isSelected={selectedSet.has(index)}
               editable={editable}
-              onToggle={() => onToggleNumber?.(index)}
+              onToggleSelected={() => onToggleSelectedNumber?.(index)}
             />
           )
         })}

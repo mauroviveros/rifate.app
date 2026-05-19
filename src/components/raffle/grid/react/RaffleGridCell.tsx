@@ -7,7 +7,7 @@ interface Props extends Omit<ComponentProps<"label">, "onChange"> {
   isSold?: boolean
   isSelected?: boolean
   number: string
-  onToggle?: () => void
+  onToggleSelected?: () => void
 }
 
 export function RaffleGridCell({
@@ -15,7 +15,7 @@ export function RaffleGridCell({
   isSold = false,
   isSelected = false,
   number,
-  onToggle,
+  onToggleSelected,
   className,
   ...props
 }: Props) {
@@ -34,7 +34,7 @@ export function RaffleGridCell({
         className="peer sr-only"
         checked={isSelected}
         disabled={isSold}
-        onChange={onToggle}
+        onChange={onToggleSelected}
       />
       <span
         className={cn(
