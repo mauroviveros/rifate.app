@@ -2,3 +2,5 @@ allowBuilds:
   esbuild: true
   msw: true
   sharp: true
+minimumReleaseAgeExclude:
+  - '@types/react@19.2.15'
