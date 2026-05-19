@@ -1,8 +1,7 @@
 import { useRaffle } from "@/hooks/useRaffle";
 import { RaffleGrid } from "./grid/react";
 import type { Tables } from "@/types";
-import { Button } from "@shadcn/button";
-import { formatCurrency } from "@/lib/formatters";
+import { RaffleBuyerSellDialog } from "../dialogs/raffleBuyerSellDialog";
 
 export function RaffleGridSell(
   {
@@ -37,16 +36,10 @@ export function RaffleGridSell(
 
       {raffle.numbers.selecteds.length > 0 && (
         <footer className="sticky bottom-6 z-10">
-          <Button
-            size="lg"
-            className="w-full rounded-xl h-12 font-bold text-base shadow-float"
-          >
-            {[
-              `Vender ${raffle.numbers.selecteds.length}`,
-              `número${raffle.numbers.selecteds.length !== 1 ? 's' : ''}`,
-              `— ${formatCurrency(raffle.numbers.selecteds.length * price)}`
-            ].join(' ')}
-          </Button>
+          <RaffleBuyerSellDialog
+            selectedNumbers={raffle.numbers.selecteds}
+            price={price}
+          />
         </footer>
       )}
     </article>
