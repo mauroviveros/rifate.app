@@ -1,5 +1,5 @@
 ---
-import { RaffleGridWithSellModal } from '@/components/raffle/grid/RaffleGridWithSellModal';
+import { RaffleGridSell } from '@/components/raffle/RaffleGridSell';
 import Stats from '@/components/Stats.astro';
 import AppLayout from '@/layouts/AppLayout.astro';
 import { formatRaffleNumber } from '@/lib/formatters';
@@ -8,7 +8,6 @@ import { createServerClient } from '@/lib/supabase/server';
 import { getNumberLength } from '@/lib/utils';
 import Button from '@starwind/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@starwind/card';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@starwind/input-group';
 import Progress from '@starwind/progress';
 import { Icon } from 'astro-icon/components';
 
@@ -68,13 +67,13 @@ const STATS = mapRaffleDetailStats({
     variant="primary"
   />
 
-  <section class="grid lg:grid-cols-[1fr_23rem] gap-6">
-    <RaffleGridWithSellModal
+  <section class="grid lg:grid-cols-[1fr_23rem] gap-6 pb-6">
+    <RaffleGridSell
       numbers={raffle.numbers}
-      client:idle
+      raffle_id={raffle.id}
+      price={raffle.price}
+      client:only="react"
     />
-
-
 
     <Card size="sm" class="h-fit">
       <CardHeader class="flex items-center">

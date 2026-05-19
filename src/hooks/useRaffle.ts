@@ -11,8 +11,7 @@ export function useRaffle({
   const [solds, setSolds] = useState<number[]>(initials?.solds ?? []);
   const [selecteds, setSelecteds] = useState<number[]>(initials?.selecteds ?? []);
 
-  const toggleNumber = useCallback((number: number) => {
-    console.log(number)
+  const toggleSelectedNumber = useCallback((number: number) => {
     if (!Number.isInteger(number) || number < 0 || number >= length) return;
     if (solds.includes(number)) return;
 
@@ -42,6 +41,6 @@ export function useRaffle({
 
   return {
     raffle,
-    toggleNumber
+    toggleSelectedNumber
   }
 }
