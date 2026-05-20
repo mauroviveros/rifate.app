@@ -1,9 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@shadcn/card"
 import { formatRaffleNumber } from "@/lib/formatters"
 import { getNumberLength } from "@/lib/utils"
 
 import { RaffleGridCell } from "./RaffleGridCell"
 import { RaffleGridLegend } from "./RaffleGridLegend"
+import { Icon } from "@iconify/react"
 
 interface Props {
   editable?: boolean
@@ -29,7 +30,10 @@ export function RaffleGrid({
   return (
     <Card>
       <CardHeader className="flex items-center justify-between mb-4 flex-wrap">
-        <CardTitle className="font-bold text-lg text-foreground flex-1">Números</CardTitle>
+        <CardTitle className="font-bold text-lg text-foreground flex items-center gap-2 flex-1">
+          <Icon icon="lucide:ticket" className="text-primary" />
+          Números
+        </CardTitle>
         <RaffleGridLegend className="ml-auto" />
       </CardHeader>
       <CardContent

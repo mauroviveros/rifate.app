@@ -6,8 +6,9 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "paths": {
-      "@starwind/*": ["./src/components/starwind/*"],
-      "@shadcn/*": ["./src/components/shadcn/*"],
+      "@starwind/*": ["./src/components/ui/starwind/*"],
+      "@shadcn/*": ["./src/components/ui/shadcn/*"],
+      "@ui/*": ["./src/components/ui/*"],
       "@/*": ["./src/*"],
     }
   }

@@ -1,6 +1,5 @@
 ---
 import { RaffleGridSell } from '@/components/raffle/RaffleGridSell';
-import Stats from '@/components/Stats.astro';
 import AppLayout from '@/layouts/AppLayout.astro';
 import { formatRaffleNumber } from '@/lib/formatters';
 import { mapRaffleDetailStats } from '@/lib/mappers';
@@ -9,6 +8,7 @@ import { getNumberLength } from '@/lib/utils';
 import Button from '@starwind/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@starwind/card';
 import Progress from '@starwind/progress';
+import Stats from '@ui/Stats.astro';
 import { Icon } from 'astro-icon/components';
 
 if (!Astro.params.id) throw new Error("ID de rifa no proporcionado");
@@ -76,7 +76,9 @@ const STATS = mapRaffleDetailStats({
     >
       <Card slot="fallback">
         <CardHeader class="flex items-center justify-between mb-4">
-          <CardTitle class="font-bold text-lg text-foreground">Números</CardTitle>
+          <CardTitle class="font-bold text-lg text-foreground flex items-center gap-2 flex-1">
+            <Icon name="lucide:ticket" class="text-primary" />
+            Números</CardTitle>
         </CardHeader>
         <CardContent class="grid grid-cols-10 gap-1">
           {Array.from({ length: Math.min(raffle.total_numbers, 100) }, () => (
