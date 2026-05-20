@@ -73,7 +73,18 @@ const STATS = mapRaffleDetailStats({
       raffle_id={raffle.id}
       price={raffle.price}
       client:only="react"
-    />
+    >
+      <Card slot="fallback">
+        <CardHeader class="flex items-center justify-between mb-4">
+          <CardTitle class="font-bold text-lg text-foreground">Números</CardTitle>
+        </CardHeader>
+        <CardContent class="grid grid-cols-10 gap-1">
+          {Array.from({ length: Math.min(raffle.total_numbers, 100) }, () => (
+            <div class="aspect-square rounded-lg bg-muted/30 animate-pulse" />
+          ))}
+        </CardContent>
+      </Card>
+    </RaffleGridSell>
 
     <Card size="sm" class="h-fit">
       <CardHeader class="flex items-center">
