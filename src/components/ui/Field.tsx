@@ -5,7 +5,7 @@ import {
   FieldError,
   FieldLabel,
   fieldVariants,
-} from "@/components/shadcn/field";
+} from "@shadcn/field";
 
 type Props = {
   label: string;

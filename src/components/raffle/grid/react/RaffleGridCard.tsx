@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@shadcn/card"
 import { formatRaffleNumber } from "@/lib/formatters"
 import { getNumberLength } from "@/lib/utils"
 

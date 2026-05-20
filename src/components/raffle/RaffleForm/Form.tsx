@@ -6,7 +6,7 @@ import { Card, CardContent } from "@shadcn/card";
 import { RaffleSchema, type RaffleInput } from "@/schemas/raffle";
 import { Input } from "@shadcn/input";
 import { Textarea } from "@shadcn/textarea";
-import { Field } from "@/components/Field";
+import { Field } from "@/components/ui/Field";
 import { ActionError, actions } from "astro:actions";
 
 export type RafflePreviewState = Pick<RaffleInput, "price" | "total_numbers">;

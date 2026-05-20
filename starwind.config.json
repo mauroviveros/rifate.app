@@ -5,7 +5,7 @@
     "baseColor": "neutral",
     "cssVariables": true
   },
-  "componentDir": "src/components",
+  "componentDir": "src/components/ui",
   "utilsDir": "src/lib/utils",
   "components": [
     {

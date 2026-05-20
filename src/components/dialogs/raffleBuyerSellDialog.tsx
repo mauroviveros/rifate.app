@@ -1,6 +1,6 @@
 import { formatCurrency } from "@/lib/formatters"
 import { Button } from "@shadcn/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@shadcn/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@shadcn/dialog"
 import { RaffleBuyerSellForm } from "../forms/raffleBuyerSellForm"
 
 export function RaffleBuyerSellDialog(
