@@ -1,5 +1,5 @@
 import { formatCurrency } from "@/lib/formatters";
-import { z } from "zod";
+import { z } from "astro/zod";
 
 export const RaffleSchema = z.object({
   title: z

@@ -32,8 +32,6 @@ if (error || !raffle) {
   throw new Error("No se pudo cargar la rifa");
 }
 
-console.log("Raffle data:", raffle);
-
 const number_padding = getNumberLength(raffle.total_numbers);
 const STATS = mapRaffleDetailStats({
   sold: raffle.numbers.filter((n) => n.status === "SOLD").length,

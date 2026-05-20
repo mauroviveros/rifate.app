@@ -37,6 +37,7 @@ export function RaffleGridSell(
       {raffle.numbers.selecteds.length > 0 && (
         <footer className="sticky bottom-6 z-10">
           <RaffleBuyerSellDialog
+            raffle_id={raffle_id}
             selectedNumbers={raffle.numbers.selecteds}
             price={price}
           />
