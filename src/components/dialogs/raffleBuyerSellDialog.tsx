@@ -5,15 +5,18 @@ import { RaffleBuyerSellForm } from "../forms/raffleBuyerSellForm"
 
 export function RaffleBuyerSellDialog(
   {
-    selectedNumbers = [],
-    price = 0,
+    raffle_id,
+    selectedNumbers,
+    price,
   }: {
-    selectedNumbers?: number[]
-    price?: number
+    raffle_id: string,
+    selectedNumbers: number[]
+    price: number
   }
 ){
 
   const sellTitle = `Vender ${selectedNumbers.length} número${selectedNumbers.length !== 1 ? 's' : ''}`;
+  const ordenedSelectedNumbers = [...new Set(selectedNumbers)].sort((a, b) => a - b);
 
   return (
     <Dialog>
@@ -32,15 +35,18 @@ export function RaffleBuyerSellDialog(
           >
             {sellTitle}
           </DialogTitle>
-          <div className="flex flex-wrap gap-1.5 py-2">
-            {selectedNumbers.map((number) => (
+          <div className="flex flex-wrap gap-1.5 py-2 max-h-39 overflow-y-auto">
+            {ordenedSelectedNumbers.map((number) => (
               <span key={number} className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-lg">
                 {String(number).padStart(2, "0")}
               </span>
             ))}
           </div>
 
-          <RaffleBuyerSellForm />
+          <RaffleBuyerSellForm
+            raffle_id={raffle_id}
+            numbers={selectedNumbers}
+          />
         </DialogHeader>
       </DialogContent>
     </Dialog>
