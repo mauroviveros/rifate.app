@@ -47,6 +47,10 @@
     {
       "name": "avatar",
       "version": "1.2.2"
+    },
+    {
+      "name": "skeleton",
+      "version": "1.2.1"
     }
   ]
 }
