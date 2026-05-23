@@ -48,7 +48,7 @@ const STATS = mapRaffleListStats({
     {STATS.map((props) => <Stats {...props} />)}
   </article>
 
-  <section class="flex flex-col sm:items-center sm:flex-row gap-3 mb-6">
+  <!-- <section class="flex flex-col sm:items-center sm:flex-row gap-3 mb-6">
     <InputGroup class="h-9">
       <InputGroupInput type="search" placeholder="Buscar rifa..." />
       <InputGroupAddon>
@@ -67,7 +67,7 @@ const STATS = mapRaffleListStats({
         </Button>
       ))}
     </div>
-  </section>
+  </section> -->
 
   <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
     {raffles?.map(({ id, title, description, price, total_numbers, numbers, draw_date, status }) => (
@@ -97,9 +97,9 @@ const STATS = mapRaffleListStats({
             </span> */}
           </CardHeader>
           <CardContent>
-            <article class="flex gap-0.5 mb-3 overflow-hidden h-fit flex-wrap">
+            <article class="flex gap-0.5 mb-3 overflow-hidden h-fit flex-wrap max-h-13">
               {Array
-                .from({ length: total_numbers })
+                .from({ length: Math.min(total_numbers, 100) }, (_, i) => i)
                 .map((_, i) => numbers.find(n => n.number === i)?.status === 'SOLD')
                 .map((bool) => (
                   <span
