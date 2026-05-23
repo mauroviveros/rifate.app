@@ -1,5 +1,5 @@
 ---
-import { RaffleForm } from "@/components/raffle/RaffleForm";
+import { RaffleCreate } from "@/components/raffle/RaffleCreate";
 import AppLayout from "@/layouts/AppLayout.astro";
 import Button from "@starwind/button";
 import { Icon } from "astro-icon/components";
@@ -23,7 +23,7 @@ const user = Astro.locals.user;
   </hgroup>
 
 
-  <RaffleForm
+  <RaffleCreate
     client:only="react"
     owner_id={user.id}
   />

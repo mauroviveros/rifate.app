@@ -1,16 +1,18 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@shadcn/card";
-
 import { Icon } from "@iconify/react";
+import { Card, CardContent, CardHeader, CardTitle } from "@shadcn/card";
+import { useState } from "react";
+import { RaffleCreateForm, type RafflePreviewState } from "../forms/raffleCreateForm";
+import { formatCurrency } from "@/lib/formatters";
 
-interface RafflePreviewProps {
+function RaffleCreatePreview({
+  price = 0,
+  total_numbers = 0
+}: {
   price?: number;
   total_numbers?: number;
-}
-
-export function RafflePreview({ price = 0, total_numbers = 0 }: RafflePreviewProps) {
+}) {
   const numberCount = isNaN(total_numbers) ? 0 : total_numbers;
   const numberPrice = isNaN(price) ? 0 : price;
-  const totalPotential = (numberCount * numberPrice).toFixed(2);
 
   return (
     <div className="space-y-4">
@@ -29,7 +31,7 @@ export function RafflePreview({ price = 0, total_numbers = 0 }: RafflePreviewPro
           <div className="flex justify-between items-baseline flex-wrap">
             <span className="text-muted-foreground">Precio c/u</span>
             <span className="font-bold text-foreground ml-auto">
-              $ {numberPrice.toFixed(2)} ARS
+              {formatCurrency(numberPrice)}
             </span>
           </div>
           <div className="border-t border-border pt-3 flex justify-between items-baseline flex-wrap">
@@ -37,7 +39,7 @@ export function RafflePreview({ price = 0, total_numbers = 0 }: RafflePreviewPro
               Total potencial
             </span>
             <span className="font-extrabold text-primary text-lg ml-auto">
-              $ {totalPotential} ARS
+              {formatCurrency(numberCount * numberPrice)}
             </span>
           </div>
         </CardContent>
@@ -51,6 +53,33 @@ export function RafflePreview({ price = 0, total_numbers = 0 }: RafflePreviewPro
           </p>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+export function RaffleCreate({ owner_id }: { owner_id: string }) {
+  const [previewData, setPreviewData] = useState<RafflePreviewState>({
+    price: 2000,
+    total_numbers: 100,
+  });
+
+  return (
+    <div className="grid lg:grid-cols-[1fr_18rem] gap-6">
+      <Card>
+        <CardContent className="pt-0">
+          <RaffleCreateForm
+            owner_id={owner_id}
+            price={previewData.price}
+            total_numbers={previewData.total_numbers}
+            onPreviewChange={setPreviewData}
+          />
+        </CardContent>
+      </Card>
+
+      <RaffleCreatePreview
+        price={previewData.price}
+        total_numbers={previewData.total_numbers}
+      />
     </div>
   );
 }
