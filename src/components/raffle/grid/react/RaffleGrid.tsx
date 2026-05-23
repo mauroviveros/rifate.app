@@ -31,7 +31,6 @@ export function RaffleGrid({
     <Card>
       <CardHeader className="flex items-center justify-between mb-4 flex-wrap">
         <CardTitle className="font-bold text-lg text-foreground flex items-center gap-2 flex-1">
-          <Icon icon="lucide:ticket" className="text-primary" />
           Números
         </CardTitle>
         <RaffleGridLegend className="ml-auto" />
