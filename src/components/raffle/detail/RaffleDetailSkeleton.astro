@@ -1,0 +1,50 @@
+---
+import { Card, CardContent, CardHeader, CardTitle } from "@starwind/card";
+import Skeleton from "@starwind/skeleton/Skeleton.astro";
+
+interface Props { total_numbers: number; }
+
+const { total_numbers = 100 } = Astro.props;
+---
+
+<div slot="fallback" class="space-y-6">
+  <article class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+    {Array.from({ length: 5 }).map((_, i) => (
+      <Skeleton class="h-28 rounded-2xl shadow-card" />
+    ))}
+  </article>
+  <Skeleton class="h-2 rounded-full" />
+
+  <section class="grid lg:grid-cols-[1fr_23rem] gap-6">
+    <Card slot="fallback">
+      <CardHeader class="flex items-center justify-between mb-4">
+        <CardTitle class="font-bold text-lg text-foreground flex items-center gap-2 flex-1">
+          Números
+        </CardTitle>
+        <Skeleton class="h-5 w-20 rounded-full" />
+      </CardHeader>
+      <CardContent class="grid grid-cols-10 gap-1">
+        {Array.from({ length: Math.min(total_numbers) }, (_, i) => (
+          <Skeleton class="aspect-square rounded-lg" />
+        ))}
+      </CardContent>
+    </Card>
+
+    <Card size="sm" class="h-fit">
+      <CardHeader class="flex items-center">
+        <Skeleton class="h-5 w-32" />
+      </CardHeader>
+      <CardContent class="space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div class="flex items-center gap-3 p-3">
+            <Skeleton class="size-10 rounded-2xl" />
+            <div class="flex-1 space-y-1">
+              <Skeleton class="h-4 w-24" />
+              <Skeleton class="h-3 w-16" />
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  </section>
+</div>

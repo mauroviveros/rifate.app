@@ -1,8 +1,7 @@
-import type { StatsProps } from "@/components/Stats.astro";
 import { formatCurrency, formatDate, formatPercentage } from "@/lib/formatters";
-import type { RaffleDetailStats } from "@/types";
+import type { RaffleDetailStats, Stats } from "@/types";
 
-export const mapRaffleDetailStats = ({ sold, total, price, date }: RaffleDetailStats): StatsProps[] => {
+export const mapRaffleDetailStats = ({ sold, total, price, date }: RaffleDetailStats): Stats[] => {
   return [
     {
       name: "Vendidos",
