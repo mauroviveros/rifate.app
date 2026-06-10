@@ -1,13 +1,9 @@
 ---
 import { RaffleDetail } from '@/components/raffle/detail';
 import RaffleDetailSkeleton from '@/components/raffle/detail/RaffleDetailSkeleton.astro';
-import { RaffleDetailData } from '@/components/raffle/RaffleDetailData';
 import AppLayout from '@/layouts/AppLayout.astro';
 import { createServerClient } from '@/lib/supabase/server';
-import { getNumberLength } from '@/lib/utils';
 import Button from '@starwind/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@starwind/card';
-import Skeleton from '@starwind/skeleton';
 import { Icon } from 'astro-icon/components';
 
 if (!Astro.params.id) throw new Error("ID de rifa no proporcionado");

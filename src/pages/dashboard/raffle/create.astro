@@ -1,10 +1,9 @@
 ---
-import { RaffleCreate } from "@/components/raffle/RaffleCreate";
+import { RaffleCreate } from "@/components/raffle/create";
 import AppLayout from "@/layouts/AppLayout.astro";
 import Button from "@starwind/button";
-import { Card, CardContent } from "@starwind/card";
 import { Icon } from "astro-icon/components";
-import Skeleton from "@starwind/skeleton";
+import RaffleCreateSkeleton from "@/components/raffle/create/RaffleCreateSkeleton.astro";
 
 const user = Astro.locals.user;
 ---
@@ -24,62 +23,7 @@ const user = Astro.locals.user;
     </Button>
   </hgroup>
 
-  <RaffleCreate
-    client:only="react"
-    owner_id={user.id}
-  >
-    <div slot="fallback" class="grid lg:grid-cols-[1fr_18rem] gap-6">
-      <Card>
-        <CardContent class="pt-6 space-y-4">
-          <Skeleton class="h-5 w-20" />
-          <Skeleton class="h-10 w-full" />
-          <div class="pt-3 space-y-2">
-            <Skeleton class="h-5 w-24" />
-            <Skeleton class="h-20 w-full" />
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-            <div class="space-y-2">
-              <Skeleton class="h-5 w-32" />
-              <Skeleton class="h-10 w-full" />
-            </div>
-            <div class="space-y-2">
-              <Skeleton class="h-5 w-36" />
-              <Skeleton class="h-10 w-full" />
-            </div>
-          </div>
-          <div class="space-y-2">
-            <Skeleton class="h-5 w-28" />
-            <Skeleton class="h-10 w-full" />
-          </div>
-          <Skeleton class="h-12 w-full rounded-3xl" />
-        </CardContent>
-      </Card>
-
-      <div class="space-y-4">
-        <Card size="sm">
-          <CardContent class="space-y-3 pt-4">
-            <Skeleton class="h-5 w-20" />
-            <div class="flex justify-between">
-              <Skeleton class="h-4 w-16" />
-              <Skeleton class="h-4 w-12" />
-            </div>
-            <div class="flex justify-between">
-              <Skeleton class="h-4 w-16" />
-              <Skeleton class="h-4 w-16" />
-            </div>
-            <div class="border-t pt-3 flex justify-between">
-              <Skeleton class="h-4 w-24" />
-              <Skeleton class="h-6 w-20" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card size="sm" class="bg-secondary/20 border-0">
-          <CardContent class="pt-4">
-            <Skeleton class="h-4 w-full" />
-            <Skeleton class="h-4 w-3/4 mt-2" />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+  <RaffleCreate client:only="react" owner_id={user.id}>
+    <RaffleCreateSkeleton slot="fallback"/>
   </RaffleCreate>
 </AppLayout>

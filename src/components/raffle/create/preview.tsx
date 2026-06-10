@@ -1,10 +1,8 @@
+import { formatCurrency } from "@/lib/formatters";
 import { Icon } from "@iconify/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@shadcn/card";
-import { useState } from "react";
-import { RaffleCreateForm, type RafflePreviewState } from "../forms/raffleCreateForm";
-import { formatCurrency } from "@/lib/formatters";
 
-function RaffleCreatePreview({
+export function RaffleCreatePreview({
   price = 0,
   total_numbers = 0
 }: {
@@ -23,17 +21,20 @@ function RaffleCreatePreview({
             Resumen
           </CardTitle>
         </CardHeader>
+
         <CardContent className="space-y-3 text-sm">
           <div className="flex justify-between items-baseline flex-wrap">
             <span className="text-muted-foreground">Números</span>
             <span className="font-bold text-foreground ml-auto">{numberCount}</span>
           </div>
+
           <div className="flex justify-between items-baseline flex-wrap">
             <span className="text-muted-foreground">Precio c/u</span>
             <span className="font-bold text-foreground ml-auto">
               {formatCurrency(numberPrice)}
             </span>
           </div>
+
           <div className="border-t border-border pt-3 flex justify-between items-baseline flex-wrap">
             <span className="text-muted-foreground font-semibold">
               Total potencial
@@ -53,33 +54,6 @@ function RaffleCreatePreview({
           </p>
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-export function RaffleCreate({ owner_id }: { owner_id: string }) {
-  const [previewData, setPreviewData] = useState<RafflePreviewState>({
-    price: 2000,
-    total_numbers: 100,
-  });
-
-  return (
-    <div className="grid lg:grid-cols-[1fr_18rem] gap-6">
-      <Card>
-        <CardContent className="pt-0">
-          <RaffleCreateForm
-            owner_id={owner_id}
-            price={previewData.price}
-            total_numbers={previewData.total_numbers}
-            onPreviewChange={setPreviewData}
-          />
-        </CardContent>
-      </Card>
-
-      <RaffleCreatePreview
-        price={previewData.price}
-        total_numbers={previewData.total_numbers}
-      />
     </div>
   );
 }
