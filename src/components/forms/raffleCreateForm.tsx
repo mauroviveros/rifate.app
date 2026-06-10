@@ -168,7 +168,7 @@ export function RaffleCreateForm({
 
             <Button
               type="submit"
-              className="w-full rounded-3xl h-12 font-bold text-base"
+              className="w-full rounded-xl h-12 font-bold text-base"
               size="lg"
               disabled={isSubmitting}
             >
