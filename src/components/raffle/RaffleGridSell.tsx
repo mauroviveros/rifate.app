@@ -15,7 +15,7 @@ export function RaffleGridSell(
   }
 ) {
 
-  const { raffle, toggleSelectedNumber } = useRaffle({
+  const { raffle, toggleSelectedNumber, clearSelection, addSolds } = useRaffle({
     length: 100,
     initials: {
       solds: numbers
@@ -23,6 +23,12 @@ export function RaffleGridSell(
         .map(n => n.number),
     }
   });
+
+  // Mover números seleccionados a vendidos y limpiar selección post-venta
+  const handleSaleSuccess = () => {
+    addSolds(raffle.numbers.selecteds);
+    clearSelection();
+  };
 
   return (
     <article className="space-y-4">
@@ -40,6 +46,7 @@ export function RaffleGridSell(
             raffle_id={raffle_id}
             selectedNumbers={raffle.numbers.selecteds}
             price={price}
+            onSuccess={handleSaleSuccess}
           />
         </footer>
       )}

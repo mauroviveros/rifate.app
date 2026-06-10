@@ -3,7 +3,7 @@ import { Field } from "../ui/Field";
 import { Input } from "@shadcn/input";
 import { Textarea } from "@shadcn/textarea";
 import { Button } from "@shadcn/button";
-import { RaffleBuyerSellSchema, type RaffleBuyerSellInput } from "@/schemas/raffle-buyer";
+import { SellRaffleNumbersSchema, type SellRaffleNumbersInput } from "@/schemas/raffle-buyer";
 import type { Tables } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
@@ -12,17 +12,20 @@ import { actions } from "astro:actions";
 export function RaffleBuyerSellForm(
   {
     raffle_id,
-    numbers
+    numbers,
+    onSuccess,
   }: {
     raffle_id: Tables<'raffles'>["id"],
     numbers: Tables<'raffle_numbers'>["number"][],
+    onSuccess?: () => void,
   }
 ) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const methods = useForm<RaffleBuyerSellInput>({
+  const [error, setError] = useState<string | null>(null);
+  const methods = useForm<SellRaffleNumbersInput>({
     mode: "onChange",
     reValidateMode: "onChange",
-    resolver: zodResolver(RaffleBuyerSellSchema as never),
+    resolver: zodResolver(SellRaffleNumbersSchema),
     disabled: isSubmitting,
     defaultValues: {
       raffle_id,
@@ -33,13 +36,18 @@ export function RaffleBuyerSellForm(
     },
   });
 
-  const handleSubmit: FormSubmitHandler<RaffleBuyerSellInput> = async ({ data }) => {
+  // Si el action devuelve error (conflicto, server error) se muestra en el formulario.
+  // Si hay una excepción inesperada (error de red, etc.) se captura aparte.
+  const handleSubmit: FormSubmitHandler<SellRaffleNumbersInput> = async ({ data }) => {
     setIsSubmitting(true);
+    setError(null);
 
     try {
-      const { error, data:dataRes } = await actions.sellRaffleNumbers(data)
-    } catch (error) {
-      console.error("Error selling raffle numbers:", error);
+      const { error } = await actions.sellRaffleNumbers(data);
+      if (error) setError(error.message);
+      else onSuccess?.();
+    } catch {
+      setError("Ocurrió un error inesperado. Intentalo nuevamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -52,6 +60,12 @@ export function RaffleBuyerSellForm(
         onSubmit={handleSubmit}
         className="space-y-3"
       >
+        {error && (
+          <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+
         <Field
           label="Nombre"
           htmlFor="buyer.name"
@@ -97,8 +111,9 @@ export function RaffleBuyerSellForm(
           type="submit"
           size="lg"
           className="w-full rounded-xl h-12 font-bold text-base"
+          disabled={isSubmitting}
         >
-          Confirmar venta
+          {isSubmitting ? "Vendiendo..." : "Confirmar venta"}
         </Button>
       </Form>
     </FormProvider>
