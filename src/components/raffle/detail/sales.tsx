@@ -1,22 +1,26 @@
-import { useRaffle } from "@/hooks/useRaffle";
-import { RaffleGrid } from "./grid/react";
 import type { Tables } from "@/types";
-import { RaffleBuyerSellDialog } from "../dialogs/raffleBuyerSellDialog";
+import { RaffleGrid } from "../grid/react";
+import { useRaffle } from "@/hooks/useRaffle";
+import { RaffleBuyerSellDialog } from "@/components/dialogs/raffleBuyerSellDialog";
 
-export function RaffleGridSell(
+export function RaffleSalesGrid(
   {
     numbers,
     raffle_id,
-    price
+    price,
+    total_numbers,
+    onSale,
   }: {
     numbers: Tables<'raffle_numbers'>[];
     raffle_id: string;
     price: number;
+    total_numbers: number;
+    onSale?: () => void;
   }
 ) {
 
-  const { raffle, toggleSelectedNumber, clearSelection, addSolds } = useRaffle({
-    length: 100,
+  const { raffle, toggleSelectedNumber } = useRaffle({
+    length: total_numbers,
     initials: {
       solds: numbers
         .filter(n => n.status === 'SOLD')
@@ -24,10 +28,10 @@ export function RaffleGridSell(
     }
   });
 
-  // Mover números seleccionados a vendidos y limpiar selección post-venta
+  // Mover números seleccionados a vendidos, limpiar selección y notificar
+  // al padre para que refetchee stats + compradores
   const handleSaleSuccess = () => {
-    addSolds(raffle.numbers.selecteds);
-    clearSelection();
+    onSale?.();
   };
 
   return (

@@ -1,7 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { RaffleSchema } from "@/schemas/raffle";
 import { ActionError, defineAction } from "astro:actions";
-import z from "zod";
 
 export default defineAction({
   accept: "json",

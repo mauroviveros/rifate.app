@@ -1,15 +1,13 @@
 ---
-import { RaffleGridSell } from '@/components/raffle/RaffleGridSell';
+import { RaffleDetail } from '@/components/raffle/detail';
+import RaffleDetailSkeleton from '@/components/raffle/detail/RaffleDetailSkeleton.astro';
+import { RaffleDetailData } from '@/components/raffle/RaffleDetailData';
 import AppLayout from '@/layouts/AppLayout.astro';
-import { formatRaffleNumber } from '@/lib/formatters';
-import { mapRaffleDetailStats } from '@/lib/mappers';
 import { createServerClient } from '@/lib/supabase/server';
 import { getNumberLength } from '@/lib/utils';
 import Button from '@starwind/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@starwind/card';
-import Progress from '@starwind/progress';
 import Skeleton from '@starwind/skeleton';
-import Stats from '@ui/Stats.astro';
 import { Icon } from 'astro-icon/components';
 
 if (!Astro.params.id) throw new Error("ID de rifa no proporcionado");
@@ -33,13 +31,6 @@ if (error || !raffle) {
   throw new Error("No se pudo cargar la rifa");
 }
 
-const number_padding = getNumberLength(raffle.total_numbers);
-const STATS = mapRaffleDetailStats({
-  sold: raffle.numbers.filter((n) => n.status === "SOLD").length,
-  total: raffle.total_numbers,
-  price: raffle.price,
-  date: new Date(raffle.draw_date)
-});
 ---
 
 <AppLayout size="6xl">
@@ -54,78 +45,13 @@ const STATS = mapRaffleDetailStats({
     </Button>
   </div>
 
-  <article class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-    {STATS.map((props) => (
-      <Stats class:list={[props.highlight === 'accent' ? "col-span-2 lg:col-span-1" : ""]} {...props} />
-    ))}
-  </article>
-
-  <Progress
-    value={(raffle.numbers.filter(n => n.status === 'SOLD').length / raffle.total_numbers) * 100}
-    class="h-2 rounded-full mb-6"
-    variant="primary"
-  />
-
-  <section class="grid lg:grid-cols-[1fr_23rem] gap-6 pb-6">
-    <RaffleGridSell
-      numbers={raffle.numbers}
-      raffle_id={raffle.id}
-      price={raffle.price}
-      client:only="react"
-    >
-      <Card slot="fallback">
-        <CardHeader class="flex items-center justify-between mb-4">
-          <CardTitle class="font-bold text-lg text-foreground flex items-center gap-2 flex-1">
-            Números
-          </CardTitle>
-          <Skeleton class="h-5 w-20 rounded-full" />
-        </CardHeader>
-        <CardContent class="grid grid-cols-10 gap-1">
-          {Array.from({ length: Math.min(raffle.total_numbers, 100) }, () => (
-            <Skeleton class="aspect-square rounded-lg" />
-          ))}
-        </CardContent>
-      </Card>
-    </RaffleGridSell>
-
-    <Card size="sm" class="h-fit">
-      <CardHeader class="flex items-center">
-        <CardTitle class="font-bold text-lg text-foreground flex items-center gap-2 flex-1">
-          <Icon name="lucide:users" class="size-4 text-primary" />
-          Compradores
-        </CardTitle>
-        <span class="text-xs font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-          {raffle.buyers.length}
-        </span>
-      </CardHeader>
-      <CardContent class="space-y-3">
-        <!-- <InputGroup>
-          <InputGroupInput type="search" placeholder="Buscar rifa..." />
-          <InputGroupAddon>
-            <Icon name="lucide:search" />
-          </InputGroupAddon>
-        </InputGroup> -->
-
-        <ul class="space-y-1.5 max-h-100 overflow-y-auto pr-2">
-          <!-- TODO: hover:bg-muted transition-colors -->
-          {
-            raffle.numbers
-              .filter(n => n.status === 'SOLD')
-              .sort((a, b) => a.number - b.number)
-              .map(({ number, buyer }) => (
-                <li class="flex items-center gap-3 bg-muted/50 rounded-xl p-3">
-                  <span class="size-10 rounded-2xl bg-raffle-sold flex items-center justify-center text-raffle-sold-foreground font-bold text-sm shrink-0">
-                    {formatRaffleNumber(number, number_padding)}
-                  </span>
-                  <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-foreground text-sm truncate">{buyer.name}</p>
-                    <p class="text-xs text-muted-foreground">{buyer.phone}</p>
-                  </div>
-                </li>
-              ))
-          }
-        </ul>
-      </CardContent>
-    </Card>
-  </section>
+  <RaffleDetail
+    raffle={raffle}
+    client:only="react"
+  >
+    <RaffleDetailSkeleton
+      total_numbers={raffle.total_numbers}
+      slot="fallback"
+    />
+  </RaffleDetail>
 </AppLayout>
