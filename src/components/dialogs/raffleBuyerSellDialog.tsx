@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatCurrency } from "@/lib/formatters"
 import { Button } from "@shadcn/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@shadcn/dialog"
@@ -8,18 +9,25 @@ export function RaffleBuyerSellDialog(
     raffle_id,
     selectedNumbers,
     price,
+    onSuccess,
   }: {
     raffle_id: string,
     selectedNumbers: number[]
     price: number
+    onSuccess?: () => void,
   }
 ){
-
+  const [open, setOpen] = useState(false);
   const sellTitle = `Vender ${selectedNumbers.length} número${selectedNumbers.length !== 1 ? 's' : ''}`;
   const ordenedSelectedNumbers = [...new Set(selectedNumbers)].sort((a, b) => a - b);
 
+  const handleSuccess = () => {
+    setOpen(false);
+    onSuccess?.();
+  };
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
             size="lg"
@@ -46,6 +54,7 @@ export function RaffleBuyerSellDialog(
           <RaffleBuyerSellForm
             raffle_id={raffle_id}
             numbers={selectedNumbers}
+            onSuccess={handleSuccess}
           />
         </DialogHeader>
       </DialogContent>

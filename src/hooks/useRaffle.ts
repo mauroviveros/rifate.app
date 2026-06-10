@@ -19,7 +19,15 @@ export function useRaffle({
       if (current.includes(number)) return current.filter((n) => n !== number);
       return [...current, number].sort((a, b) => a - b);
     });
-  }, [length, solds, selecteds]);
+  }, [length, solds]);
+
+  const clearSelection = useCallback(() => {
+    setSelecteds([]);
+  }, []);
+
+  const addSolds = useCallback((newSolds: number[]) => {
+    setSolds((current) => [...new Set([...current, ...newSolds])].sort((a, b) => a - b));
+  }, []);
 
   const raffle = useMemo(() => {
     return {
@@ -41,6 +49,8 @@ export function useRaffle({
 
   return {
     raffle,
-    toggleSelectedNumber
+    toggleSelectedNumber,
+    clearSelection,
+    addSolds
   }
 }

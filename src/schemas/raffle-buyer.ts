@@ -1,6 +1,6 @@
 import { z } from "astro/zod";
 
-export const RaffleBuyerSellSchema = z.object({
+export const SellRaffleNumbersSchema = z.object({
   raffle_id: z.uuid(),
   numbers: z.array(z.number().int().min(0)).min(1, "Selecciona al menos un número"),
   name: z.string().min(1, "El nombre es requerido").max(100),
@@ -8,4 +8,4 @@ export const RaffleBuyerSellSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
-export type RaffleBuyerSellInput = z.infer<typeof RaffleBuyerSellSchema>;
+export type SellRaffleNumbersInput = z.infer<typeof SellRaffleNumbersSchema>;
