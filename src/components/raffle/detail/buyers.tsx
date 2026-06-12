@@ -33,7 +33,7 @@ export default function RaffleBuyers({
             </div>
           </li> */}
           {sold_numbers.map(({ number, buyer }) => (
-            <li className="flex items-center gap-3 bg-muted/50 rounded-xl p-3">
+            <li key={number} className="flex items-center gap-3 bg-muted/50 rounded-xl p-3">
               <span className="size-10 rounded-2xl bg-accent flex items-center justify-center text-accent-foreground font-bold text-sm shrink-0">
                 {formatRaffleNumber(number, number_padding)}
               </span>
