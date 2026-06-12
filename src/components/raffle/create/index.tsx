@@ -8,7 +8,7 @@ import {
 
 import { RaffleCreatePreview } from './preview';
 
-export function RaffleCreate({ owner_id }: { owner_id: string }) {
+export function RaffleCreate() {
   const [previewData, setPreviewData] = useState<RafflePreviewState>({
     price: 2000,
     total_numbers: 100,
@@ -19,7 +19,6 @@ export function RaffleCreate({ owner_id }: { owner_id: string }) {
       <Card>
         <CardContent className="pt-0">
           <RaffleCreateForm
-            owner_id={owner_id}
             price={previewData.price}
             total_numbers={previewData.total_numbers}
             onPreviewChange={setPreviewData}

@@ -20,7 +20,6 @@ export const RaffleSchema = z.object({
     .min(1, 'El número total de boletos debe ser mayor a 0')
     .max(10000, 'El número total de boletos no puede superar 10,000'),
   draw_date: z.iso.date(),
-  owner_id: z.uuid(),
 });
 
 export type RaffleInput = z.infer<typeof RaffleSchema>;

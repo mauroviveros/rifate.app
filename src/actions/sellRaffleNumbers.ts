@@ -6,8 +6,29 @@ import { SellRaffleNumbersSchema } from '@/schemas/raffle-buyer';
 export default defineAction({
   accept: 'json',
   input: SellRaffleNumbersSchema,
-  handler: async (input, { cookies, request }) => {
+  handler: async (input, { cookies, request, locals }) => {
+    if (!locals.user) {
+      throw new ActionError({
+        code: 'UNAUTHORIZED',
+        message: 'Debes iniciar sesión para vender números',
+      });
+    }
+
     const supabase = createServerClient({ cookies, request });
+
+    // Guard: verificar ownership de la rifa
+    const { data: raffle } = await supabase
+      .from('raffles')
+      .select('owner_id')
+      .eq('id', input.raffle_id)
+      .single();
+
+    if (!raffle || raffle.owner_id !== locals.user.id) {
+      throw new ActionError({
+        code: 'FORBIDDEN',
+        message: 'No tenés permiso para vender números en esta rifa',
+      });
+    }
 
     // Guard: verificar que los números no estén ya vendidos (evitar race conditions)
     const { data: soldNumbers } = await supabase

@@ -5,8 +5,6 @@ import { Icon } from 'astro-icon/components';
 import { RaffleCreate } from '@/components/raffle/create';
 import RaffleCreateSkeleton from '@/components/raffle/create/RaffleCreateSkeleton.astro';
 import AppLayout from '@/layouts/AppLayout.astro';
-
-const user = Astro.locals.user;
 ---
 
 <AppLayout size="3xl" class="pb-4 sm:pb-6">
@@ -28,7 +26,7 @@ const user = Astro.locals.user;
     </Button>
   </hgroup>
 
-  <RaffleCreate client:only="react" owner_id={user.id}>
+  <RaffleCreate client:only="react">
     <RaffleCreateSkeleton slot="fallback" />
   </RaffleCreate>
 </AppLayout>
