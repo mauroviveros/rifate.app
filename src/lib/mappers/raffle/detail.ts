@@ -1,34 +1,39 @@
-import { formatCurrency, formatDate, formatPercentage } from "@/lib/formatters";
-import type { RaffleDetailStats, Stats } from "@/types";
+import { formatCurrency, formatDate, formatPercentage } from '@/lib/formatters';
+import type { RaffleDetailStats, Stats } from '@/types';
 
-export const mapRaffleDetailStats = ({ sold, total, price, date }: RaffleDetailStats): Stats[] => {
+export const mapRaffleDetailStats = ({
+  sold,
+  total,
+  price,
+  date,
+}: RaffleDetailStats): Stats[] => {
   return [
     {
-      name: "Vendidos",
+      name: 'Vendidos',
       value: `${sold}/${total}`,
-      icon: "lucide:shopping-cart",
+      icon: 'lucide:shopping-cart',
     },
     {
-      name: "Progreso",
+      name: 'Progreso',
       value: formatPercentage(sold / total),
-      icon: "lucide:percent",
+      icon: 'lucide:percent',
     },
     {
-      name: "Recaudado",
+      name: 'Recaudado',
       value: formatCurrency(sold * price),
-      icon: "lucide:dollar-sign",
-      highlight: "accent",
+      icon: 'lucide:dollar-sign',
+      highlight: 'accent',
     },
     {
-      name: "Sorteo",
-      value: formatDate(date, { dateStyle: "medium" }),
-      icon: "lucide:calendar-days",
+      name: 'Sorteo',
+      value: formatDate(date, { dateStyle: 'medium' }),
+      icon: 'lucide:calendar-days',
     },
     {
-      name: "Disponibles",
+      name: 'Disponibles',
       value: `${total - sold}`,
-      icon: "lucide:users",
-      highlight: "primary"
-    }
-  ]
-}
+      icon: 'lucide:users',
+      highlight: 'primary',
+    },
+  ];
+};

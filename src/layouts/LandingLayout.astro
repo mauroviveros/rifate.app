@@ -1,31 +1,36 @@
 ---
-import type { HTMLAttributes } from "astro/types";
-import Body, { type BodyProps } from "./components/Body.astro";
-import { Icon } from "astro-icon/components";
-import AuthBtn from "@/components/auth/AuthBtn.astro";
-import Button from "@starwind/button";
+import Button from '@starwind/button';
+import type { HTMLAttributes } from 'astro/types';
+import { Icon } from 'astro-icon/components';
+
+import Body, { type BodyProps } from './components/Body.astro';
 
 interface Props extends BodyProps, HTMLAttributes<'main'> {}
 const { title, description, class: className, ...props } = Astro.props;
 ---
 
 <Body title={title} description={description}>
-  <header class="h-16 flex items-center px-6">
-    <div class="container mx-auto max-w-6xl flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2 group">
-        <span class="size-9 rounded-xl bg-gradient-hero flex items-center justify-center">
-          <Icon name="lucide:ticket" class="size-5 text-primary-foreground" />
+  <header class="flex h-16 items-center px-6">
+    <div class="container mx-auto flex max-w-6xl items-center justify-between">
+      <a href="/" class="group flex items-center gap-2">
+        <span
+          class="bg-gradient-hero flex size-9 items-center justify-center rounded-xl"
+        >
+          <Icon name="lucide:ticket" class="text-primary-foreground size-5" />
         </span>
-        <span class="text-xl font-extrabold text-foreground tracking-tight group-hover:hover:text-primary transition-colors">rifate.app</span>
+        <span
+          class="text-foreground group-hover:hover:text-primary text-xl font-extrabold tracking-tight transition-colors"
+          >rifate.app</span
+        >
       </a>
 
       <nav class="flex items-center gap-3">
         <Button
-            href="/dashboard"
-            variant="primary"
-            class="rounded-full font-bold px-6"
-          >
-            Ingresar
+          href="/dashboard"
+          variant="primary"
+          class="rounded-full px-6 font-bold"
+        >
+          Ingresar
         </Button>
       </nav>
     </div>
@@ -33,9 +38,9 @@ const { title, description, class: className, ...props } = Astro.props;
 
   <main
     class:list={[
-      "[&>section]:px-6 [&>section]:py-20",
-      "[&>section]:even:bg-red-500",
-      className
+      '[&>section]:px-6 [&>section]:py-20',
+      '[&>section]:even:bg-red-500',
+      className,
     ]}
     {...props}
   >

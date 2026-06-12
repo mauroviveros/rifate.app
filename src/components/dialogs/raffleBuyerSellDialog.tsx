@@ -1,25 +1,33 @@
-import { useState } from "react";
-import { formatCurrency } from "@/lib/formatters"
-import { Button } from "@shadcn/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@shadcn/dialog"
-import { RaffleBuyerSellForm } from "../forms/raffleBuyerSellForm"
+import { Button } from '@shadcn/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@shadcn/dialog';
+import { useState } from 'react';
 
-export function RaffleBuyerSellDialog(
-  {
-    raffle_id,
-    selectedNumbers,
-    price,
-    onSuccess,
-  }: {
-    raffle_id: string,
-    selectedNumbers: number[]
-    price: number
-    onSuccess?: () => void,
-  }
-){
+import { formatCurrency } from '@/lib/formatters';
+
+import { RaffleBuyerSellForm } from '../forms/raffleBuyerSellForm';
+
+export function RaffleBuyerSellDialog({
+  raffle_id,
+  selectedNumbers,
+  price,
+  onSuccess,
+}: {
+  raffle_id: string;
+  selectedNumbers: number[];
+  price: number;
+  onSuccess?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const sellTitle = `Vender ${selectedNumbers.length} número${selectedNumbers.length !== 1 ? 's' : ''}`;
-  const ordenedSelectedNumbers = [...new Set(selectedNumbers)].sort((a, b) => a - b);
+  const ordenedSelectedNumbers = [...new Set(selectedNumbers)].sort(
+    (a, b) => a - b,
+  );
 
   const handleSuccess = () => {
     setOpen(false);
@@ -30,23 +38,24 @@ export function RaffleBuyerSellDialog(
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-            size="lg"
-            className="w-full rounded-xl h-12 font-bold text-base shadow-float"
-          >
-            {sellTitle} - {formatCurrency(selectedNumbers.length * price)}
-          </Button>
+          size="lg"
+          className="shadow-float h-12 w-full rounded-xl text-base font-bold"
+        >
+          {sellTitle} - {formatCurrency(selectedNumbers.length * price)}
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle
-            className="tracking-tight text-lg font-extrabold"
-          >
+          <DialogTitle className="text-lg font-extrabold tracking-tight">
             {sellTitle}
           </DialogTitle>
-          <div className="flex flex-wrap gap-1.5 py-2 max-h-39 overflow-y-auto">
+          <div className="flex max-h-39 flex-wrap gap-1.5 overflow-y-auto py-2">
             {ordenedSelectedNumbers.map((number) => (
-              <span key={number} className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-lg">
-                {String(number).padStart(2, "0")}
+              <span
+                key={number}
+                className="bg-primary/10 text-primary rounded-lg px-2.5 py-1 text-xs font-bold"
+              >
+                {String(number).padStart(2, '0')}
               </span>
             ))}
           </div>
@@ -59,5 +68,5 @@ export function RaffleBuyerSellDialog(
         </DialogHeader>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

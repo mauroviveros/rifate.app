@@ -1,7 +1,9 @@
 ---
-import "@/styles/starwind.css";
-import type { HTMLAttributes } from "astro/types";
-import Body, { type BodyProps } from "./components/Body.astro";
+import '@/styles/starwind.css';
+
+import type { HTMLAttributes } from 'astro/types';
+
+import Body, { type BodyProps } from './components/Body.astro';
 
 interface Props extends BodyProps, HTMLAttributes<'main'> {}
 const { title, description, class: className, ...props } = Astro.props;

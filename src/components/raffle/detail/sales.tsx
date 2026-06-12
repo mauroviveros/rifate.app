@@ -1,31 +1,27 @@
-import type { Tables } from "@/types";
-import { RaffleGrid } from "../grid/react";
-import { useRaffle } from "@/hooks/useRaffle";
-import { RaffleBuyerSellDialog } from "@/components/dialogs/raffleBuyerSellDialog";
+import { RaffleBuyerSellDialog } from '@/components/dialogs/raffleBuyerSellDialog';
+import { useRaffle } from '@/hooks/useRaffle';
+import type { Tables } from '@/types';
 
-export function RaffleSalesGrid(
-  {
-    numbers,
-    raffle_id,
-    price,
-    total_numbers,
-    onSale,
-  }: {
-    numbers: Tables<'raffle_numbers'>[];
-    raffle_id: string;
-    price: number;
-    total_numbers: number;
-    onSale?: () => void;
-  }
-) {
+import { RaffleGrid } from '../grid/react';
 
+export function RaffleSalesGrid({
+  numbers,
+  raffle_id,
+  price,
+  total_numbers,
+  onSale,
+}: {
+  numbers: Tables<'raffle_numbers'>[];
+  raffle_id: string;
+  price: number;
+  total_numbers: number;
+  onSale?: () => void;
+}) {
   const { raffle, toggleSelectedNumber } = useRaffle({
     length: total_numbers,
     initials: {
-      solds: numbers
-        .filter(n => n.status === 'SOLD')
-        .map(n => n.number),
-    }
+      solds: numbers.filter((n) => n.status === 'SOLD').map((n) => n.number),
+    },
   });
 
   // Mover números seleccionados a vendidos, limpiar selección y notificar
@@ -55,5 +51,5 @@ export function RaffleSalesGrid(
         </footer>
       )}
     </article>
-  )
+  );
 }

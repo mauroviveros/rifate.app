@@ -1,9 +1,9 @@
-export * from "./database";
-export * from "./raffle";
+export * from './database';
+export * from './raffle';
 
 export interface Stats {
   name: string;
   value: string;
   icon: string;
-  highlight?: "default" | "accent" | "primary";
+  highlight?: 'default' | 'accent' | 'primary';
 }

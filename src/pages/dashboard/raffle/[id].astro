@@ -1,38 +1,49 @@
 ---
+import Button from '@starwind/button';
+import { Icon } from 'astro-icon/components';
+
 import { RaffleDetail } from '@/components/raffle/detail';
 import RaffleDetailSkeleton from '@/components/raffle/detail/RaffleDetailSkeleton.astro';
 import AppLayout from '@/layouts/AppLayout.astro';
 import { createServerClient } from '@/lib/supabase/server';
-import Button from '@starwind/button';
-import { Icon } from 'astro-icon/components';
 
-if (!Astro.params.id) throw new Error("ID de rifa no proporcionado");
+if (!Astro.params.id) throw new Error('ID de rifa no proporcionado');
 
-const supabase = createServerClient({ request: Astro.request, cookies: Astro.cookies });
+const supabase = createServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies,
+});
 const { data: raffle, error } = await supabase
-  .from("raffles")
-  .select(`
+  .from('raffles')
+  .select(
+    `
     *,
     buyers:raffle_buyers(*),
     numbers:raffle_numbers(
       *,
       buyer:raffle_buyers(*)
     )
-  `)
-  .eq("id", Astro.params.id)
-  .single()
+  `,
+  )
+  .eq('id', Astro.params.id)
+  .single();
 
 if (error || !raffle) {
-  console.error("Error fetching raffle data:", error);
-  throw new Error("No se pudo cargar la rifa");
+  console.error('Error fetching raffle data:', error);
+  throw new Error('No se pudo cargar la rifa');
 }
-
 ---
 
 <AppLayout size="6xl">
   <hgroup slot="header">
-    <h1 class="text-2xl lg:text-3xl font-extrabold text-primary-foreground mb-1">{raffle.title}</h1>
-    <p class="text-primary-foreground/70 text-sm max-w-lg">{raffle.description}</p>
+    <h1
+      class="text-primary-foreground mb-1 text-2xl font-extrabold lg:text-3xl"
+    >
+      {raffle.title}
+    </h1>
+    <p class="text-primary-foreground/70 max-w-lg text-sm">
+      {raffle.description}
+    </p>
   </hgroup>
   <div class="flex flex-wrap gap-2" slot="header">
     <Button variant="outline-primary" size="sm" disabled>
@@ -41,10 +52,7 @@ if (error || !raffle) {
     </Button>
   </div>
 
-  <RaffleDetail
-    raffle={raffle}
-    client:only="react"
-  >
+  <RaffleDetail raffle={raffle} client:only="react">
     <RaffleDetailSkeleton
       total_numbers={raffle.total_numbers}
       slot="fallback"

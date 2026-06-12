@@ -1,46 +1,65 @@
 ---
-import type { HTMLAttributes } from "astro/types";
-import Body, { type BodyProps } from "./components/Body.astro";
-import { Icon } from 'astro-icon/components'
-import { tv, type VariantProps } from "tailwind-variants";
-import AuthMenu from "@/components/auth/AuthMenu.astro";
+import type { HTMLAttributes } from 'astro/types';
+import { Icon } from 'astro-icon/components';
+import { tv, type VariantProps } from 'tailwind-variants';
+
+import AuthMenu from '@/components/auth/AuthMenu.astro';
+
+import Body, { type BodyProps } from './components/Body.astro';
 
 const layout = tv({
   variants: {
     size: {
-      "3xl": "max-w-3xl",
-      "4xl": "max-w-4xl",
-      "5xl": "max-w-5xl",
-      "6xl": "max-w-6xl",
-    }
+      '3xl': 'max-w-3xl',
+      '4xl': 'max-w-4xl',
+      '5xl': 'max-w-5xl',
+      '6xl': 'max-w-6xl',
+    },
   },
   defaultVariants: {
-    size: "5xl"
-  }
-})
+    size: '5xl',
+  },
+});
 
-interface Props extends BodyProps, HTMLAttributes<'main'>, VariantProps<typeof layout> {}
-const { title, description, size= "5xl", class: className, ...props } = Astro.props;
+interface Props
+  extends BodyProps, HTMLAttributes<'main'>, VariantProps<typeof layout> {}
+const {
+  title,
+  description,
+  size = '5xl',
+  class: className,
+  ...props
+} = Astro.props;
 ---
+
 <Body title={title} description={description} class="min-h-dvh">
-  <header class="bg-gradient-hero text-primary-foreground px-6 pt-6 pb-14 lg:pb-16 ">
-    <div class:list={["mx-auto", layout({ size })]}>
-      <nav class="flex items-center justify-between mb-4 h-10">
+  <header
+    class="bg-gradient-hero text-primary-foreground px-6 pt-6 pb-14 lg:pb-16"
+  >
+    <div class:list={['mx-auto', layout({ size })]}>
+      <nav class="mb-4 flex h-10 items-center justify-between">
         <a class="flex items-center gap-2" href="/dashboard">
           <Icon name="lucide:ticket" class="size-6" />
-          <span class="text-lg font-extrabold text-primary-foreground">rifate.app</span>
+          <span class="text-primary-foreground text-lg font-extrabold"
+            >rifate.app</span
+          >
         </a>
 
-        <AuthMenu server:defer/>
+        <AuthMenu server:defer />
       </nav>
 
-      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-x-4 gap-y-2">
+      <div
+        class="flex flex-col gap-x-4 gap-y-2 sm:flex-row sm:items-end sm:justify-between"
+      >
         <slot name="header" />
       </div>
     </div>
   </header>
 
-  <main class:list={["px-4 sm:px-6 -mt-8 mx-auto", layout({ size }), className]} {...props}>
+  <main
+    class:list={['mx-auto -mt-8 px-4 sm:px-6', layout({ size }), className]}
+    {...props}
+  >
     <slot />
   </main>
 </Body>

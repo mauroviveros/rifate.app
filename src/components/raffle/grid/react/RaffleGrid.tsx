@@ -1,19 +1,19 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@shadcn/card"
-import { formatRaffleNumber } from "@/lib/formatters"
-import { getNumberLength } from "@/lib/utils"
+import { Card, CardContent, CardHeader, CardTitle } from '@shadcn/card';
 
-import { RaffleGridCell } from "./RaffleGridCell"
-import { RaffleGridLegend } from "./RaffleGridLegend"
-import { Icon } from "@iconify/react"
+import { formatRaffleNumber } from '@/lib/formatters';
+import { getNumberLength } from '@/lib/utils';
+
+import { RaffleGridCell } from './RaffleGridCell';
+import { RaffleGridLegend } from './RaffleGridLegend';
 
 interface Props {
-  editable?: boolean
-  length: number
-  soldNumbers?: number[]
-  selectedNumbers?: number[]
-  title?: string
-  numberPadding?: number
-  onToggleSelectedNumber?: (number: number) => void
+  editable?: boolean;
+  length: number;
+  soldNumbers?: number[];
+  selectedNumbers?: number[];
+  title?: string;
+  numberPadding?: number;
+  onToggleSelectedNumber?: (number: number) => void;
 }
 
 export function RaffleGrid({
@@ -29,17 +29,17 @@ export function RaffleGrid({
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between mb-4 flex-wrap">
-        <CardTitle className="font-bold text-lg text-foreground flex items-center gap-2 flex-1">
+      <CardHeader className="mb-4 flex flex-wrap items-center justify-between">
+        <CardTitle className="text-foreground flex flex-1 items-center gap-2 text-lg font-bold">
           Números
         </CardTitle>
         <RaffleGridLegend className="ml-auto" />
       </CardHeader>
       <CardContent
         className={[
-          "grid grid-cols-10 gap-1",
-          editable ? "" : "pointer-events-none",
-        ].join(" ")}
+          'grid grid-cols-10 gap-1',
+          editable ? '' : 'pointer-events-none',
+        ].join(' ')}
       >
         {Array.from({ length }, (_, index) => {
           return (
@@ -51,9 +51,9 @@ export function RaffleGrid({
               editable={editable}
               onToggleSelected={() => onToggleSelectedNumber?.(index)}
             />
-          )
+          );
         })}
       </CardContent>
     </Card>
-  )
+  );
 }

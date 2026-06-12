@@ -1,10 +1,14 @@
-export * from "./react";
+export * from './react';
 
 export const getNumberLength = (number: number) => {
   return String(number - 1).length;
-}
+};
 
-export const getUniqueRandomNumbers = (max: number, count = 1, existing: number[] = []) => {
+export const getUniqueRandomNumbers = (
+  max: number,
+  count = 1,
+  existing: number[] = [],
+) => {
   const result = [];
   const used = new Set(existing);
 
@@ -22,4 +26,4 @@ export const getUniqueRandomNumbers = (max: number, count = 1, existing: number[
   }
 
   return result;
-}
+};

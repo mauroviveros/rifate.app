@@ -1,5 +1,6 @@
 ---
 import '@/global.css';
+
 import type { HTMLAttributes } from 'astro/types';
 import { Font } from 'astro:assets';
 
@@ -11,6 +12,7 @@ export interface BodyProps {
 interface Props extends BodyProps, HTMLAttributes<'body'> {}
 const { title, description = '', class: className, ...props } = Astro.props;
 ---
+
 <!doctype html>
 <html lang="es">
   <head>
@@ -24,7 +26,10 @@ const { title, description = '', class: className, ...props } = Astro.props;
     <Font cssVariable="--fontsource-nunito" />
     <slot name="head" />
   </head>
-  <body class:list={["bg-background text-foreground font-nunito", className]} {...props}>
+  <body
+    class:list={['bg-background text-foreground font-nunito', className]}
+    {...props}
+  >
     <slot />
   </body>
 </html>

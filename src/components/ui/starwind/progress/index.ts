@@ -1,4 +1,4 @@
-import Progress, { progress, progressIndicator } from "./Progress.astro";
+import Progress, { progress, progressIndicator } from './Progress.astro';
 
 const ProgressVariants = {
   progress,

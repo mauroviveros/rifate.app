@@ -1,7 +1,12 @@
-import { RaffleCreateForm, type RafflePreviewState } from "@/components/forms/raffleCreateForm";
-import { Card, CardContent } from "@shadcn/card";
-import { useState } from "react";
-import { RaffleCreatePreview } from "./preview";
+import { Card, CardContent } from '@shadcn/card';
+import { useState } from 'react';
+
+import {
+  RaffleCreateForm,
+  type RafflePreviewState,
+} from '@/components/forms/raffleCreateForm';
+
+import { RaffleCreatePreview } from './preview';
 
 export function RaffleCreate({ owner_id }: { owner_id: string }) {
   const [previewData, setPreviewData] = useState<RafflePreviewState>({
@@ -10,7 +15,7 @@ export function RaffleCreate({ owner_id }: { owner_id: string }) {
   });
 
   return (
-    <div className="grid lg:grid-cols-[1fr_18rem] gap-6">
+    <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
       <Card>
         <CardContent className="pt-0">
           <RaffleCreateForm

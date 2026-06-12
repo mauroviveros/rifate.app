@@ -1,7 +1,7 @@
 ---
-import type { HTMLAttributes } from "astro/types";
+import type { HTMLAttributes } from 'astro/types';
 
-type Props = HTMLAttributes<"div"> & {
+type Props = HTMLAttributes<'div'> & {
   /**
    * When true, the dropdown will open on hover in addition to click
    */
@@ -15,12 +15,17 @@ type Props = HTMLAttributes<"div"> & {
   children: any;
 };
 
-const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Astro.props;
+const {
+  class: className,
+  openOnHover = false,
+  closeDelay = 200,
+  ...rest
+} = Astro.props;
 ---
 
 <div
-  class:list={["starwind-dropdown", "relative", className]}
-  data-open-on-hover={openOnHover ? "true" : undefined}
+  class:list={['starwind-dropdown', 'relative', className]}
+  data-open-on-hover={openOnHover ? 'true' : undefined}
   data-close-delay={closeDelay}
   {...rest}
   data-slot="dropdown"
@@ -41,8 +46,8 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
     private openOnHover: boolean;
     private closeDelay: number;
     private closeTimerRef: number | null = null;
-    private lastOpenSource: "keyboard" | "mouse" = "keyboard";
-    private lastCloseSource: "keyboard" | "mouse" = "keyboard";
+    private lastOpenSource: 'keyboard' | 'mouse' = 'keyboard';
+    private lastCloseSource: 'keyboard' | 'mouse' = 'keyboard';
     private isSubmenu: boolean;
     private rootDropdown: HTMLElement;
     private contentPlaceholder: Comment | null = null;
@@ -52,15 +57,21 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
 
     constructor(dropdown: HTMLElement, dropdownIdx: number) {
       this.dropdown = dropdown;
-      this.isSubmenu = dropdown.classList.contains("starwind-dropdown-sub");
-      this.openOnHover = dropdown.getAttribute("data-open-on-hover") === "true" || this.isSubmenu;
-      this.closeDelay = parseInt(dropdown.getAttribute("data-close-delay") || "200");
+      this.isSubmenu = dropdown.classList.contains('starwind-dropdown-sub');
+      this.openOnHover =
+        dropdown.getAttribute('data-open-on-hover') === 'true' ||
+        this.isSubmenu;
+      this.closeDelay = parseInt(
+        dropdown.getAttribute('data-close-delay') || '200',
+      );
 
       // Find the trigger and content that belong to this dropdown, avoiding nested ones
-      this.trigger = this.findOwnElement('[data-slot="dropdown-trigger"], [data-sub-trigger]');
+      this.trigger = this.findOwnElement(
+        '[data-slot="dropdown-trigger"], [data-sub-trigger]',
+      );
 
       // if trigger is set with asChild, use the first child element for trigger button
-      if (this.trigger?.hasAttribute("data-as-child")) {
+      if (this.trigger?.hasAttribute('data-as-child')) {
         this.trigger = this.trigger.firstElementChild as HTMLElement;
       }
 
@@ -68,11 +79,14 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
 
       // Resolve root dropdown before any portaling (DOM is in original state)
       this.rootDropdown =
-        (this.dropdown.closest(".starwind-dropdown") as HTMLElement) || this.dropdown;
+        (this.dropdown.closest('.starwind-dropdown') as HTMLElement) ||
+        this.dropdown;
 
       // Store handler reference and root dropdown on content element for lookups
       if (this.content) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this.content as any).__dropdownHandler = this;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (this.content as any).__rootDropdown = this.rootDropdown;
       }
 
@@ -80,9 +94,9 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
 
       // Get animation duration from inline styles if available
       const animationDurationString = this.content.style.animationDuration;
-      if (animationDurationString.endsWith("ms")) {
+      if (animationDurationString.endsWith('ms')) {
         this.animationDuration = parseFloat(animationDurationString);
-      } else if (animationDurationString.endsWith("s")) {
+      } else if (animationDurationString.endsWith('s')) {
         this.animationDuration = parseFloat(animationDurationString) * 1000;
       }
 
@@ -92,7 +106,10 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
     private findOwnElement(selector: string): HTMLElement | null {
       const elements = this.dropdown.querySelectorAll(selector);
       for (const el of elements) {
-        if (el.closest(".starwind-dropdown, .starwind-dropdown-sub") === this.dropdown) {
+        if (
+          el.closest('.starwind-dropdown, .starwind-dropdown-sub') ===
+          this.dropdown
+        ) {
           return el as HTMLElement;
         }
       }
@@ -112,54 +129,59 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       this.content.id = `starwind-dropdown${dropdownIdx}-content`;
 
       // Set up additional ARIA attributes
-      this.trigger.setAttribute("aria-controls", this.content.id);
-      this.content.setAttribute("aria-labelledby", this.trigger.id);
+      this.trigger.setAttribute('aria-controls', this.content.id);
+      this.content.setAttribute('aria-labelledby', this.trigger.id);
     }
 
     private setupEvents() {
       if (!this.trigger || !this.content) return;
 
       // Handle trigger click
-      this.trigger.addEventListener("click", (e) => {
+      this.trigger.addEventListener('click', (e) => {
         e.preventDefault();
-        this.lastOpenSource = e.detail === 0 ? "keyboard" : "mouse";
+        this.lastOpenSource = e.detail === 0 ? 'keyboard' : 'mouse';
         this.toggleDropdown();
       });
 
       // Handle keyboard navigation on trigger
-      this.trigger.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
+      this.trigger.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           e.stopPropagation();
-          this.lastOpenSource = "keyboard";
+          this.lastOpenSource = 'keyboard';
           if (this.isSubmenu) {
             this.openDropdown();
           } else {
             this.toggleDropdown();
           }
-        } else if (e.key === "Escape" && this.isOpen) {
+        } else if (e.key === 'Escape' && this.isOpen) {
           e.preventDefault();
           e.stopPropagation();
-          this.lastCloseSource = "keyboard";
+          this.lastCloseSource = 'keyboard';
           // Close all menus in the group, focus root trigger
           this.rootDropdown.dispatchEvent(
-            new CustomEvent("starwind-dropdown:close-all", { detail: { focusRoot: true } }),
+            new CustomEvent('starwind-dropdown:close-all', {
+              detail: { focusRoot: true },
+            }),
           );
-        } else if (this.isOpen && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+        } else if (
+          this.isOpen &&
+          (e.key === 'ArrowDown' || e.key === 'ArrowUp')
+        ) {
           e.preventDefault();
           e.stopPropagation();
-          this.lastOpenSource = "keyboard";
+          this.lastOpenSource = 'keyboard';
           this.updateDropdownItems();
-          if (e.key === "ArrowDown") {
+          if (e.key === 'ArrowDown') {
             this.focusItem(0); // Focus first item when opening with arrow down
           } else {
             this.focusItem(this.items.length - 1); // Focus last item when opening with arrow up
           }
-        } else if (e.key === "ArrowRight" && this.isSubmenu) {
+        } else if (e.key === 'ArrowRight' && this.isSubmenu) {
           e.preventDefault();
           e.stopPropagation();
           if (!this.isOpen) {
-            this.lastOpenSource = "keyboard";
+            this.lastOpenSource = 'keyboard';
             this.openDropdown();
           } else {
             this.updateDropdownItems();
@@ -169,31 +191,42 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       });
 
       // Listen for close-all event (routed through rootDropdown to work across portaled content)
-      this.rootDropdown.addEventListener("starwind-dropdown:close-all", ((e: CustomEvent) => {
-        this.closeDropdown({ skipFocus: e.detail?.focusRoot && this.isSubmenu });
+      this.rootDropdown.addEventListener('starwind-dropdown:close-all', ((
+        e: CustomEvent,
+      ) => {
+        this.closeDropdown({
+          skipFocus: e.detail?.focusRoot && this.isSubmenu,
+        });
       }) as EventListener);
 
       // Listen for cancel-close event (routed through rootDropdown)
-      this.rootDropdown.addEventListener("starwind-dropdown:cancel-close", () => {
-        this.clearCloseTimer();
-      });
+      this.rootDropdown.addEventListener(
+        'starwind-dropdown:cancel-close',
+        () => {
+          this.clearCloseTimer();
+        },
+      );
 
       // Close dropdown when clicking outside for mouse
-      document.addEventListener("pointerdown", (e) => {
+      document.addEventListener('pointerdown', (e) => {
         if (
           this.isOpen &&
           !this.dropdown.contains(e.target as Node) &&
           !this.content?.contains(e.target as Node) &&
           !this.isTargetInGroup(e.target as Node)
         ) {
-          if (e.button === 0 && e.ctrlKey === false && e.pointerType === "mouse") {
+          if (
+            e.button === 0 &&
+            e.ctrlKey === false &&
+            e.pointerType === 'mouse'
+          ) {
             this.closeDropdown();
           }
         }
       });
 
       // Handle click outside select content to close for mobile
-      document.addEventListener("click", (e) => {
+      document.addEventListener('click', (e) => {
         if (
           this.isOpen &&
           !this.trigger?.contains(e.target as Node) &&
@@ -205,13 +238,15 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       });
 
       // Handle keyboard navigation and item selection within dropdown
-      this.content.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
+      this.content.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
           e.preventDefault();
           e.stopPropagation();
           // Close all menus in the group, focus root trigger
           this.rootDropdown.dispatchEvent(
-            new CustomEvent("starwind-dropdown:close-all", { detail: { focusRoot: true } }),
+            new CustomEvent('starwind-dropdown:close-all', {
+              detail: { focusRoot: true },
+            }),
           );
         } else if (this.isOpen) {
           this.handleMenuKeydown(e);
@@ -219,25 +254,31 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       });
 
       // Handle item selection
-      this.content.addEventListener("click", (e) => {
+      this.content.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
         const item = target.closest('[role="menuitem"]');
-        if (item && !(item as HTMLElement).hasAttribute("data-disabled")) {
-          if (item.hasAttribute("aria-haspopup")) return;
+        if (item && !(item as HTMLElement).hasAttribute('data-disabled')) {
+          if (item.hasAttribute('aria-haspopup')) return;
 
           // Close the dropdown after item selection
           this.closeDropdown();
 
           // Dispatch close-all through root to close all menus in the group
-          this.rootDropdown.dispatchEvent(new CustomEvent("starwind-dropdown:close-all"));
+          this.rootDropdown.dispatchEvent(
+            new CustomEvent('starwind-dropdown:close-all'),
+          );
         }
       });
 
       // Handle hover on dropdown items
-      this.content.addEventListener("mouseover", (e) => {
+      this.content.addEventListener('mouseover', (e) => {
         const target = e.target as HTMLElement;
         const menuItem = target.closest('[role="menuitem"]');
-        if (menuItem && menuItem instanceof HTMLElement && this.isOpen === true) {
+        if (
+          menuItem &&
+          menuItem instanceof HTMLElement &&
+          this.isOpen === true
+        ) {
           // Update items list before focusing to ensure the index is correct
           this.updateDropdownItems();
 
@@ -250,11 +291,11 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       });
 
       if (this.openOnHover) {
-        this.trigger.addEventListener("pointerenter", (e) => {
-          if (e.pointerType !== "mouse") return;
+        this.trigger.addEventListener('pointerenter', (e) => {
+          if (e.pointerType !== 'mouse') return;
           if (this.isClosing) return;
           if (!this.isOpen) {
-            this.lastOpenSource = "mouse";
+            this.lastOpenSource = 'mouse';
             this.openDropdown();
           } else {
             // If the dropdown is already open, make sure to clear any close timer
@@ -262,17 +303,17 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
           }
         });
 
-        this.dropdown.addEventListener("pointerleave", (e) => {
-          if (e.pointerType !== "mouse") return;
+        this.dropdown.addEventListener('pointerleave', (e) => {
+          if (e.pointerType !== 'mouse') return;
           if (this.openChildCount > 0) return;
           if (this.isOpen) {
-            this.lastCloseSource = "mouse";
+            this.lastCloseSource = 'mouse';
             this.closeDropdownDelayed();
           }
         });
 
-        this.content.addEventListener("pointerenter", (e) => {
-          if (e.pointerType !== "mouse") return;
+        this.content.addEventListener('pointerenter', (e) => {
+          if (e.pointerType !== 'mouse') return;
           // If the user moves the mouse to the content, cancel the close timer
           this.clearCloseTimer();
         });
@@ -290,42 +331,44 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       const currentItem = this.items[currentIdx];
 
       switch (e.key) {
-        case "ArrowDown":
+        case 'ArrowDown':
           e.preventDefault();
           e.stopPropagation();
           this.focusItem(currentIdx === -1 ? 0 : currentIdx + 1);
           break;
-        case "ArrowUp":
+        case 'ArrowUp':
           e.preventDefault();
           e.stopPropagation();
-          this.focusItem(currentIdx === -1 ? this.items.length - 1 : currentIdx - 1);
+          this.focusItem(
+            currentIdx === -1 ? this.items.length - 1 : currentIdx - 1,
+          );
           break;
-        case "ArrowRight":
-          if (currentItem?.getAttribute("aria-haspopup") === "true") {
+        case 'ArrowRight':
+          if (currentItem?.getAttribute('aria-haspopup') === 'true') {
             e.preventDefault();
             e.stopPropagation();
             currentItem.click();
           }
           break;
-        case "ArrowLeft":
+        case 'ArrowLeft':
           if (this.isSubmenu) {
             e.preventDefault();
             e.stopPropagation();
             this.closeDropdown();
           }
           break;
-        case "Home":
+        case 'Home':
           e.preventDefault();
           e.stopPropagation();
           this.focusItem(0);
           break;
-        case "End":
+        case 'End':
           e.preventDefault();
           e.stopPropagation();
           this.focusItem(this.items.length - 1);
           break;
-        case "Enter":
-        case " ":
+        case 'Enter':
+        case ' ':
           if (currentIdx !== -1) {
             e.preventDefault();
             e.stopPropagation();
@@ -339,7 +382,10 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       const el = target instanceof HTMLElement ? target : target.parentElement;
       if (!el) return false;
       const contentEl = el.closest('[data-slot="dropdown-content"]');
-      return !!contentEl && (contentEl as any).__rootDropdown === this.rootDropdown;
+      return (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        !!contentEl && (contentEl as any).__rootDropdown === this.rootDropdown
+      );
     }
 
     private updateDropdownItems() {
@@ -347,7 +393,9 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       // Get all interactive menuitem elements belonging to this menu level only
       this.items = (
         Array.from(
-          this.content.querySelectorAll('[role="menuitem"]:not([data-disabled="true"])'),
+          this.content.querySelectorAll(
+            '[role="menuitem"]:not([data-disabled="true"])',
+          ),
         ) as HTMLElement[]
       ).filter((item) => item.closest('[role="menu"]') === this.content);
     }
@@ -372,18 +420,20 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
 
     private openDropdown() {
       if (this.isClosing) return;
-      if (!this.content || !this.trigger || (this.trigger as any).disabled) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!this.content || !this.trigger || (this.trigger as any).disabled)
+        return;
 
       this.isOpen = true;
-      this.trigger.setAttribute("aria-expanded", "true");
-      this.content.style.removeProperty("display");
+      this.trigger.setAttribute('aria-expanded', 'true');
+      this.content.style.removeProperty('display');
 
       // Portal sub-content to body before triggering animation
       if (this.isSubmenu) {
         this.portalContent();
       }
 
-      this.content.setAttribute("data-state", "open");
+      this.content.setAttribute('data-state', 'open');
 
       // Update the list of dropdown items
       this.updateDropdownItems();
@@ -394,7 +444,7 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       this.positionContent();
 
       // For submenus opened by keyboard, focus the first item
-      if (this.isSubmenu && this.lastOpenSource === "keyboard") {
+      if (this.isSubmenu && this.lastOpenSource === 'keyboard') {
         requestAnimationFrame(() => {
           this.focusItem(0);
         });
@@ -407,15 +457,15 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
 
       this.isClosing = true;
       this.isOpen = false;
-      this.content.setAttribute("data-state", "closed");
+      this.content.setAttribute('data-state', 'closed');
 
       // Set focus back on trigger only if opened or closed by keyboard
       // Skip focus if a close-all with focusRoot is closing this submenu (root will handle focus)
       if (
         !options?.skipFocus &&
         (!this.openOnHover ||
-          this.lastOpenSource === "keyboard" ||
-          this.lastCloseSource === "keyboard")
+          this.lastOpenSource === 'keyboard' ||
+          this.lastCloseSource === 'keyboard')
       ) {
         requestAnimationFrame(() => {
           if (!this.trigger) return;
@@ -429,11 +479,11 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
         if (this.isSubmenu) {
           this.unportalContent();
         }
-        this.content.style.display = "none";
+        this.content.style.display = 'none';
         this.isClosing = false;
       }, this.animationDuration);
 
-      this.trigger.setAttribute("aria-expanded", "false");
+      this.trigger.setAttribute('aria-expanded', 'false');
 
       // Reset focus index when closing
       this.currentFocusIndex = -1;
@@ -465,27 +515,35 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       if (!this.content || !this.trigger) return;
 
       // Save the original position with a placeholder
-      this.contentPlaceholder = document.createComment("dropdown-sub-placeholder");
-      this.content.parentNode?.insertBefore(this.contentPlaceholder, this.content);
+      this.contentPlaceholder = document.createComment(
+        'dropdown-sub-placeholder',
+      );
+      this.content.parentNode?.insertBefore(
+        this.contentPlaceholder,
+        this.content,
+      );
 
       // Move content to body
       document.body.appendChild(this.content);
 
       // Apply fixed positioning (overrides the CSS absolute class)
-      this.content.style.position = "fixed";
-      this.content.style.zIndex = "50";
+      this.content.style.position = 'fixed';
+      this.content.style.zIndex = '50';
 
       // Position relative to trigger
       this.positionSubContent();
 
       // Set up auto-update for scroll/resize
       const updatePosition = () => this.positionSubContent();
-      window.addEventListener("scroll", updatePosition, true);
-      window.addEventListener("resize", updatePosition);
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
 
       // Find and link to parent handler for child-tracking
-      const parentContent = this.trigger.closest('[data-slot="dropdown-content"]');
+      const parentContent = this.trigger.closest(
+        '[data-slot="dropdown-content"]',
+      );
       if (parentContent) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.parentHandler = (parentContent as any).__dropdownHandler || null;
         if (this.parentHandler) {
           this.parentHandler.openChildCount++;
@@ -494,28 +552,30 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
 
       // Handle hover interactions for portaled content
       const onPointerEnter = (e: PointerEvent) => {
-        if (e.pointerType !== "mouse") return;
+        if (e.pointerType !== 'mouse') return;
         this.clearCloseTimer();
         // Cancel close timers for all handlers in the group (parents included)
-        this.rootDropdown.dispatchEvent(new CustomEvent("starwind-dropdown:cancel-close"));
+        this.rootDropdown.dispatchEvent(
+          new CustomEvent('starwind-dropdown:cancel-close'),
+        );
       };
 
       const onPointerLeave = (e: PointerEvent) => {
-        if (e.pointerType !== "mouse") return;
+        if (e.pointerType !== 'mouse') return;
         // Don't close if a child submenu is still open
         if (this.openChildCount > 0) return;
-        this.lastCloseSource = "mouse";
+        this.lastCloseSource = 'mouse';
         this.closeDropdownDelayed();
       };
 
-      this.content.addEventListener("pointerenter", onPointerEnter);
-      this.content.addEventListener("pointerleave", onPointerLeave);
+      this.content.addEventListener('pointerenter', onPointerEnter);
+      this.content.addEventListener('pointerleave', onPointerLeave);
 
       this.cleanupAutoUpdate = () => {
-        window.removeEventListener("scroll", updatePosition, true);
-        window.removeEventListener("resize", updatePosition);
-        this.content?.removeEventListener("pointerenter", onPointerEnter);
-        this.content?.removeEventListener("pointerleave", onPointerLeave);
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+        this.content?.removeEventListener('pointerenter', onPointerEnter);
+        this.content?.removeEventListener('pointerleave', onPointerLeave);
       };
     }
 
@@ -533,15 +593,18 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       this.cleanupAutoUpdate = null;
 
       // Move content back to its original position
-      this.contentPlaceholder.parentNode?.insertBefore(this.content, this.contentPlaceholder);
+      this.contentPlaceholder.parentNode?.insertBefore(
+        this.content,
+        this.contentPlaceholder,
+      );
       this.contentPlaceholder.remove();
       this.contentPlaceholder = null;
 
       // Remove fixed positioning styles
-      this.content.style.removeProperty("position");
-      this.content.style.removeProperty("z-index");
-      this.content.style.removeProperty("top");
-      this.content.style.removeProperty("left");
+      this.content.style.removeProperty('position');
+      this.content.style.removeProperty('z-index');
+      this.content.style.removeProperty('top');
+      this.content.style.removeProperty('left');
     }
 
     private positionSubContent() {
@@ -577,9 +640,9 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       if (!this.content || !this.trigger || this.isSubmenu) return;
 
       // Set content width to match trigger width
-      this.content.style.width = "var(--starwind-dropdown-trigger-width)";
+      this.content.style.width = 'var(--starwind-dropdown-trigger-width)';
       this.content.style.setProperty(
-        "--starwind-dropdown-trigger-width",
+        '--starwind-dropdown-trigger-width',
         `${this.trigger.offsetWidth}px`,
       );
     }
@@ -591,14 +654,22 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
 
   // Initialize dropdowns
   const initDropdowns = () => {
-    document.querySelectorAll(".starwind-dropdown, .starwind-dropdown-sub").forEach((dropdown) => {
-      if (dropdown instanceof HTMLElement && !dropdownInstances.has(dropdown)) {
-        dropdownInstances.set(dropdown, new DropdownHandler(dropdown, dropdownCounter++));
-      }
-    });
+    document
+      .querySelectorAll('.starwind-dropdown, .starwind-dropdown-sub')
+      .forEach((dropdown) => {
+        if (
+          dropdown instanceof HTMLElement &&
+          !dropdownInstances.has(dropdown)
+        ) {
+          dropdownInstances.set(
+            dropdown,
+            new DropdownHandler(dropdown, dropdownCounter++),
+          );
+        }
+      });
   };
 
   initDropdowns();
-  document.addEventListener("astro:after-swap", initDropdowns);
-  document.addEventListener("starwind:init", initDropdowns);
+  document.addEventListener('astro:after-swap', initDropdowns);
+  document.addEventListener('starwind:init', initDropdowns);
 </script>
