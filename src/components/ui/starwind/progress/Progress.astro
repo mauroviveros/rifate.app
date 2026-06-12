@@ -1,8 +1,8 @@
 ---
-import type { HTMLAttributes } from "astro/types";
-import { tv } from "tailwind-variants";
+import type { HTMLAttributes } from 'astro/types';
+import { tv } from 'tailwind-variants';
 
-type Props = HTMLAttributes<"div"> & {
+type Props = HTMLAttributes<'div'> & {
   /**
    * Current value of the progress bar (omit for indeterminate state)
    */
@@ -14,59 +14,80 @@ type Props = HTMLAttributes<"div"> & {
   /**
    * Color variant for the progress indicator (default: default)
    */
-  variant?: "default" | "primary" | "secondary" | "info" | "success" | "warning" | "error";
+  variant?:
+    | 'default'
+    | 'primary'
+    | 'secondary'
+    | 'info'
+    | 'success'
+    | 'warning'
+    | 'error';
 };
 
-const { class: className, value, max = 100, variant = "default", ...rest } = Astro.props;
+const {
+  class: className,
+  value,
+  max = 100,
+  variant = 'default',
+  ...rest
+} = Astro.props;
 
 const isIndeterminate = value == null;
-const valuePercent = isIndeterminate ? undefined : Math.round((value / max) * 100);
+const valuePercent = isIndeterminate
+  ? undefined
+  : Math.round((value / max) * 100);
 const valueText = isIndeterminate ? undefined : `${valuePercent}%`;
 
 export const progress = tv({
-  base: ["starwind-progress-bar", "bg-muted h-2 w-full overflow-hidden rounded-full"],
+  base: [
+    'starwind-progress-bar',
+    'bg-muted h-2 w-full overflow-hidden rounded-full',
+  ],
   variants: {
     variant: {
-      indeterminate: "relative",
+      indeterminate: 'relative',
     },
   },
 });
 
 export const progressIndicator = tv({
-  base: ["starwind-progress-indicator", "h-full w-full flex-1 transition-transform"],
+  base: [
+    'starwind-progress-indicator',
+    'h-full w-full flex-1 transition-transform',
+  ],
   variants: {
     variant: {
-      indeterminate: "absolute inset-y-0 start-0 w-3/4",
+      indeterminate: 'absolute inset-y-0 start-0 w-3/4',
     },
     color: {
-      primary: "bg-primary",
-      secondary: "bg-secondary",
-      default: "bg-foreground",
-      info: "bg-info",
-      success: "bg-success",
-      warning: "bg-warning",
-      error: "bg-error",
+      primary: 'bg-primary',
+      secondary: 'bg-secondary',
+      default: 'bg-foreground',
+      info: 'bg-info',
+      success: 'bg-success',
+      warning: 'bg-warning',
+      error: 'bg-error',
     },
   },
   defaultVariants: {
-    color: "primary",
+    color: 'primary',
   },
 });
 
 const indicator = progressIndicator;
 
 const progressClasses = progress({
-  variant: isIndeterminate ? "indeterminate" : undefined,
+  variant: isIndeterminate ? 'indeterminate' : undefined,
   class: className,
 });
 
 const indicatorClasses = indicator({
-  variant: isIndeterminate ? "indeterminate" : undefined,
+  variant: isIndeterminate ? 'indeterminate' : undefined,
   color: variant,
 });
 
 const indicatorStyle = isIndeterminate
-  ? ""
+  ? ''
   : `transform: translateX(-${100 - (valuePercent ?? 0)}%);`;
 ---
 
@@ -101,7 +122,10 @@ const indicatorStyle = isIndeterminate
       // Create a MutationObserver to watch for data-value attribute changes
       this.observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
-          if (mutation.attributeName === "data-value" || mutation.attributeName === "data-max") {
+          if (
+            mutation.attributeName === 'data-value' ||
+            mutation.attributeName === 'data-max'
+          ) {
             this.updateProgress();
           }
         });
@@ -112,20 +136,22 @@ const indicatorStyle = isIndeterminate
     }
 
     private updateProgress(): void {
-      const value = Number(this.progressElement.getAttribute("data-value"));
-      const max = Number(this.progressElement.getAttribute("data-max") || 100);
-      const isIndeterminate = this.progressElement.hasAttribute("data-indeterminate")
-        ? this.progressElement.getAttribute("data-indeterminate") === "true"
+      const value = Number(this.progressElement.getAttribute('data-value'));
+      const max = Number(this.progressElement.getAttribute('data-max') || 100);
+      const isIndeterminate = this.progressElement.hasAttribute(
+        'data-indeterminate',
+      )
+        ? this.progressElement.getAttribute('data-indeterminate') === 'true'
         : value == null;
 
       // Update ARIA attributes
       if (!isIndeterminate) {
         const valuePercent = Math.round((value / max) * 100);
-        this.progressElement.setAttribute("aria-valuenow", String(value));
-        this.progressElement.setAttribute("aria-valuetext", `${valuePercent}%`);
+        this.progressElement.setAttribute('aria-valuenow', String(value));
+        this.progressElement.setAttribute('aria-valuetext', `${valuePercent}%`);
 
         // Update indicator position
-        const indicator = this.progressElement.querySelector("div");
+        const indicator = this.progressElement.querySelector('div');
         if (indicator) {
           indicator.style.transform = `translateX(-${100 - valuePercent}%)`;
         }
@@ -142,14 +168,19 @@ const indicatorStyle = isIndeterminate
   const progressInstances = new WeakMap<HTMLElement, ProgressHandler>();
 
   const setupProgressBars = () => {
-    document.querySelectorAll<HTMLElement>(".starwind-progress-bar").forEach((progressElement) => {
-      if (!progressInstances.has(progressElement)) {
-        progressInstances.set(progressElement, new ProgressHandler(progressElement));
-      }
-    });
+    document
+      .querySelectorAll<HTMLElement>('.starwind-progress-bar')
+      .forEach((progressElement) => {
+        if (!progressInstances.has(progressElement)) {
+          progressInstances.set(
+            progressElement,
+            new ProgressHandler(progressElement),
+          );
+        }
+      });
   };
 
   setupProgressBars();
-  document.addEventListener("astro:after-swap", setupProgressBars);
-  document.addEventListener("starwind:init", setupProgressBars);
+  document.addEventListener('astro:after-swap', setupProgressBars);
+  document.addEventListener('starwind:init', setupProgressBars);
 </script>

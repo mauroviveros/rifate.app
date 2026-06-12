@@ -1,20 +1,25 @@
 ---
-import { RaffleCreate } from "@/components/raffle/create";
-import AppLayout from "@/layouts/AppLayout.astro";
-import Button from "@starwind/button";
-import { Icon } from "astro-icon/components";
-import RaffleCreateSkeleton from "@/components/raffle/create/RaffleCreateSkeleton.astro";
+import Button from '@starwind/button';
+import { Icon } from 'astro-icon/components';
+
+import { RaffleCreate } from '@/components/raffle/create';
+import RaffleCreateSkeleton from '@/components/raffle/create/RaffleCreateSkeleton.astro';
+import AppLayout from '@/layouts/AppLayout.astro';
 
 const user = Astro.locals.user;
 ---
 
 <AppLayout size="3xl" class="pb-4 sm:pb-6">
-  <hgroup class="flex items-center justify-between w-full" slot="header">
+  <hgroup class="flex w-full items-center justify-between" slot="header">
     <div class="flex items-center gap-3">
-      <span class="bg-primary-foreground/20 text-primary-foreground size-10 flex items-center justify-center rounded-xl">
+      <span
+        class="bg-primary-foreground/20 text-primary-foreground flex size-10 items-center justify-center rounded-xl"
+      >
         <Icon name="lucide:ticket" class="size-5" />
       </span>
-      <h1 class="text-2xl lg:text-3xl font-extrabold text-primary-foreground">Nueva rifa</h1>
+      <h1 class="text-primary-foreground text-2xl font-extrabold lg:text-3xl">
+        Nueva rifa
+      </h1>
     </div>
 
     <Button href="/dashboard/raffle" variant="secondary" size="sm">
@@ -24,6 +29,6 @@ const user = Astro.locals.user;
   </hgroup>
 
   <RaffleCreate client:only="react" owner_id={user.id}>
-    <RaffleCreateSkeleton slot="fallback"/>
+    <RaffleCreateSkeleton slot="fallback" />
   </RaffleCreate>
 </AppLayout>

@@ -1,4 +1,4 @@
-import Input, { input } from "./Input.astro";
+import Input, { input } from './Input.astro';
 
 const InputVariants = { input };
 

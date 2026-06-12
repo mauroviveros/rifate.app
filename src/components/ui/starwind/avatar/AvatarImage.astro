@@ -1,9 +1,11 @@
 ---
-import type { HTMLAttributes } from "astro/types";
-import { Image } from "astro:assets";
-import { tv } from "tailwind-variants";
+import type { HTMLAttributes } from 'astro/types';
+import { Image } from 'astro:assets';
+import { tv } from 'tailwind-variants';
 
-export const avatarImage = tv({ base: "relative z-1 h-full w-full object-cover" });
+export const avatarImage = tv({
+  base: 'relative z-1 h-full w-full object-cover',
+});
 
 type BaseProps = { alt: string; class?: string };
 
@@ -11,9 +13,17 @@ type WithSrc = BaseProps & { src: string; image?: never };
 
 type WithImage = BaseProps & { src?: never; image: ImageMetadata };
 
-type Props = HTMLAttributes<"img"> & (WithSrc | WithImage);
+type Props = HTMLAttributes<'img'> & (WithSrc | WithImage);
 
-const { src, image, alt, class: className, width, height, ...rest } = Astro.props;
+const {
+  src,
+  image,
+  alt,
+  class: className,
+  width,
+  height,
+  ...rest
+} = Astro.props;
 
 if (!src && !image) {
   throw new Error("Either 'src' or 'image' is required for an avatar image.");

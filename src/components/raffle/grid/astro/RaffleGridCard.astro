@@ -1,9 +1,11 @@
 ---
-import { Card, CardContent, CardHeader, CardTitle } from "@starwind/card";
-import RaffleGridCell from "./RaffleGridCell.astro";
-import { formatRaffleNumber } from "@/lib/formatters";
-import { getNumberLength } from "@/lib/utils";
-import RaffleGridLegend from "./RaffleGridLegend.astro";
+import { Card, CardContent, CardHeader, CardTitle } from '@starwind/card';
+
+import { formatRaffleNumber } from '@/lib/formatters';
+import { getNumberLength } from '@/lib/utils';
+
+import RaffleGridCell from './RaffleGridCell.astro';
+import RaffleGridLegend from './RaffleGridLegend.astro';
 export interface RaffleGridProps {
   editable?: boolean;
   length: number;
@@ -15,25 +17,29 @@ const number_padding = getNumberLength(length);
 ---
 
 <Card>
-  <CardHeader class="flex items-center justify-between mb-4 flex-wrap">
-    <CardTitle class="font-bold text-lg text-foreground flex-1">Números</CardTitle>
-    <RaffleGridLegend class="ml-auto"/>
+  <CardHeader class="mb-4 flex flex-wrap items-center justify-between">
+    <CardTitle class="text-foreground flex-1 text-lg font-bold"
+      >Números</CardTitle
+    >
+    <RaffleGridLegend class="ml-auto" />
   </CardHeader>
   <CardContent
     class:list={[
-      "grid grid-cols-10 gap-1",
-      editable ? "" : "pointer-events-none"
+      'grid grid-cols-10 gap-1',
+      editable ? '' : 'pointer-events-none',
     ]}
   >
-    {Array.from({ length }, (_, i) => {
-      const isSold = numbers.includes(i);
-      return (
-        <RaffleGridCell
-          number={formatRaffleNumber(i, number_padding)}
-          isSold={isSold}
-          editable={editable}
-        />
-      )
-    })}
+    {
+      Array.from({ length }, (_, i) => {
+        const isSold = numbers.includes(i);
+        return (
+          <RaffleGridCell
+            number={formatRaffleNumber(i, number_padding)}
+            isSold={isSold}
+            editable={editable}
+          />
+        );
+      })
+    }
   </CardContent>
 </Card>

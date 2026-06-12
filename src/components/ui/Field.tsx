@@ -1,11 +1,11 @@
-import type { VariantProps } from "class-variance-authority";
 import {
   Field as FieldCN,
   FieldDescription,
   FieldError,
   FieldLabel,
   fieldVariants,
-} from "@shadcn/field";
+} from '@shadcn/field';
+import type { VariantProps } from 'class-variance-authority';
 
 type Props = {
   label: string;
@@ -14,7 +14,7 @@ type Props = {
   error?: string;
   required?: boolean;
   children: React.ReactNode;
-} & React.ComponentProps<"div"> &
+} & React.ComponentProps<'div'> &
   VariantProps<typeof fieldVariants>;
 
 export const Field = ({
@@ -39,7 +39,11 @@ export const Field = ({
 
       {children}
 
-      {error ? <FieldError>{error}</FieldError> : description && <FieldDescription>{description}</FieldDescription>}
+      {error ? (
+        <FieldError>{error}</FieldError>
+      ) : (
+        description && <FieldDescription>{description}</FieldDescription>
+      )}
     </FieldCN>
   );
 };

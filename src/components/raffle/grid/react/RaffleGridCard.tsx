@@ -1,18 +1,19 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@shadcn/card"
-import { formatRaffleNumber } from "@/lib/formatters"
-import { getNumberLength } from "@/lib/utils"
+import { Card, CardContent, CardHeader, CardTitle } from '@shadcn/card';
 
-import { RaffleGridCell } from "./RaffleGridCell"
-import { RaffleGridLegend } from "./RaffleGridLegend"
+import { formatRaffleNumber } from '@/lib/formatters';
+import { getNumberLength } from '@/lib/utils';
+
+import { RaffleGridCell } from './RaffleGridCell';
+import { RaffleGridLegend } from './RaffleGridLegend';
 
 interface Props {
-  editable?: boolean
-  length: number
-  soldNumbers?: number[]
-  selectedNumbers?: number[]
-  title?: string
-  numberPadding?: number
-  onToggleNumber?: (number: number) => void
+  editable?: boolean;
+  length: number;
+  soldNumbers?: number[];
+  selectedNumbers?: number[];
+  title?: string;
+  numberPadding?: number;
+  onToggleNumber?: (number: number) => void;
 }
 
 export function RaffleGridCard({
@@ -20,25 +21,27 @@ export function RaffleGridCard({
   length,
   soldNumbers = [],
   selectedNumbers = [],
-  title = "Números",
+  title = 'Números',
   numberPadding,
   onToggleNumber,
 }: Props) {
-  const soldSet = new Set(soldNumbers)
-  const selectedSet = new Set(selectedNumbers)
-  const padding = numberPadding ?? getNumberLength(length)
+  const soldSet = new Set(soldNumbers);
+  const selectedSet = new Set(selectedNumbers);
+  const padding = numberPadding ?? getNumberLength(length);
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between mb-4 flex-wrap">
-        <CardTitle className="font-bold text-lg text-foreground flex-1">{title}</CardTitle>
+      <CardHeader className="mb-4 flex flex-wrap items-center justify-between">
+        <CardTitle className="text-foreground flex-1 text-lg font-bold">
+          {title}
+        </CardTitle>
         <RaffleGridLegend className="ml-auto" />
       </CardHeader>
       <CardContent
         className={[
-          "grid grid-cols-10 gap-1",
-          editable ? "" : "pointer-events-none",
-        ].join(" ")}
+          'grid grid-cols-10 gap-1',
+          editable ? '' : 'pointer-events-none',
+        ].join(' ')}
       >
         {Array.from({ length }, (_, index) => {
           return (
@@ -50,9 +53,9 @@ export function RaffleGridCard({
               editable={editable}
               onToggle={() => onToggleNumber?.(index)}
             />
-          )
+          );
         })}
       </CardContent>
     </Card>
-  )
+  );
 }

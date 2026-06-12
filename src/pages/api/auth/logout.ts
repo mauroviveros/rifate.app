@@ -1,6 +1,7 @@
-import type { APIRoute } from "astro";
-import { createServerClient } from "@/lib/supabase/server";
-import { HOME_PATH } from "@/lib/url";
+import type { APIRoute } from 'astro';
+
+import { createServerClient } from '@/lib/supabase/server';
+import { HOME_PATH } from '@/lib/url';
 
 export const POST = (async ({ cookies, request, redirect }) => {
   const supabase = createServerClient({ cookies, request });

@@ -1,4 +1,4 @@
-export * from "./grid"
+export * from './grid';
 
 interface RaffleStats {
   sold: number;

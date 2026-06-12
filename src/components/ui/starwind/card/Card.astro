@@ -1,23 +1,23 @@
 ---
-import type { HTMLAttributes } from "astro/types";
-import { tv, type VariantProps } from "tailwind-variants";
+import type { HTMLAttributes } from 'astro/types';
+import { tv, type VariantProps } from 'tailwind-variants';
 
-type Props = HTMLAttributes<"div"> & VariantProps<typeof card>;
+type Props = HTMLAttributes<'div'> & VariantProps<typeof card>;
 
 export const card = tv({
   base: [
-    "bg-card text-card-foreground group/card flex flex-col rounded-2xl shadow-card",
-    "has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0",
-    "*:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl",
+    'bg-card text-card-foreground group/card flex flex-col rounded-2xl shadow-card',
+    'has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0',
+    '*:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl',
   ],
   variants: {
     size: {
-      default: "gap-6 py-6",
-      sm: "gap-4 py-4 text-sm",
+      default: 'gap-6 py-6',
+      sm: 'gap-4 py-4 text-sm',
     },
   },
   defaultVariants: {
-    size: "default",
+    size: 'default',
   },
 });
 
@@ -26,7 +26,7 @@ const { class: className, size, ...rest } = Astro.props;
 
 <div
   class={card({ size, class: className })}
-  data-size={size ?? "default"}
+  data-size={size ?? 'default'}
   {...rest}
   data-slot="card"
 >

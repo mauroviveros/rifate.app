@@ -1,4 +1,4 @@
-import Textarea, { textarea } from "./Textarea.astro";
+import Textarea, { textarea } from './Textarea.astro';
 
 const TextareaVariants = {
   textarea,
