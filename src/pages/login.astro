@@ -83,6 +83,13 @@ const error = Astro.url.searchParams.get('error');
 <script>
   const form = document.querySelector('form') as HTMLFormElement;
 
+  window.addEventListener('pageshow', () => {
+    form.removeAttribute('aria-busy');
+    form
+      .querySelectorAll('button')
+      .forEach((btn) => btn.removeAttribute('disabled'));
+  });
+
   form.addEventListener('submit', () => {
     form.setAttribute('aria-busy', 'true');
     form
