@@ -10,10 +10,10 @@ export const toSafeInternalPath = (value: string | null) => {
 
 export const buildLoginRedirect = (
   url: URL,
-  searchPArams: Record<string, string | null | undefined>,
+  searchParams: Record<string, string | null | undefined>,
 ) => {
   const loginUrl = new URL(LOGIN_PATH, url);
-  for (const [key, value] of Object.entries(searchPArams)) {
+  for (const [key, value] of Object.entries(searchParams)) {
     if (value) loginUrl.searchParams.set(key, value);
   }
   return loginUrl.toString();

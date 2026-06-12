@@ -18,7 +18,7 @@ export const RaffleSchema = z.object({
   total_numbers: z
     .number({ error: 'La cantidad de números es requerida' })
     .min(1, 'El número total de boletos debe ser mayor a 0')
-    .max(10000, 'El número total de boletos no puede superar 10,000'),
+    .max(1000, 'El número total de boletos no puede superar 1,000'),
   draw_date: z.iso.date(),
 });
 
