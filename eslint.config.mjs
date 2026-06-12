@@ -48,4 +48,11 @@ export default [
       'prettier/prettier': 'error',
     },
   },
+
+  // Evita error en virtual files <script> dentro de .astro
+  // prettier-plugin-astro ya formatea el .astro completo
+  {
+    files: ['**/*.astro/*', '*.astro/*'],
+    rules: { 'prettier/prettier': 'off' },
+  },
 ];
