@@ -16,12 +16,10 @@ import { type RaffleInput, RaffleSchema } from '@/schemas/raffle';
 
 export type RafflePreviewState = Pick<RaffleInput, 'price' | 'total_numbers'>;
 export function RaffleCreateForm({
-  owner_id,
   price,
   total_numbers,
   onPreviewChange,
 }: {
-  owner_id: string;
   price?: number;
   total_numbers?: number;
   onPreviewChange?: (state: RafflePreviewState) => void;
@@ -41,7 +39,6 @@ export function RaffleCreateForm({
     resolver: zodResolver(RaffleSchema),
     disabled: isSubmitting,
     defaultValues: {
-      owner_id: owner_id,
       title: '',
       description: '',
       price: price ?? 0,

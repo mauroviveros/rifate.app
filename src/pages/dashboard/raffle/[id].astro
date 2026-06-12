@@ -9,6 +9,8 @@ import { createServerClient } from '@/lib/supabase/server';
 
 if (!Astro.params.id) throw new Error('ID de rifa no proporcionado');
 
+const user = Astro.locals.user;
+
 const supabase = createServerClient({
   request: Astro.request,
   cookies: Astro.cookies,
@@ -31,6 +33,10 @@ const { data: raffle, error } = await supabase
 if (error || !raffle) {
   console.error('Error fetching raffle data:', error);
   throw new Error('No se pudo cargar la rifa');
+}
+
+if (raffle.owner_id !== user.id) {
+  return Astro.redirect('/dashboard/raffle');
 }
 ---
 
