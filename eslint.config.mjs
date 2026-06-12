@@ -1,5 +1,6 @@
 import typescriptParser from '@typescript-eslint/parser';
 import eslintPluginAstro from 'eslint-plugin-astro';
+import eslintPluginPrettier from 'eslint-plugin-prettier';
 import tseslint from 'typescript-eslint';
 
 export default [
@@ -35,6 +36,16 @@ export default [
     files: ['**/*.d.ts'],
     rules: {
       '@typescript-eslint/triple-slash-reference': 'off',
+    },
+  },
+
+  // Prettier — reporta diferencias de formato como errores de ESLint
+  {
+    plugins: {
+      prettier: eslintPluginPrettier,
+    },
+    rules: {
+      'prettier/prettier': 'error',
     },
   },
 ];
