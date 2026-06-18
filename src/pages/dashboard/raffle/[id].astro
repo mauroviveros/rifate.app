@@ -11,6 +11,8 @@ if (!Astro.params.id) throw new Error('ID de rifa no proporcionado');
 
 const user = Astro.locals.user;
 
+if (!user) return Astro.redirect('/dashboard/raffle');
+
 const supabase = createServerClient({
   request: Astro.request,
   cookies: Astro.cookies,
