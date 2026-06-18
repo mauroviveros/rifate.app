@@ -20,25 +20,43 @@ const supabase = createServerClient({
   cookies: Astro.cookies,
   request: Astro.request,
 });
-const { data: raffles } = await supabase.from('raffles').select(`
-    id, title, description, price, total_numbers,
-    draw_date, status,
-    numbers: raffle_numbers(
-      number, status
-    )
-  `);
+
+let fetchError = false;
+let raffles: Array<{
+  id: string;
+  title: string;
+  description: string | null;
+  price: number;
+  total_numbers: number;
+  draw_date: string;
+  status: string;
+  numbers: { number: number; status: string }[];
+}> = [];
+
+try {
+  const { data } = await supabase.from('raffles').select(`
+      id, title, description, price, total_numbers,
+      draw_date, status,
+      numbers: raffle_numbers(
+        number, status
+      )
+    `);
+  if (data) raffles = data;
+} catch {
+  fetchError = true;
+}
 
 const STATS = mapRaffleListStats({
-  raffles: raffles?.length || 0,
+  raffles: raffles.length || 0,
   sold:
-    raffles?.reduce(
+    raffles.reduce(
       (acc, raffle) =>
         acc + raffle.numbers.filter((n) => n.status === 'SOLD').length,
       0,
     ) || 0,
-  total: raffles?.reduce((acc, raffle) => acc + raffle.total_numbers, 0) || 0,
+  total: raffles.reduce((acc, raffle) => acc + raffle.total_numbers, 0) || 0,
   revenue:
-    raffles?.reduce(
+    raffles.reduce(
       (acc, raffle) =>
         acc +
         raffle.numbers.filter((n) => n.status === 'SOLD').length * raffle.price,
@@ -46,7 +64,7 @@ const STATS = mapRaffleListStats({
     ) || 0,
 });
 
-const enrichedRaffles = (raffles ?? []).map((raffle) => {
+const enrichedRaffles = raffles.map((raffle) => {
   const numbers = raffle.numbers;
   const soldCount = numbers.filter((n) => n.status === 'SOLD').length;
   const dotCount = Math.min(raffle.total_numbers, 100);
@@ -86,106 +104,127 @@ const enrichedRaffles = (raffles ?? []).map((raffle) => {
     {STATS.map((props) => <Stats {...props} />)}
   </article>
 
-  <!-- <section class="flex flex-col sm:items-center sm:flex-row gap-3 mb-6">
-    <InputGroup class="h-9">
-      <InputGroupInput type="search" placeholder="Buscar rifa..." />
-      <InputGroupAddon>
-        <Icon name="lucide:search" />
-      </InputGroupAddon>
-    </InputGroup>
+  {
+    fetchError && (
+      <Card size="sm" class="border-destructive/20 bg-destructive/10 mb-6">
+        <CardContent class="flex items-center gap-3 py-6">
+          <Icon
+            name="lucide:alert-circle"
+            class="text-destructive size-8 shrink-0"
+          />
+          <p class="text-destructive text-sm">
+            No pudimos cargar tus rifas. Intentalo de nuevo más tarde.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
 
-    <div class="flex gap-2">
-      {["Todas", "Activas", "Finalizadas"].map((filter, index) => (
-        <Button
-          type="button"
-          variant={index === 0 ? "primary" : "outline"}
-          size="sm"
-        >
-          {filter}
-        </Button>
-      ))}
-    </div>
-  </section> -->
+  {
+    !fetchError && enrichedRaffles.length === 0 && (
+      <Card size="sm" class="border-dashed">
+        <CardContent class="flex flex-col items-center gap-4 py-12 text-center">
+          <span class="bg-muted flex size-16 items-center justify-center rounded-2xl">
+            <Icon name="lucide:ticket" class="text-muted-foreground size-8" />
+          </span>
+          <hgroup>
+            <CardTitle class="text-foreground text-lg font-bold">
+              Todavía no creaste ninguna rifa
+            </CardTitle>
+            <CardDescription class="text-muted-foreground mt-1 text-sm">
+              Crea tu primera rifa y empezá a vender números al instante.
+            </CardDescription>
+          </hgroup>
+          <Button variant="primary" href="/dashboard/raffle/create">
+            <Icon name="lucide:plus" class="size-4" />
+            <span class="font-bold">Crear mi primera rifa</span>
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
 
-  <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-    {
-      enrichedRaffles.map(
-        ({
-          id,
-          title,
-          description,
-          price,
-          total_numbers,
-          draw_date,
-          soldCount,
-          dots,
-        }) => (
-          <a href={`/dashboard/raffle/${id}`} class="group">
-            <Card size="sm" class="shadow-card group-hover:shadow-card-hover">
-              <CardHeader class="flex">
-                <hgroup class="min-w-0 flex-1">
-                  <CardTitle class="group-hover:text-primary truncate font-bold transition-colors">
-                    {title}
-                  </CardTitle>
-                  {description && (
-                    <CardDescription class="text-muted-foreground line-clamp-1 text-xs!">
-                      {description}
-                    </CardDescription>
-                  )}
-                </hgroup>
-              </CardHeader>
-              <CardContent>
-                <article class="mb-3 flex h-fit max-h-13 flex-wrap gap-0.5 overflow-hidden">
-                  {dots.map((bool) => (
-                    <span
-                      class:list={[
-                        'h-2 w-2 rounded-full',
-                        bool ? 'bg-raffle-sold' : 'bg-primary/20',
-                      ]}
-                    />
-                  ))}
-                </article>
+  {
+    enrichedRaffles.length > 0 && (
+      <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {enrichedRaffles.map(
+          ({
+            id,
+            title,
+            description,
+            price,
+            total_numbers,
+            draw_date,
+            soldCount,
+            dots,
+          }) => (
+            <a href={`/dashboard/raffle/${id}`} class="group">
+              <Card size="sm" class="shadow-card group-hover:shadow-card-hover">
+                <CardHeader class="flex">
+                  <hgroup class="min-w-0 flex-1">
+                    <CardTitle class="group-hover:text-primary truncate font-bold transition-colors">
+                      {title}
+                    </CardTitle>
+                    {description && (
+                      <CardDescription class="text-muted-foreground line-clamp-1 text-xs!">
+                        {description}
+                      </CardDescription>
+                    )}
+                  </hgroup>
+                </CardHeader>
+                <CardContent>
+                  <article class="mb-3 flex h-fit max-h-13 flex-wrap gap-0.5 overflow-hidden">
+                    {dots.map((bool) => (
+                      <span
+                        class:list={[
+                          'h-2 w-2 rounded-full',
+                          bool ? 'bg-raffle-sold' : 'bg-primary/20',
+                        ]}
+                      />
+                    ))}
+                  </article>
 
-                <div class="mb-3 flex items-center justify-between">
-                  <span class="text-muted-foreground text-sm font-medium">
-                    {soldCount}/{total_numbers} vendidos
-                  </span>
-                  <span class="text-primary text-sm font-bold">
-                    {Math.round((soldCount / total_numbers) * 100)}%
-                  </span>
-                </div>
-
-                <Progress
-                  value={Math.round((soldCount / total_numbers) * 100)}
-                  variant="primary"
-                  class="mb-4 h-1.5 rounded-full"
-                />
-
-                <div class="flex items-center justify-between border-t pt-3">
-                  <span class="text-muted-foreground flex items-center gap-1 text-sm">
-                    <Icon name="lucide:calendar-days" class="size-3.5" />
-                    {formatDate(new Date(draw_date), {
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                  </span>
-
-                  <div class="flex items-center gap-1">
-                    <Icon
-                      name="lucide:dollar-sign"
-                      class="text-accent size-3.5"
-                    />
-                    <span class="text-foreground font-extrabold">
-                      {formatCurrency(price, false)}
+                  <div class="mb-3 flex items-center justify-between">
+                    <span class="text-muted-foreground text-sm font-medium">
+                      {soldCount}/{total_numbers} vendidos
+                    </span>
+                    <span class="text-primary text-sm font-bold">
+                      {Math.round((soldCount / total_numbers) * 100)}%
                     </span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </a>
-        ),
-      )
-    }
-  </section>
+
+                  <Progress
+                    value={Math.round((soldCount / total_numbers) * 100)}
+                    variant="primary"
+                    class="mb-4 h-1.5 rounded-full"
+                  />
+
+                  <div class="flex items-center justify-between border-t pt-3">
+                    <span class="text-muted-foreground flex items-center gap-1 text-sm">
+                      <Icon name="lucide:calendar-days" class="size-3.5" />
+                      {formatDate(new Date(draw_date), {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </span>
+
+                    <div class="flex items-center gap-1">
+                      <Icon
+                        name="lucide:dollar-sign"
+                        class="text-accent size-3.5"
+                      />
+                      <span class="text-foreground font-extrabold">
+                        {formatCurrency(price, false)}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </a>
+          ),
+        )}
+      </section>
+    )
+  }
 </AppLayout>
