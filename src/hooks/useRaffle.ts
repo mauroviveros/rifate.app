@@ -37,22 +37,22 @@ export function useRaffle({
   }, []);
 
   const raffle = useMemo(() => {
+    const soldsSet = new Set(solds);
+    const selectedsSet = new Set(selecteds);
+
     return {
       length,
       numbers: {
-        solds: Array.from(new Set(solds)),
-        selecteds: Array.from(new Set(selecteds)),
+        solds: Array.from(soldsSet),
+        selecteds: Array.from(selectedsSet),
         availables: Array.from({ length }, (_, i) => i).filter(
-          (number) => !solds.includes(number) && !selecteds.includes(number),
+          (number) => !soldsSet.has(number) && !selectedsSet.has(number),
         ),
       },
       count: {
-        solds: Array.from(new Set(solds)).length,
-        selecteds: Array.from(new Set(selecteds)).length,
-        availables:
-          length -
-          Array.from(new Set(solds)).length -
-          Array.from(new Set(selecteds)).length,
+        solds: soldsSet.size,
+        selecteds: selectedsSet.size,
+        availables: length - soldsSet.size - selectedsSet.size,
       },
     };
   }, [length, solds, selecteds]);
