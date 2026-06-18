@@ -5,18 +5,18 @@ import { mapRaffleDetailStats } from '@/lib/mappers';
 
 export function RaffleDetailPanel({
   sold_numbers,
-  total_number,
+  total_numbers,
   unit_price,
   draw_date,
 }: {
   sold_numbers: number;
-  total_number: number;
+  total_numbers: number;
   unit_price: number;
   draw_date: Date;
 }) {
   const STATS = mapRaffleDetailStats({
     sold: sold_numbers,
-    total: total_number,
+    total: total_numbers,
     price: unit_price,
     date: draw_date,
   });
@@ -36,7 +36,7 @@ export function RaffleDetailPanel({
       </article>
 
       <Progress
-        value={(sold_numbers / total_number) * 100}
+        value={(sold_numbers / total_numbers) * 100}
         className="my-6 h-2"
       />
     </>
