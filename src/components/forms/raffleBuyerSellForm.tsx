@@ -26,7 +26,7 @@ export function RaffleBuyerSellForm({
 }: {
   raffle_id: Tables<'raffles'>['id'];
   numbers: Tables<'raffle_numbers'>['number'][];
-  onSuccess?: () => void;
+  onSuccess?: (buyerName: string, buyerPhone?: string | null) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export function RaffleBuyerSellForm({
     try {
       const { error } = await actions.sellRaffleNumbers(data);
       if (error) setError(error.message);
-      else onSuccess?.();
+      else onSuccess?.(data.name, data.phone);
     } catch {
       setError('Ocurrió un error inesperado. Intentalo nuevamente.');
     } finally {
