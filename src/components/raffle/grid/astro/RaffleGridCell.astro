@@ -20,6 +20,7 @@ const { editable = false, isSold, isSelected, number } = Astro.props;
     class="peer sr-only"
     checked={isSelected}
     disabled={isSold}
+    aria-label={`Número ${number}${isSold ? ' — vendido' : isSelected ? ' — seleccionado' : ' — disponible'}`}
   />
   <span
     class:list={[
