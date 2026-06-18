@@ -98,7 +98,7 @@ export function RaffleBuyerSellForm({
           <Input
             type="tel"
             id="buyer.phone"
-            placeholder="Ej: 11 5142-3888"
+            placeholder="Ej: 11 2345-6789"
             aria-invalid={!!methods.formState.errors.phone}
             {...methods.register('phone')}
           />

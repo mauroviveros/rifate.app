@@ -20,6 +20,14 @@ const supabase = createServerClient({
 const { data, error } = await supabase.auth.getUser();
 if (!data || error) return;
 const user = data.user;
+const initials = user.user_metadata.full_name
+  ? user.user_metadata.full_name
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase()
+  : '?';
 ---
 
 <Dropdown>
@@ -41,8 +49,9 @@ const user = data.user;
         />
         <AvatarFallback
           class="bg-primary/50 text-primary-foreground top-0 left-0 size-7 text-xs font-bold"
-          >MV</AvatarFallback
         >
+          {initials}
+        </AvatarFallback>
       </Avatar>
 
       <span class="hidden text-sm font-medium sm:inline"

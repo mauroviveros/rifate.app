@@ -22,7 +22,7 @@ export default defineAction({
       .single();
 
     if (error) {
-      console.error('Error creating raffle:', { error, raffle: input });
+      console.error('Error creating raffle:', error);
       throw new ActionError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Error al crear la rifa',
