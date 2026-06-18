@@ -177,7 +177,7 @@ const enrichedRaffles = (raffles ?? []).map((raffle) => {
                       class="text-accent size-3.5"
                     />
                     <span class="text-foreground font-extrabold">
-                      {formatCurrency(price).replace(/^\D+/, '')}
+                      {formatCurrency(price, false)}
                     </span>
                   </div>
                 </div>

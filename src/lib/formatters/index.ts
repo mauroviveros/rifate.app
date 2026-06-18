@@ -1,10 +1,11 @@
 export const formatCurrency = (value: number, showCurrency: boolean = true) => {
-  const formatter = new Intl.NumberFormat('es-AR', {
+  if (!showCurrency) return value.toLocaleString('es-AR');
+
+  return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
     useGrouping: true,
-  });
-  return `${formatter.format(value)} ${showCurrency ? 'ARS' : ''}`.trim();
+  }).format(value);
 };
 
 export const formatPercentage = (
