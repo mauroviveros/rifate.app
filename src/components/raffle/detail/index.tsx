@@ -80,7 +80,7 @@ export function RaffleDetail({ raffle }: { raffle: RaffleProps }) {
       <Toaster position="bottom-center" richColors />
       <RaffleDetailPanel
         sold_numbers={raffleState.count.solds}
-        total_number={raffle.total_numbers}
+        total_numbers={raffle.total_numbers}
         unit_price={raffle.price}
         draw_date={new Date(raffle.draw_date)}
       />
