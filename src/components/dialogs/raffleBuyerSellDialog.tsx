@@ -21,7 +21,7 @@ export function RaffleBuyerSellDialog({
   raffle_id: string;
   selectedNumbers: number[];
   price: number;
-  onSuccess?: () => void;
+  onSuccess?: (buyerName: string, buyerPhone?: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const sellTitle = `Vender ${selectedNumbers.length} número${selectedNumbers.length !== 1 ? 's' : ''}`;
@@ -29,9 +29,9 @@ export function RaffleBuyerSellDialog({
     (a, b) => a - b,
   );
 
-  const handleSuccess = () => {
+  const handleSuccess = (buyerName: string, buyerPhone?: string | null) => {
     setOpen(false);
-    onSuccess?.();
+    onSuccess?.(buyerName, buyerPhone);
   };
 
   return (
