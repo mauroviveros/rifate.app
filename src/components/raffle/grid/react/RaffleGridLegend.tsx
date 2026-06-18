@@ -14,15 +14,24 @@ export function RaffleGridLegend({ className, ...props }: Props) {
       {...props}
     >
       <li className="flex items-center gap-1">
-        <span className="bg-raffle-available inline-block size-2.5 rounded" />
+        <span
+          className="bg-raffle-available inline-block size-2.5 rounded"
+          aria-hidden="true"
+        />
         <p>Disponible</p>
       </li>
       <li className="flex items-center gap-1">
-        <span className="bg-raffle-sold inline-block size-2.5 rounded" />
+        <span
+          className="bg-raffle-sold inline-block size-2.5 rounded"
+          aria-hidden="true"
+        />
         <p>Vendido</p>
       </li>
       <li className="flex items-center gap-1">
-        <span className="bg-raffle-selected inline-block size-2.5 rounded" />
+        <span
+          className="bg-raffle-selected inline-block size-2.5 rounded"
+          aria-hidden="true"
+        />
         <p>Seleccionado</p>
       </li>
     </ul>

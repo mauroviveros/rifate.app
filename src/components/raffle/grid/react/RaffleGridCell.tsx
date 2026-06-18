@@ -34,6 +34,7 @@ export function RaffleGridCell({
         checked={isSelected}
         disabled={isSold}
         onChange={onToggleSelected}
+        aria-label={`Número ${number}${isSold ? ' — vendido' : isSelected ? ' — seleccionado' : ' — disponible'}`}
       />
       <span
         className={cn(
