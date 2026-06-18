@@ -45,6 +45,24 @@ const STATS = mapRaffleListStats({
       0,
     ) || 0,
 });
+
+const enrichedRaffles = (raffles ?? []).map((raffle) => {
+  const numbers = raffle.numbers;
+  const soldCount = numbers.filter((n) => n.status === 'SOLD').length;
+  const dotCount = Math.min(raffle.total_numbers, 100);
+  const dots = Array.from({ length: dotCount }, (_, i) => {
+    if (raffle.total_numbers <= 100) {
+      return numbers.some((n) => n.number === i && n.status === 'SOLD');
+    }
+    const step = raffle.total_numbers / dotCount;
+    const start = Math.floor(i * step);
+    const end = Math.floor((i + 1) * step);
+    return numbers.some(
+      (n) => n.number >= start && n.number < end && n.status === 'SOLD',
+    );
+  });
+  return { ...raffle, soldCount, dots };
+});
 ---
 
 <AppLayout size="5xl">
@@ -91,16 +109,16 @@ const STATS = mapRaffleListStats({
 
   <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
     {
-      raffles?.map(
+      enrichedRaffles.map(
         ({
           id,
           title,
           description,
           price,
           total_numbers,
-          numbers,
           draw_date,
-          status,
+          soldCount,
+          dots,
         }) => (
           <a href={`/dashboard/raffle/${id}`} class="group">
             <Card size="sm" class="shadow-card group-hover:shadow-card-hover">
@@ -115,53 +133,30 @@ const STATS = mapRaffleListStats({
                     </CardDescription>
                   )}
                 </hgroup>
-
-                {/* <span
-              class:list={[
-                "text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap",
-                "bg-secondary/30 text-secondary-foreground"
-              ]}
-            >
-              {
-                status === "DRAFT" ? "Borrador" :
-                status === "PUBLISHED" ? "Activa" :
-                status === "CLOSED" ? "Finalizada" :
-                status === "CANCELLED" ? "Cancelada" :
-                "Desconocido"
-              }
-            </span> */}
               </CardHeader>
               <CardContent>
                 <article class="mb-3 flex h-fit max-h-13 flex-wrap gap-0.5 overflow-hidden">
-                  {Array.from(
-                    { length: Math.min(total_numbers, 100) },
-                    (_, i) => i,
-                  )
-                    .map(
-                      (_, i) =>
-                        numbers.find((n) => n.number === i)?.status === 'SOLD',
-                    )
-                    .map((bool) => (
-                      <span
-                        class:list={[
-                          'h-2 w-2 rounded-full',
-                          bool ? 'bg-raffle-sold' : 'bg-primary/20',
-                        ]}
-                      />
-                    ))}
+                  {dots.map((bool) => (
+                    <span
+                      class:list={[
+                        'h-2 w-2 rounded-full',
+                        bool ? 'bg-raffle-sold' : 'bg-primary/20',
+                      ]}
+                    />
+                  ))}
                 </article>
 
                 <div class="mb-3 flex items-center justify-between">
                   <span class="text-muted-foreground text-sm font-medium">
-                    {numbers.length}/{total_numbers} vendidos
+                    {soldCount}/{total_numbers} vendidos
                   </span>
                   <span class="text-primary text-sm font-bold">
-                    {Math.round((numbers.length / total_numbers) * 100)}%
+                    {Math.round((soldCount / total_numbers) * 100)}%
                   </span>
                 </div>
 
                 <Progress
-                  value={Math.round((numbers.length / total_numbers) * 100)}
+                  value={Math.round((soldCount / total_numbers) * 100)}
                   variant="primary"
                   class="mb-4 h-1.5 rounded-full"
                 />
