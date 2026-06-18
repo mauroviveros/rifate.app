@@ -9,12 +9,9 @@ import {
 } from '@starwind/card';
 import { Icon } from 'astro-icon/components';
 
-import { RaffleGrid } from '@/components/raffle/grid/astro';
+import RaffleGridCell from '@/components/raffle/grid/astro/RaffleGridCell.astro';
+import RaffleGridLegend from '@/components/raffle/grid/astro/RaffleGridLegend.astro';
 import PublicLayout from '@/layouts/PublicLayout.astro';
-
-export function getStaticPaths() {
-  return [{ params: { id: '1' } }];
-}
 ---
 
 <PublicLayout>
@@ -30,7 +27,16 @@ export function getStaticPaths() {
   </hgroup>
 
   <section class="grid gap-6 lg:grid-cols-[1fr_19rem]">
-    <RaffleGrid editable={true} />
+    <div class="space-y-2">
+      <div class="grid grid-cols-10 gap-1">
+        {
+          Array.from({ length: 100 }, (_, i) => (
+            <RaffleGridCell number={String(i).padStart(2, '0')} />
+          ))
+        }
+      </div>
+      <RaffleGridLegend />
+    </div>
 
     <div class="space-y-4">
       <Card size="sm">
