@@ -6,8 +6,9 @@ import { RaffleDetail } from '@/components/raffle/detail';
 import RaffleDetailSkeleton from '@/components/raffle/detail/RaffleDetailSkeleton.astro';
 import AppLayout from '@/layouts/AppLayout.astro';
 import { createServerClient } from '@/lib/supabase/server';
+import type { Tables } from '@/types';
 
-if (!Astro.params.id) throw new Error('ID de rifa no proporcionado');
+if (!Astro.params.id) return Astro.redirect('/dashboard/raffle');
 
 const user = Astro.locals.user;
 
@@ -17,27 +18,38 @@ const supabase = createServerClient({
   request: Astro.request,
   cookies: Astro.cookies,
 });
-const { data: raffle, error } = await supabase
-  .from('raffles')
-  .select(
-    `
-    *,
-    buyers:raffle_buyers(*),
-    numbers:raffle_numbers(
-      *,
-      buyer:raffle_buyers(*)
-    )
-  `,
-  )
-  .eq('id', Astro.params.id)
-  .single();
 
-if (error || !raffle) {
-  console.error('Error fetching raffle data:', error);
-  throw new Error('No se pudo cargar la rifa');
+type RaffleWithRelations = Tables<'raffles'> & {
+  buyers: Tables<'raffle_buyers'>[];
+  numbers: (Tables<'raffle_numbers'> & {
+    buyer: Tables<'raffle_buyers'> | null;
+  })[];
+};
+
+let raffle: RaffleWithRelations | null = null;
+
+try {
+  const { data } = await supabase
+    .from('raffles')
+    .select(
+      `
+      *,
+      buyers:raffle_buyers(*),
+      numbers:raffle_numbers(
+        *,
+        buyer:raffle_buyers(*)
+      )
+    `,
+    )
+    .eq('id', Astro.params.id)
+    .single();
+
+  raffle = data as RaffleWithRelations | null;
+} catch {
+  // fall through to redirect
 }
 
-if (raffle.owner_id !== user.id) {
+if (!raffle || raffle.owner_id !== user.id) {
   return Astro.redirect('/dashboard/raffle');
 }
 ---
