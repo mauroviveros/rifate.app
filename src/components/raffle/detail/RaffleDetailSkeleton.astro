@@ -31,7 +31,7 @@ const { total_numbers = 100 } = Astro.props;
       </CardHeader>
       <CardContent class="grid grid-cols-10 gap-1">
         {
-          Array.from({ length: Math.min(total_numbers) }, (_, i) => (
+          Array.from({ length: Math.min(total_numbers, 100) }, (_, i) => (
             <Skeleton class="aspect-square rounded-lg" />
           ))
         }
