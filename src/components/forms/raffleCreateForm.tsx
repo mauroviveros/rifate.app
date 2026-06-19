@@ -44,6 +44,7 @@ export function RaffleCreateForm({
       price: price ?? 0,
       total_numbers: total_numbers ?? 100,
       draw_date: defaultDrawDate,
+      contact_phone: '',
     },
   });
 
@@ -171,6 +172,21 @@ export function RaffleCreateForm({
             min={today}
             aria-invalid={!!methods.formState.errors.draw_date}
             {...methods.register('draw_date')}
+          />
+        </Field>
+
+        <Field
+          label="Teléfono de contacto (WhatsApp)"
+          htmlFor="raffle-contact_phone"
+          description="Los compradores usarán este número para contactarte"
+          error={methods.formState.errors.contact_phone?.message}
+        >
+          <Input
+            id="raffle-contact_phone"
+            type="tel"
+            placeholder="Ej: 11 2345-6789"
+            aria-invalid={!!methods.formState.errors.contact_phone}
+            {...methods.register('contact_phone')}
           />
         </Field>
 
