@@ -11,7 +11,38 @@ import { Icon } from 'astro-icon/components';
 
 import RaffleGridCell from '@/components/raffle/grid/astro/RaffleGridCell.astro';
 import RaffleGridLegend from '@/components/raffle/grid/astro/RaffleGridLegend.astro';
+import RafflePublicStats from '@/components/raffle/public/RafflePublicStats.astro';
 import PublicLayout from '@/layouts/PublicLayout.astro';
+import {
+  formatCurrency,
+  formatDate,
+  formatRaffleNumber,
+} from '@/lib/formatters';
+import { createServerClient } from '@/lib/supabase/server';
+import { getNumberLength } from '@/lib/utils';
+
+if (!Astro.params.id) return Astro.redirect('/');
+
+const supabase = createServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies,
+});
+
+const { data: raffle } = await supabase
+  .from('raffles')
+  .select('*, numbers:raffle_numbers(number, status)')
+  .eq('id', Astro.params.id)
+  .eq('status', 'PUBLISHED')
+  .single();
+
+if (!raffle) return Astro.redirect('/');
+
+const soldNumbers = raffle.numbers
+  .filter((n: { status: string }) => n.status === 'SOLD')
+  .map((n: { number: number }) => n.number);
+const soldCount = soldNumbers.length;
+const soldSet = new Set(soldNumbers);
+const padding = getNumberLength(raffle.total_numbers);
 ---
 
 <PublicLayout>
@@ -19,52 +50,164 @@ import PublicLayout from '@/layouts/PublicLayout.astro';
     <h1
       class="text-primary-foreground mb-1 text-2xl font-extrabold lg:text-3xl"
     >
-      Rifa del Barrio - TV 50 pulgadas
+      {raffle.title}
     </h1>
     <p class="text-primary-foreground/70 max-w-lg text-sm">
-      Gran rifa para juntar fondos para el club del barrio
+      {raffle.description}
     </p>
   </hgroup>
 
-  <section class="grid gap-6 lg:grid-cols-[1fr_19rem]">
-    <div class="space-y-2">
-      <div class="grid grid-cols-10 gap-1">
-        {
-          Array.from({ length: 100 }, (_, i) => (
-            <RaffleGridCell number={String(i).padStart(2, '0')} />
-          ))
-        }
-      </div>
-      <RaffleGridLegend />
+  <RafflePublicStats
+    drawDate={raffle.draw_date}
+    pricePerNumber={raffle.price}
+    totalNumbers={raffle.total_numbers}
+    availableNumbers={raffle.total_numbers - soldCount}
+  />
+
+  <section class="grid gap-6 lg:grid-cols-[1fr_16rem]">
+    <div class="space-y-4">
+      <Card>
+        <CardHeader class="mb-4 flex flex-wrap items-center justify-between">
+          <CardTitle
+            class="text-foreground flex flex-1 items-center gap-2 text-lg font-bold"
+          >
+            Números
+          </CardTitle>
+          <RaffleGridLegend class="ml-auto" />
+        </CardHeader>
+        <CardContent
+          class="grid grid-cols-10 gap-1"
+          id="raffle-grid"
+          data-length={raffle.total_numbers}
+          data-sold={JSON.stringify(soldNumbers)}
+        >
+          {
+            Array.from({ length: raffle.total_numbers }, (_, i) => (
+              <RaffleGridCell
+                number={formatRaffleNumber(i, padding)}
+                isSold={soldSet.has(i)}
+              />
+            ))
+          }
+        </CardContent>
+      </Card>
     </div>
 
     <div class="space-y-4">
       <Card size="sm">
         <CardHeader>
+          <CardTitle class="text-foreground font-bold">
+            Detalles de la rifa
+          </CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-3 text-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-muted-foreground">Precio por número</span>
+            <span class="text-foreground font-bold">
+              {formatCurrency(raffle.price)}
+            </span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-muted-foreground">Vendidos</span>
+            <span class="text-foreground font-bold">
+              {soldCount}/{raffle.total_numbers}
+            </span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-muted-foreground">Fecha del sorteo</span>
+            <span class="text-foreground font-bold">
+              {formatDate(new Date(raffle.draw_date), { dateStyle: 'medium' })}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card size="sm">
+        <CardHeader>
           <CardTitle class="text-foreground font-bold"
             >¿Querés comprar?</CardTitle
           >
-          <CardDescription class="text-muted-foreground text-sm"
-            >Seleccioná los números que te interesan y contactá al organizador
-            por WhatsApp.</CardDescription
-          >
+          <CardDescription class="text-muted-foreground text-sm">
+            Seleccioná los números que te interesan y contactá al organizador.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="primary" class="w-full">
-            <Icon name="lucide:message-circle" />
-            Contactar al organizador
-          </Button>
+          {
+            raffle.contact_phone ? (
+              <a
+                id="whatsapp-link"
+                href={`https://wa.me/${raffle.contact_phone.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="w-full"
+              >
+                <Button variant="primary" class="w-full">
+                  <Icon name="lucide:message-circle" />
+                  Contactar al organizador
+                </Button>
+              </a>
+            ) : (
+              <Button variant="primary" class="w-full" disabled>
+                <Icon name="lucide:message-circle" />
+                Contactar al organizador
+              </Button>
+            )
+          }
         </CardContent>
       </Card>
 
       <Card size="sm" class="bg-secondary/20 border-0">
         <CardContent>
           <p class="text-muted-foreground text-sm leading-relaxed">
-            <strong>Tip:</strong> Tocá los números disponibles para seleccionar los
-            que te interesan antes de contactar al organizador.
+            <strong>Tocá</strong> los números disponibles para seleccionarlos. Después
+            usá el botón de WhatsApp para enviarle tu selección al organizador.
           </p>
         </CardContent>
       </Card>
     </div>
   </section>
 </PublicLayout>
+
+<script>
+  const grid = document.getElementById('raffle-grid');
+  if (!grid) return;
+  const checkboxes = grid.querySelectorAll<HTMLInputElement>(
+    "input[type='checkbox']",
+  );
+  const whatsappLink = document.getElementById(
+    'whatsapp-link',
+  ) as HTMLAnchorElement | null;
+
+  const total = Number(grid.dataset.length) || 0;
+  const sold: number[] = JSON.parse(grid.dataset.sold || '[]');
+  const soldSet = new Set(sold);
+  const padding = String(total).length;
+
+  const getSelected = (): number[] => {
+    const selected: number[] = [];
+    checkboxes.forEach((cb, i) => {
+      if (cb.checked && !soldSet.has(i)) selected.push(i);
+    });
+    return selected;
+  };
+
+  const updateWhatsApp = () => {
+    if (!whatsappLink) return;
+    const selected = getSelected();
+    const base = whatsappLink.href.split('?')[0];
+    if (selected.length === 0) {
+      whatsappLink.href = base;
+      return;
+    }
+    const nums = selected
+      .map((n) => String(n).padStart(padding, '0'))
+      .join(', ');
+
+    whatsappLink.href = `${base}?text=${encodeURIComponent(`¡Hola! Me interesan los números: ${nums}.`)}`;
+  };
+
+  checkboxes.forEach((cb, i) => {
+    if (soldSet.has(i)) return;
+    cb.addEventListener('change', updateWhatsApp);
+  });
+</script>

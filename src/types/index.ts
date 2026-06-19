@@ -6,4 +6,5 @@ export interface Stats {
   value: string;
   icon: string;
   highlight?: 'default' | 'accent' | 'primary';
+  className?: string;
 }

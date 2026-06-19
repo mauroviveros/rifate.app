@@ -96,6 +96,7 @@ export type Database = {
       };
       raffles: {
         Row: {
+          contact_phone: string | null;
           created_at: string;
           description: string | null;
           draw_date: string;
@@ -108,6 +109,7 @@ export type Database = {
           updated_at: string | null;
         };
         Insert: {
+          contact_phone?: string | null;
           created_at?: string;
           description?: string | null;
           draw_date: string;
@@ -120,6 +122,7 @@ export type Database = {
           updated_at?: string | null;
         };
         Update: {
+          contact_phone?: string | null;
           created_at?: string;
           description?: string | null;
           draw_date?: string;
