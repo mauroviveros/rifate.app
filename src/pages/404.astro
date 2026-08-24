@@ -4,6 +4,8 @@ import { Card, CardContent } from '@starwind/card';
 import { Icon } from 'astro-icon/components';
 
 import Layout from '@/layouts/Layout.astro';
+
+Astro.response.status = 404;
 ---
 
 <Layout
@@ -22,7 +24,7 @@ import Layout from '@/layouts/Layout.astro';
           La página que buscás no existe o fue eliminada.
         </p>
       </hgroup>
-      <Button variant="primary" href="/dashboard/raffle">
+      <Button variant="primary" href="/">
         <Icon name="lucide:home" class="size-4" />
         <span class="font-bold">Volver al inicio</span>
       </Button>

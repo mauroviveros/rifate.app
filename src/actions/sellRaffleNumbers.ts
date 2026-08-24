@@ -1,5 +1,6 @@
 import { ActionError, defineAction } from 'astro:actions';
 
+import { getRaffleOwnerId, sellRaffleNumbers } from '@/lib/repositories/raffle';
 import { createServerClient } from '@/lib/supabase/server';
 import { SellRaffleNumbersSchema } from '@/schemas/raffle-buyer';
 
@@ -16,66 +17,34 @@ export default defineAction({
 
     const supabase = createServerClient({ cookies, request });
 
-    // Guard: verificar ownership de la rifa
-    const { data: raffle } = await supabase
-      .from('raffles')
-      .select('owner_id')
-      .eq('id', input.raffle_id)
-      .single();
-
-    if (!raffle || raffle.owner_id !== locals.user.id) {
+    // Solo el dueño de la rifa puede vender sus números.
+    const ownerId = await getRaffleOwnerId(supabase, input.raffle_id);
+    if (!ownerId || ownerId !== locals.user.id) {
       throw new ActionError({
         code: 'FORBIDDEN',
         message: 'No tenés permiso para vender números en esta rifa',
       });
     }
 
-    const { data: buyer, error: buyerError } = await supabase
-      .from('raffle_buyers')
-      .insert({
-        raffle_id: input.raffle_id,
-        name: input.name,
-        phone: input.phone ?? null,
-        note: input.note ?? null,
-      })
-      .select('id')
-      .single();
+    const result = await sellRaffleNumbers(supabase, {
+      raffleId: input.raffle_id,
+      buyer: { name: input.name, phone: input.phone, note: input.note },
+      numbers: input.numbers,
+    });
 
-    if (buyerError || !buyer) {
-      console.error('Error creating buyer:', buyerError);
-      throw new ActionError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Error al crear el comprador',
-      });
-    }
-
-    const numbersToInsert = input.numbers.map((number) => ({
-      raffle_id: input.raffle_id,
-      number,
-      buyer_id: buyer.id,
-      status: 'SOLD' as const,
-    }));
-
-    const { error: numbersError } = await supabase
-      .from('raffle_numbers')
-      .insert(numbersToInsert);
-
-    if (numbersError) {
-      await supabase.from('raffle_buyers').delete().eq('id', buyer.id);
-
-      if (numbersError.code === '23505') {
+    if (!result.ok) {
+      if (result.reason === 'conflict') {
         throw new ActionError({
           code: 'CONFLICT',
           message: 'Uno o más números ya no están disponibles',
         });
       }
-
       throw new ActionError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Error al asignar los números',
       });
     }
 
-    return { success: true, buyer_id: buyer.id };
+    return { success: true, buyer_id: result.buyerId };
   },
 });

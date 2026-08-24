@@ -9,7 +9,13 @@ import icon from 'astro-icon';
 export default defineConfig({
   site: 'https://rifate.app',
   output: 'server',
-  adapter: vercel(),
+  adapter: vercel({
+    // Ensure the OG fonts are bundled with the serverless function.
+    includeFiles: [
+      './src/pages/og/raffle/Nunito-Bold.ttf',
+      './src/pages/og/raffle/Nunito-ExtraBold.ttf',
+    ],
+  }),
   integrations: [icon(), react()],
   vite: {
     plugins: [tailwindcss()],

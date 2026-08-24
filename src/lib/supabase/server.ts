@@ -19,6 +19,8 @@ const getSupabaseEnv = () => {
   return { url, anonKey };
 };
 
+export type ServerClient = ReturnType<typeof createServerClient>;
+
 export function createServerClient({
   request,
   cookies,

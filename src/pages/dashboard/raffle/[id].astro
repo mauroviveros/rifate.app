@@ -5,8 +5,8 @@ import { Icon } from 'astro-icon/components';
 import { RaffleDetail } from '@/components/raffle/detail';
 import RaffleDetailSkeleton from '@/components/raffle/detail/RaffleDetailSkeleton.astro';
 import AppLayout from '@/layouts/AppLayout.astro';
+import { getOwnerRaffle } from '@/lib/repositories/raffle';
 import { createServerClient } from '@/lib/supabase/server';
-import type { Tables } from '@/types';
 
 if (!Astro.params.id) return Astro.redirect('/dashboard/raffle');
 
@@ -19,39 +19,9 @@ const supabase = createServerClient({
   cookies: Astro.cookies,
 });
 
-type RaffleWithRelations = Tables<'raffles'> & {
-  buyers: Tables<'raffle_buyers'>[];
-  numbers: (Tables<'raffle_numbers'> & {
-    buyer: Tables<'raffle_buyers'> | null;
-  })[];
-};
+const raffle = await getOwnerRaffle(supabase, Astro.params.id, user.id);
 
-let raffle: RaffleWithRelations | null = null;
-
-try {
-  const { data } = await supabase
-    .from('raffles')
-    .select(
-      `
-      *,
-      buyers:raffle_buyers(*),
-      numbers:raffle_numbers(
-        *,
-        buyer:raffle_buyers(*)
-      )
-    `,
-    )
-    .eq('id', Astro.params.id)
-    .single();
-
-  raffle = data as RaffleWithRelations | null;
-} catch {
-  // fall through to redirect
-}
-
-if (!raffle || raffle.owner_id !== user.id) {
-  return Astro.redirect('/dashboard/raffle');
-}
+if (!raffle) return Astro.redirect('/dashboard/raffle');
 ---
 
 <AppLayout size="6xl">
