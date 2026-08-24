@@ -12,9 +12,16 @@ import Stats from '@ui/Stats.astro';
 import { Icon } from 'astro-icon/components';
 
 import AppLayout from '@/layouts/AppLayout.astro';
+import {
+  aggregateListStats,
+  buildSalesDots,
+  countSold,
+} from '@/lib/domain/raffle';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { mapRaffleListStats } from '@/lib/mappers';
+import { listOwnerRaffles } from '@/lib/repositories/raffle';
 import { createServerClient } from '@/lib/supabase/server';
+import type { RaffleListItem } from '@/types';
 
 const supabase = createServerClient({
   cookies: Astro.cookies,
@@ -22,65 +29,21 @@ const supabase = createServerClient({
 });
 
 let fetchError = false;
-let raffles: Array<{
-  id: string;
-  title: string;
-  description: string | null;
-  price: number;
-  total_numbers: number;
-  draw_date: string;
-  status: string;
-  numbers: { number: number; status: string }[];
-}> = [];
+let raffles: RaffleListItem[] = [];
 
 try {
-  const { data } = await supabase.from('raffles').select(`
-      id, title, description, price, total_numbers,
-      draw_date, status,
-      numbers: raffle_numbers(
-        number, status
-      )
-    `);
-  if (data) raffles = data;
+  raffles = await listOwnerRaffles(supabase);
 } catch {
   fetchError = true;
 }
 
-const STATS = mapRaffleListStats({
-  raffles: raffles.length || 0,
-  sold:
-    raffles.reduce(
-      (acc, raffle) =>
-        acc + raffle.numbers.filter((n) => n.status === 'SOLD').length,
-      0,
-    ) || 0,
-  total: raffles.reduce((acc, raffle) => acc + raffle.total_numbers, 0) || 0,
-  revenue:
-    raffles.reduce(
-      (acc, raffle) =>
-        acc +
-        raffle.numbers.filter((n) => n.status === 'SOLD').length * raffle.price,
-      0,
-    ) || 0,
-});
+const STATS = mapRaffleListStats(aggregateListStats(raffles));
 
-const enrichedRaffles = raffles.map((raffle) => {
-  const numbers = raffle.numbers;
-  const soldCount = numbers.filter((n) => n.status === 'SOLD').length;
-  const dotCount = Math.min(raffle.total_numbers, 100);
-  const dots = Array.from({ length: dotCount }, (_, i) => {
-    if (raffle.total_numbers <= 100) {
-      return numbers.some((n) => n.number === i && n.status === 'SOLD');
-    }
-    const step = raffle.total_numbers / dotCount;
-    const start = Math.floor(i * step);
-    const end = Math.floor((i + 1) * step);
-    return numbers.some(
-      (n) => n.number >= start && n.number < end && n.status === 'SOLD',
-    );
-  });
-  return { ...raffle, soldCount, dots };
-});
+const enrichedRaffles = raffles.map((raffle) => ({
+  ...raffle,
+  soldCount: countSold(raffle.numbers),
+  dots: buildSalesDots(raffle.numbers, raffle.total_numbers),
+}));
 ---
 
 <AppLayout size="5xl">

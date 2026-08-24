@@ -1,5 +1,6 @@
 import { ActionError, defineAction } from 'astro:actions';
 
+import { insertRaffle } from '@/lib/repositories/raffle';
 import { createServerClient } from '@/lib/supabase/server';
 import { RaffleSchema } from '@/schemas/raffle';
 
@@ -15,11 +16,7 @@ export default defineAction({
     }
 
     const supabase = createServerClient({ cookies, request });
-    const { data, error } = await supabase
-      .from('raffles')
-      .insert({ ...input, owner_id: locals.user.id })
-      .select('id')
-      .single();
+    const { data, error } = await insertRaffle(supabase, input, locals.user.id);
 
     if (error) {
       console.error('Error creating raffle:', error);

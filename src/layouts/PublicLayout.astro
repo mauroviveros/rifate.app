@@ -7,6 +7,7 @@ const { title, description, class: className, ...props } = Astro.props;
 ---
 
 <Body title={title} description={description} class="flex min-h-dvh flex-col">
+  <slot name="head" slot="head" />
   <header
     class="bg-gradient-hero text-primary-foreground px-6 pt-6 pb-14 lg:pb-16"
   >
