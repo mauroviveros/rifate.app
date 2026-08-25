@@ -1,0 +1,742 @@
+# 07 · Guía de migración a Cloudflare Workers
+
+> ## ⏸ DIFERIDA
+>
+> Se decidió **quedarse en Vercel** hasta activar el cobro. Motivo: Vercel Hobby
+> es $0 mientras no haya uso comercial, y Cloudflare Workers Free **no alcanza
+> para Astro SSR** (10 ms de CPU por request; la propia doc de Cloudflare dice
+> que SSR usa 10-20 ms). Cloudflare recién conviene cuando Vercel Pro pase a ser
+> obligatorio: ahí son $5/mes contra $20.
+>
+> **Esta guía queda lista para ese momento.** Nada de acá se ejecuta ahora.
+>
+> **Excepción — la etapa C sí se hace ya**, adaptada: la URL versionada del OG y
+> la plantilla de satori son independientes de la plataforma y arreglan un bug
+> real (WhatsApp muestra la imagen vieja al recompartir). En Vercel se mantiene
+> `@resvg/resvg-js` nativo; la mudanza futura son ~10 líneas.
+
+> Guía para tipear paso a paso. Cada etapa termina con algo **verificable**: si
+> no funciona, no seguís a la siguiente.
+>
+> Orden elegido a propósito: primero la infraestructura con el código actual
+> (v1), y recién después el esquema nuevo. Así, si algo se rompe, sabés que fue
+> el cambio de plataforma y no el rediseño de la base.
+
+## Índice
+
+| Etapa | Qué | Verificás con |
+|---|---|---|
+| A | Astro 7 + adapter Cloudflare | `pnpm build` sin errores |
+| B | wrangler + deploy | La app v1 andando en `*.workers.dev` |
+| C | OG con satori + resvg-wasm | La imagen se genera con Nunito, < 400 ms |
+| D | Supabase CLI + esquema v2 | `supabase db reset` limpio |
+| E | Adaptar la app | → [06 · Roadmap](./06-roadmap.md), fase 5 |
+
+Antes de empezar:
+
+```bash
+git switch -c v2-refactor
+```
+
+---
+
+## Etapa A · Astro 7 + adapter de Cloudflare
+
+`@astrojs/cloudflare@14` pide `astro ^7.2.0`. Tenés 6.4.6, así que hay que subir.
+Ya existe una rama de dependabot con ese bump (`origin/dependabot/npm_and_yarn/astro-7.1.1`),
+pero conviene hacerlo a mano para ir a la última.
+
+### A.1 · Subir Astro y sacar Vercel
+
+```bash
+pnpm remove @astrojs/vercel
+pnpm add -D astro@^7.2.6 @astrojs/cloudflare@^14.2.4 wrangler@^4.125.0
+pnpm add -D @astrojs/react@latest
+```
+
+### A.2 · `astro.config.mjs`
+
+Reemplazá el archivo completo:
+
+```js
+// @ts-check
+import cloudflare from '@astrojs/cloudflare';
+import react from '@astrojs/react';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig, fontProviders } from 'astro/config';
+import icon from 'astro-icon';
+
+export default defineConfig({
+  site: 'https://rifate.app',
+  output: 'server',
+
+  // Ya no hace falta `includeFiles` con las .ttf: la imagen OG pasa a
+  // generarse con Browser Run y las fuentes las carga el navegador headless.
+  adapter: cloudflare({
+    imageService: 'compile',
+    platformProxy: { enabled: true },
+  }),
+
+  integrations: [icon(), react()],
+
+  vite: {
+    plugins: [tailwindcss()],
+  },
+
+  fonts: [
+    {
+      provider: fontProviders.fontsource(),
+      name: 'Nunito',
+      cssVariable: '--fontsource-nunito',
+      weights: [400, 500, 600, 700, 800, 900],
+    },
+  ],
+
+  redirects: {
+    '/dashboard': '/dashboard/raffle',
+  },
+});
+```
+
+> `platformProxy` es lo que hace que `astro dev` te dé acceso a los bindings de
+> Cloudflare (el de Browser Run, entre otros) sin desplegar. Sin esto, en
+> desarrollo `locals.runtime` viene vacío.
+
+### A.3 · Borrar los archivos que ya no van
+
+```bash
+rm -rf .vercel
+```
+
+> **No borres las `.ttf`.** Se mueven a `src/lib/og/` en la etapa C: satori
+> necesita los buffers de la fuente. Lo único que se saca es `@resvg/resvg-js`
+> (binding nativo), y eso también en C — si lo desinstalás ahora, el build falla.
+
+### A.4 · Verificación
+
+```bash
+pnpm build
+```
+
+Tiene que terminar sin errores y dejar un `dist/_worker.js/`. Anotá la ruta
+exacta que imprime: la vas a necesitar en B.2.
+
+> Si algo del ecosistema no está listo para Astro 7, va a saltar acá. Los
+> candidatos son `astro-icon` y los componentes de `starwind`.
+
+---
+
+## Etapa B · wrangler y primer deploy
+
+### B.1 · `.gitignore`
+
+```bash
+cat >> .gitignore <<'EOF'
+
+# Cloudflare
+.wrangler/
+.dev.vars
+worker-configuration.d.ts
+EOF
+```
+
+### B.2 · `wrangler.jsonc` (nuevo, en la raíz)
+
+```jsonc
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rifate-app",
+  "main": "./dist/_worker.js/index.js",
+
+  // quickAction() de Browser Run necesita 2026-03-24 o posterior.
+  "compatibility_date": "2026-08-01",
+
+  // supabase-js usa APIs de Node (streams, buffer). Sin esto falla en runtime,
+  // no en build: el error aparece recién con el primer request.
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+
+  // Browser Run: genera las imágenes OG. Incluido en el plan free.
+  "browser": {
+    "binding": "BROWSER"
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}
+```
+
+> **Verificá `main`** contra lo que imprimió `pnpm build` en A.4. Si el adapter
+> emite otra ruta, esta es la línea a corregir.
+
+### B.3 · Variables de entorno
+
+Cloudflare no lee `.env`. Para desarrollo local usa `.dev.vars`:
+
+```bash
+cp .env .dev.vars
+```
+
+Y para producción, cargalas como secrets (te las va a pedir por stdin):
+
+```bash
+npx wrangler secret put PUBLIC_SUPABASE_URL
+npx wrangler secret put PUBLIC_SUPABASE_KEY
+```
+
+> **Por qué las dos cosas.** `import.meta.env.PUBLIC_*` lo inlinea Vite en tiempo
+> de build desde `.env`, y eso sigue funcionando. Pero un valor inlineado sólo se
+> cambia rebuildeando. Los secrets de Cloudflare se leen en runtime y se rotan
+> sin tocar el código. Para la anon key da igual (es pública por diseño); para el
+> día que sumes `SUPABASE_SERVICE_ROLE_KEY` o las claves de Mercado Pago, **no**
+> da igual. El paso B.5 deja el patrón listo.
+
+### B.4 · Tipos de los bindings
+
+```bash
+npx wrangler types
+```
+
+Genera `worker-configuration.d.ts` con la interfaz `Env` (incluye `BROWSER`).
+Ahora enganchalo en `src/env.d.ts`:
+
+```ts
+/// <reference types="astro/client" />
+/// <reference path="../worker-configuration.d.ts" />
+
+type Runtime = import('@astrojs/cloudflare').Runtime<Env>;
+
+declare namespace App {
+  interface Locals extends Runtime {
+    user: import('@supabase/supabase-js').User | null;
+  }
+}
+```
+
+A partir de acá `Astro.locals.runtime.env.BROWSER` está tipado.
+
+### B.5 · `src/lib/supabase/server.ts`
+
+Un solo cambio: aceptar el env de runtime, con fallback a `import.meta.env`.
+Todas las llamadas existentes siguen funcionando sin tocarlas.
+
+```ts
+import {
+  createServerClient as createSupabaseServerClient,
+  parseCookieHeader,
+} from '@supabase/ssr';
+import type { AstroCookies } from 'astro';
+
+import type { Database } from '@/types';
+
+/**
+ * En Cloudflare los secrets viven en el runtime, no en el bundle. Se pasa
+ * `runtimeEnv` cuando está disponible (`Astro.locals.runtime.env`) y se cae a
+ * `import.meta.env` para `astro dev` y para las variables PUBLIC_ inlineadas.
+ */
+const getSupabaseEnv = (runtimeEnv?: Partial<Env>) => {
+  const url = runtimeEnv?.PUBLIC_SUPABASE_URL ?? import.meta.env.PUBLIC_SUPABASE_URL;
+  const anonKey = runtimeEnv?.PUBLIC_SUPABASE_KEY ?? import.meta.env.PUBLIC_SUPABASE_KEY;
+
+  if (!url || !anonKey) {
+    throw new Error(
+      'Faltan las variables de Supabase: PUBLIC_SUPABASE_URL y PUBLIC_SUPABASE_KEY',
+    );
+  }
+
+  return { url, anonKey };
+};
+
+export type ServerClient = ReturnType<typeof createServerClient>;
+
+export function createServerClient({
+  request,
+  cookies,
+  runtimeEnv,
+}: {
+  request: Request;
+  cookies: AstroCookies;
+  runtimeEnv?: Partial<Env>;
+}) {
+  const { url, anonKey } = getSupabaseEnv(runtimeEnv);
+
+  return createSupabaseServerClient<Database>(url, anonKey, {
+    cookies: {
+      getAll() {
+        return parseCookieHeader(request.headers.get('Cookie') ?? '').filter(
+          (cookie): cookie is { name: string; value: string } =>
+            typeof cookie.value === 'string',
+        );
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          cookies.set(name, value, {
+            ...options,
+            maxAge: 60 * 60 * 24 * 7,
+          });
+        });
+      },
+    },
+  });
+}
+```
+
+Y en `src/middleware.ts`, pasale el env de runtime:
+
+```ts
+const supabase = createServerClient({
+  cookies,
+  request,
+  runtimeEnv: locals.runtime?.env,
+});
+```
+
+### B.6 · Scripts en `package.json`
+
+```json
+"scripts": {
+  "dev": "astro dev",
+  "build": "astro build",
+  "preview": "wrangler dev",
+  "deploy": "astro build && wrangler deploy",
+  "cf:types": "wrangler types",
+  "astro": "astro"
+}
+```
+
+### B.7 · Verificación
+
+```bash
+pnpm build
+npx wrangler dev        # local, con bindings reales
+```
+
+Abrí `http://localhost:8787`, entrá al dashboard y verificá que el login con
+Google siga funcionando. Después:
+
+```bash
+npx wrangler deploy
+```
+
+> **Checkpoint.** Antes de seguir, la app v1 tiene que funcionar completa en
+> `rifate-app.<tu-subdominio>.workers.dev`: login, listado, detalle, página
+> pública. La imagen OG todavía no — la arreglamos ahora.
+
+---
+
+## Etapa C · Imagen OG con satori + resvg-wasm
+
+> **Corrección respecto de la primera versión de esta guía.** Acá decía usar
+> Browser Run. Los límites reales lo desaconsejan para el OG:
+>
+> | | Workers Free | Workers Paid |
+> |---|---|---|
+> | Browser Run · quick actions | **1 request cada 10 s** | 10 h/mes, luego $0.09/h |
+> | Browser Run · duración | 10 min/día | — |
+>
+> 1 request cada 10 segundos es un bloqueante duro para un endpoint público, y
+> levantar un Chromium completo para dibujar una tarjeta estática es
+> desproporcionado: 1–3 s contra ~200 ms de un renderer de SVG.
+>
+> Browser Run queda para la **imagen descargable de la grilla** (etapa E): la
+> pide una persona con un click, no está en el camino de compartir, y ahí sí
+> conviene tener CSS completo.
+
+### C.0 · El punto que importa más que el motor
+
+**La imagen no cambia por request: cambia cuando se vende un número.** Todo el
+diseño sale de ahí.
+
+Y una trampa que hay que resolver desde el principio:
+
+> **WhatsApp cachea el preview por URL, y es agresivo.** Si la imagen vive en
+> `/og/raffle/{id}.png`, el organizador comparte, vende 20 números, comparte de
+> nuevo — y WhatsApp muestra la imagen vieja. El "estado en vivo al compartir",
+> que es el corazón del producto, no funciona.
+
+La solución es un token de versión en la URL que cambie con el estado:
+
+```
+/og/raffle/{id}/{vendidos}.png
+```
+
+Cada venta cambia la URL, WhatsApp la trata como imagen nueva, y de paso la
+versión anterior queda cacheable para siempre (`immutable`).
+
+### C.1 · Dependencias
+
+```bash
+pnpm remove @resvg/resvg-js
+pnpm add satori @resvg/resvg-wasm
+```
+
+`satori` se queda: lo que se va es el binding **nativo** de resvg, que no corre
+en Workers, reemplazado por la versión WASM.
+
+> Las dos `.ttf` **no** se borran (contra lo que decía la etapa A.3): satori
+> necesita los buffers de la fuente. Si ya las borraste, recuperalas con
+> `git checkout v1.0.0 -- src/pages/og/raffle/`.
+
+### C.2 · Las fuentes, como módulo
+
+Importar binarios en el bundle de Workers depende del bundler. Lo más
+determinista es inlinearlas en base64 — no hay configuración que se rompa y no
+hay request de red en el camino.
+
+```bash
+mkdir -p src/lib/og
+node -e "
+const fs = require('fs');
+const b = (p) => fs.readFileSync(p).toString('base64');
+fs.writeFileSync('src/lib/og/fonts.ts', \`// Generado. Nunito 700 y 900 en base64 para satori.
+const decode = (b64: string): ArrayBuffer => {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+};
+
+export const NUNITO_BOLD = decode('\${b('src/pages/og/raffle/Nunito-Bold.ttf')}');
+export const NUNITO_EXTRABOLD = decode('\${b('src/pages/og/raffle/Nunito-ExtraBold.ttf')}');
+\`);
+console.log('src/lib/og/fonts.ts escrito');
+"
+mv src/pages/og/raffle/Nunito-*.ttf src/lib/og/
+```
+
+### C.3 · La plantilla
+
+`src/lib/og/template.ts`. Ojo con la restricción principal de satori:
+
+> **satori sólo soporta flexbox.** No hay `display: grid`, no hay
+> `aspect-ratio`, no hay `gap` en todos los casos. La grilla de la rifa se arma
+> con `flexWrap` y celdas de tamaño fijo. En la práctica no se nota.
+
+```ts
+import { createElement as h, type ReactElement } from 'react';
+
+import { formatCurrency, formatDate } from '@/lib/formatters';
+
+export interface OgRaffleData {
+  title: string;
+  description: string | null;
+  totalNumbers: number;
+  numberStart: number;
+  soldNumbers: number[];
+  ticketPrice: number;
+  drawDate: string;
+  winnerNumber: number | null;
+}
+
+const PALETTE = {
+  bgFrom: '#0d3b2e',
+  bgTo: '#17614c',
+  free: '#6ee7b7',
+  sold: '#b0402f',
+  winner: '#fbbf24',
+};
+
+const padWidth = (total: number, start: number) =>
+  String(start + total - 1).length;
+
+export const buildOgElement = (raffle: OgRaffleData): ReactElement => {
+  const sold = new Set(raffle.soldNumbers);
+  const width = padWidth(raffle.totalNumbers, raffle.numberStart);
+  const soldCount = raffle.soldNumbers.length;
+  const available = raffle.totalNumbers - soldCount;
+
+  // Arriba de 200 celdas la grilla no se lee en un preview de WhatsApp:
+  // se muestra un resumen grande en su lugar.
+  const showGrid = raffle.totalNumbers <= 200;
+  const cellSize = raffle.totalNumbers <= 100 ? 44 : 30;
+
+  const stat = (label: string, value: string, color = '#ffffff') =>
+    h('div', { style: { display: 'flex', flexDirection: 'column' } }, [
+      h('div', {
+        key: 'k',
+        style: { fontSize: 15, opacity: 0.6, letterSpacing: 2, textTransform: 'uppercase' },
+      }, label),
+      h('div', {
+        key: 'v',
+        style: { fontSize: 34, fontWeight: 900, color, marginTop: 4 },
+      }, value),
+    ]);
+
+  const grid = h('div', {
+    style: {
+      display: 'flex', flexWrap: 'wrap', width: 480,
+      alignContent: 'center', justifyContent: 'center',
+    },
+  }, Array.from({ length: raffle.totalNumbers }, (_, i) => {
+    const n = raffle.numberStart + i;
+    const isWinner = raffle.winnerNumber === n;
+    const isSold = sold.has(n);
+
+    return h('div', {
+      key: n,
+      style: {
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: cellSize, height: cellSize, margin: 3, borderRadius: 8,
+        fontSize: cellSize * 0.38, fontWeight: 700,
+        background: isWinner ? PALETTE.winner : isSold ? PALETTE.sold : 'rgba(255,255,255,0.12)',
+        border: `2px solid ${isWinner ? '#fcd34d' : isSold ? '#d4553f' : 'rgba(255,255,255,0.2)'}`,
+        color: isWinner ? '#422006' : isSold ? 'rgba(255,255,255,0.45)' : '#ffffff',
+      },
+    }, String(n).padStart(width, '0'));
+  }));
+
+  const summary = h('div', {
+    style: {
+      display: 'flex', flexDirection: 'column', width: 480,
+      alignItems: 'center', justifyContent: 'center',
+    },
+  }, [
+    h('div', { key: 'n', style: { fontSize: 132, fontWeight: 900, color: PALETTE.free } }, String(available)),
+    h('div', { key: 'l', style: { fontSize: 26, opacity: 0.75, marginTop: 8 } },
+      `de ${raffle.totalNumbers} números libres`),
+  ]);
+
+  return h('div', {
+    style: {
+      width: 1200, height: 630, display: 'flex', padding: 56,
+      background: `linear-gradient(135deg, ${PALETTE.bgFrom} 0%, ${PALETTE.bgTo} 100%)`,
+      color: '#ffffff', fontFamily: 'Nunito',
+    },
+  }, [
+    h('div', {
+      key: 'info',
+      style: { display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between', marginRight: 48 },
+    }, [
+      h('div', { key: 'head', style: { display: 'flex', flexDirection: 'column' } }, [
+        h('div', {
+          key: 't',
+          style: { fontSize: 58, fontWeight: 900, lineHeight: 1.05 },
+        }, raffle.title),
+        raffle.description
+          ? h('div', {
+              key: 'd',
+              style: { fontSize: 24, opacity: 0.8, marginTop: 16, lineHeight: 1.35 },
+            }, raffle.description)
+          : null,
+      ]),
+
+      h('div', { key: 'stats', style: { display: 'flex', gap: 40 } }, [
+        stat('Disponibles', String(available), PALETTE.free),
+        stat('Por número', formatCurrency(raffle.ticketPrice)),
+        stat('Sorteo', formatDate(new Date(raffle.drawDate), { day: '2-digit', month: 'short' })),
+      ]),
+
+      h('div', {
+        key: 'brand',
+        style: { fontSize: 20, fontWeight: 700, opacity: 0.55 },
+      }, 'rifate.app'),
+    ]),
+
+    showGrid ? grid : summary,
+  ]);
+};
+```
+
+> satori corta el texto largo solo, pero no trunca por líneas. El título ya está
+> limitado a 100 caracteres por el esquema y la descripción a 500 — conviene
+> recortar la descripción a ~120 en el endpoint antes de pasarla.
+
+### C.4 · El renderer
+
+`src/lib/og/render.ts`:
+
+```ts
+import { initWasm, Resvg } from '@resvg/resvg-wasm';
+import resvgWasm from '@resvg/resvg-wasm/index_bg.wasm';
+import satori from 'satori';
+
+import { NUNITO_BOLD, NUNITO_EXTRABOLD } from './fonts';
+import { buildOgElement, type OgRaffleData } from './template';
+
+// El módulo WASM se inicializa una sola vez por isolate. Sin este guard,
+// initWasm tira error en la segunda invocación del mismo Worker.
+let wasmReady: Promise<unknown> | null = null;
+const ensureWasm = () => {
+  wasmReady ??= initWasm(resvgWasm);
+  return wasmReady;
+};
+
+export const renderRaffleOg = async (raffle: OgRaffleData): Promise<Uint8Array> => {
+  const svg = await satori(buildOgElement(raffle), {
+    width: 1200,
+    height: 630,
+    fonts: [
+      { name: 'Nunito', data: NUNITO_BOLD, weight: 700, style: 'normal' },
+      { name: 'Nunito', data: NUNITO_EXTRABOLD, weight: 900, style: 'normal' },
+    ],
+  });
+
+  await ensureWasm();
+
+  return new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } })
+    .render()
+    .asPng();
+};
+```
+
+### C.5 · El endpoint, con versión en la URL
+
+Renombrá el archivo a `src/pages/og/raffle/[id]/[v].png.ts`:
+
+```ts
+import type { APIRoute } from 'astro';
+
+import { countSold, soldNumbersOf } from '@/lib/domain/raffle';
+import { renderRaffleOg } from '@/lib/og/render';
+import { getPublicRaffle } from '@/lib/repositories/raffle';
+import { createServerClient } from '@/lib/supabase/server';
+
+export const prerender = false;
+
+export const GET: APIRoute = async ({ params, request, cookies, locals }) => {
+  if (!params.id) return new Response('Not found', { status: 404 });
+
+  const supabase = createServerClient({
+    request,
+    cookies,
+    runtimeEnv: locals.runtime?.env,
+  });
+
+  const raffle = await getPublicRaffle(supabase, params.id);
+  if (!raffle) return new Response('Not found', { status: 404 });
+
+  const png = await renderRaffleOg({
+    title: raffle.title,
+    description: raffle.description?.slice(0, 120) ?? null,
+    totalNumbers: raffle.total_numbers,
+    numberStart: 0,            // ← raffle.number_start en la etapa E
+    soldNumbers: soldNumbersOf(raffle.numbers),
+    ticketPrice: raffle.price, // ← raffle.ticket_price en la etapa E
+    drawDate: raffle.draw_date,
+    winnerNumber: null,        // ← raffle.winner_number en la etapa E
+  });
+
+  // El `v` de la URL es la cantidad de vendidos: si cambió el estado, cambió la
+  // URL. Por eso esta respuesta concreta es inmutable y se puede cachear para
+  // siempre, tanto en el CDN como en el cache de WhatsApp.
+  const current = countSold(raffle.numbers);
+  const isCurrent = String(current) === params.v;
+
+  return new Response(png, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': isCurrent
+        ? 'public, max-age=300, s-maxage=300'
+        : 'public, max-age=31536000, immutable',
+    },
+  });
+};
+```
+
+Y en `src/components/seo/SocialMeta.astro`, la meta tag pasa a incluir la versión:
+
+```astro
+image={`/og/raffle/${raffle.id}/${soldCount}.png`}
+```
+
+### C.6 · `wrangler.jsonc`
+
+El binding de Browser Run **se puede dejar** — lo vas a usar en la etapa E para
+la imagen descargable. Lo que hay que sumar es el soporte de WASM:
+
+```jsonc
+{
+  // ...
+  "rules": [
+    { "type": "CompiledWasm", "globs": ["**/*.wasm"] }
+  ]
+}
+```
+
+### C.7 · Verificación
+
+```bash
+pnpm build && npx wrangler dev
+```
+
+Abrí `http://localhost:8787/og/raffle/<id>/0.png`. Tres cosas a mirar:
+
+1. La grilla sale con los vendidos en rojo.
+2. **La tipografía es Nunito, no una de fallback.** Si ves otra fuente, satori no
+   encontró el peso pedido: revisá que `fontWeight` en la plantilla sea 700 o
+   900, que son los dos que cargaste.
+3. En la consola de `wrangler dev`, el CPU time del request. Tiene que estar
+   holgadamente abajo de 30 s (va a dar ~150–400 ms).
+
+## Etapa D · Supabase CLI y esquema v2
+
+Esta etapa no cambia respecto de lo planificado: seguí
+[06 · Roadmap](./06-roadmap.md), fases 2 y 3. Los ocho archivos de
+[`docs/sql/`](./sql/) siguen valiendo tal cual — Postgres no se toca.
+
+Resumen de comandos:
+
+```bash
+brew install supabase/tap/supabase
+supabase init
+supabase link --project-ref <tu-ref>
+
+# Respaldo del esquema actual ANTES de tocar nada
+supabase db dump --schema public > docs/sql/_v1_snapshot.sql
+
+# Aplicar el esquema nuevo en local (necesita Docker corriendo)
+git mv docs/sql/2026*.sql supabase/migrations/
+supabase start
+supabase db reset
+
+# Regenerar tipos
+supabase gen types typescript --local > src/types/database.ts
+```
+
+---
+
+## Comandos de git por etapa
+
+```bash
+# Etapa A
+git add package.json pnpm-lock.yaml astro.config.mjs
+git rm --cached src/pages/og/raffle/Nunito-*.ttf
+git commit -m "build: :arrow_up: upgrade to Astro 7 and swap Vercel adapter for Cloudflare"
+
+# Etapa B
+git add wrangler.jsonc .gitignore src/env.d.ts src/lib/supabase/server.ts src/middleware.ts package.json
+git commit -m "build: :construction_worker: configure wrangler with browser binding and runtime env"
+
+# Etapa C
+git add src/lib/og/ src/pages/og/ package.json pnpm-lock.yaml
+git commit -m "refactor: :recycle: render OG images with resvg-wasm and version their URL"
+
+# Etapa D
+git add supabase/
+git commit -m "feat: :database: add v2 schema with RLS policies and RPC functions"
+```
+
+---
+
+## Si algo falla
+
+| Síntoma | Causa probable |
+|---|---|
+| `Cannot find module 'node:...'` en runtime | Falta `nodejs_compat` en `compatibility_flags` |
+| `env.BROWSER is undefined` en `astro dev` | Falta `platformProxy: { enabled: true }` en el adapter |
+| `quickAction is not a function` | `compatibility_date` anterior a `2026-03-24` |
+| `wrangler deploy` no encuentra el entry | `main` en `wrangler.jsonc` no coincide con la salida del build |
+| La imagen OG sale con otra tipografía | satori no encontró el peso: usá 700 o 900 |
+| `initWasm` falla en el segundo request | Falta el guard de módulo en `render.ts` |
+| `Unexpected character` al importar el `.wasm` | Falta la regla `CompiledWasm` en `wrangler.jsonc` |
+| WhatsApp muestra la imagen vieja | Falta el token de versión en la URL del OG |
+| Login rompe después de desplegar | La URL de callback en Supabase todavía apunta a Vercel |
+
+> El último es fácil de pasar por alto: en el dashboard de Supabase, en
+> **Authentication → URL Configuration**, hay que agregar el dominio de
+> Cloudflare a las *Redirect URLs*.
