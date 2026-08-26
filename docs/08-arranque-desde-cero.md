@@ -1,15 +1,5 @@
 # 08 · Arranque desde cero: qué rescatar de v1
 
-> ## ⚠️ SUPERADO POR LA DECISIÓN DE STACK
->
-> Se decidió ir a **Cloudflare Workers + D1 + Better Auth**, priorizando el
-> aprendizaje del stack por encima de la eficiencia de construcción.
-> El inventario de qué rescatar de v1 sigue valiendo. Lo que cambia: no se portan `src/lib/supabase/*` ni las rutas de auth de Supabase — se reemplazan por Better Auth.
->
-> Ver [README · decisiones](./README.md).
-
----
-
 > **Leé esto ANTES de borrar.** Todo v1 está en el tag `v1.0.0`, así que nada se
 > pierde de verdad — pero después de borrar no vas a recordar qué había. Este
 > documento es el inventario.
@@ -21,9 +11,8 @@
 
 ## Decisiones que acompañan este arranque
 
-1. **Se queda en Vercel.** El cobro está lejos y no definido; Hobby es legítimo
-   mientras no haya uso comercial, y Cloudflare Free no alcanza para Astro SSR
-   (10 ms de CPU). Se migra cuando actives el cobro → [01b](./01b-infraestructura.md)
+1. **Cloudflare Workers + D1 + Durable Objects + Better Auth.** Elegido
+   priorizando aprender el stack → [01b](./01b-infraestructura.md) · [09](./09-durable-objects.md)
 2. **Una sola app, sin monorepo.** Justificación abajo.
 3. **Proyecto nuevo, no edición del viejo.** Se arranca con `pnpm create astro`
    y se portan archivos deliberadamente, uno por uno.
@@ -50,7 +39,7 @@ porque el modo de render se decide por página, no por proyecto.
 > Conservalo tal cual.
 
 **El seguro barato**, si algún día querés extraer código: mantener
-`src/lib/domain/` sin ninguna importación de Supabase ni de UI. Ya está así en
+`src/lib/domain/` sin ninguna importación de Cloudflare ni de UI. Ya está así en
 v1 y hay que sostenerlo. Esa disciplina te da el 90 % del beneficio de un
 monorepo con el 0 % del costo. Si algún día aparece una app móvil que comparta
 la lógica, ahí se evalúa — no antes.
@@ -63,9 +52,7 @@ la lógica, ahí se evalúa — no antes.
 
 | Ruta | Líneas | Por qué |
 |---|---|---|
-| `src/pages/api/auth/callback.ts` | ~20 | Flujo OAuth de Google, andando |
-| `src/pages/api/auth/logout.ts` | ~15 | idem |
-| `src/pages/api/auth/signin/google.ts` | ~20 | idem |
+| ~~`src/pages/api/auth/*`~~ | 54 | **Ya no se rescatan.** Las tres rutas las reemplaza el catch-all de Better Auth → [10](./10-better-auth.md) |
 | `src/lib/formatters/index.ts` | — | `formatCurrency`, `formatDate` con locale AR |
 | `src/lib/utils/index.ts` · `utils/react.ts` | — | El helper `cn()` |
 | `src/global.css` · `src/styles/*` | — | Tokens de Tailwind v4 y tema |
@@ -73,14 +60,15 @@ la lógica, ahí se evalúa — no antes.
 | `tsconfig.json` · `pnpm-workspace.yaml` | — | Alias `@/` y config de pnpm |
 | `public/favicon.*` | — | — |
 
-> Las tres rutas de auth son **54 líneas en total**. Retipearlas no te enseña
-> nada y es donde un error se paga caro. Rescatalas.
+> Con Supabase esas tres rutas valían la pena rescatarlas. Con Better Auth
+> desaparecen: una sola ruta catch-all las reemplaza. Es de las pocas cosas que
+> el cambio de stack simplificó.
 
 ### 🟡 Rescatar y adaptar
 
 | Ruta | Qué cambia |
 |---|---|
-| `src/lib/supabase/server.ts` | Sumar `runtimeEnv` opcional (queda listo para Cloudflare) |
+| ~~`src/lib/supabase/server.ts`~~ | **No se porta.** Lo reemplaza Better Auth + D1 → [10](./10-better-auth.md) |
 | `src/lib/domain/raffle.ts` | Lógica pura, se mantiene. Sumar padding y `number_start` |
 | `src/middleware.ts` | 25 líneas. Sumar la ruta `/admin` a las protegidas |
 | `src/layouts/*` | 205 líneas. Revisar, probablemente sirven |
@@ -92,7 +80,7 @@ la lógica, ahí se evalúa — no antes.
 |---|---|
 | `src/lib/repositories/raffle.ts` | Va contra las vistas públicas y las RPC → [03](./03-modelo-de-datos.md) |
 | `src/actions/*` | Pasan a ser envoltorios finos sobre las funciones RPC |
-| `src/types/database.ts` | Se regenera con `supabase gen types` |
+| `src/types/database.ts` | Se escribe a mano contra el esquema de [`docs/sql/`](./sql/) |
 | `src/types/raffle/index.ts` | Deriva del esquema nuevo |
 | `src/schemas/*` | Campos nuevos: `tier`, `number_start`, `prize` |
 | `src/pages/**` | Rutas nuevas (`/r/[slug]`) y datos nuevos |
@@ -106,7 +94,7 @@ la lógica, ahí se evalúa — no antes.
 | `src/components/raffle/grid/astro/` **o** `react/` | **También duplicado**: la grilla existe en las dos tecnologías |
 | `src/components/raffle/RaffleGridExample.astro` | Demo de la landing, se rehace |
 | `.vercel/` · `dist/` · `.astro/` · `node_modules/` | Generados |
-| `supabase/.temp/` | Basura de la CLI |
+| `supabase/` completo | El proyecto ya no usa Supabase |
 
 ---
 
@@ -138,8 +126,8 @@ de cliente, es React; si no, es Astro. Nunca los dos.*
 
 1. `pnpm create astro@latest` en una carpeta nueva, con TypeScript estricto
 2. Portar la fila 🟢 completa (`git checkout v1.0.0 -- <ruta>` desde el repo viejo)
-3. Configurar Vercel + Supabase y verificar que el **login funcione**
-4. Recién ahí, el esquema v2 → [06 · Roadmap](./06-roadmap.md), fase 2
+3. Configurar Cloudflare + D1 + Better Auth y verificar que el **login funcione**
+4. Recién ahí, el esquema → [06 · Roadmap](./06-roadmap.md), fases 3 y 4
 5. Construir hacia arriba: repositorios → actions → páginas
 
 > El paso 3 es el checkpoint que importa. Si el login anda sobre el proyecto

@@ -1,160 +1,234 @@
 # 02 · Arquitectura
 
-> ## ⚠️ SUPERADO POR LA DECISIÓN DE STACK
->
-> Se decidió ir a **Cloudflare Workers + D1 + Better Auth**, priorizando el
-> aprendizaje del stack por encima de la eficiencia de construcción.
-> El principio «la base hace cumplir las reglas» **se invierte**: sin RLS ni plpgsql, toda la autorización y la lógica de escritura pasan a TypeScript. Este documento necesita reescritura.
->
-> Ver [README · decisiones](./README.md).
+## El principio, corregido
+
+La versión anterior de este documento decía:
+
+> ~~«La base de datos hace cumplir las reglas. La app las expresa.»~~
+
+Eso valía con Postgres. **Con D1 no hay RLS ni plpgsql, así que es falso.**
+Reemplazarlo por «la app tiene que acordarse» sería peor: es exactamente cómo se
+filtran datos.
+
+El principio real de este stack:
+
+> **Cada regla vive en el mecanismo que puede hacerla cumplir. Ninguna depende
+> de que alguien se acuerde.**
+
+Y son tres mecanismos, cada uno con un trabajo distinto:
+
+| Mecanismo | Qué garantiza | Ejemplo |
+|---|---|---|
+| **`CHECK` de SQLite** | Coherencia del dato | Un número `SOLD` no puede tener `buyer_id` nulo |
+| **El Durable Object** | Atomicidad y propiedad | Dos personas no pueden reservar el mismo número; `assertOwner` |
+| **El sistema de tipos** | Qué puede salir | `PublicNumber` no tiene dónde poner un teléfono |
+
+Lo que no encaja en ninguno de los tres es un riesgo, y hay que tratarlo como
+tal. Hoy queda uno solo: el canje de vouchers, que necesita atomicidad y **no**
+vive en un DO. Se resuelve con `batch()` + la tabla `_abort`, y está documentado
+como la excepción que es.
 
 ---
-
-## El principio que ordena todo
-
-> **La base de datos es la que hace cumplir las reglas. La app las expresa.**
-
-En v1 las reglas viven en TypeScript: `sellRaffleNumbers` chequea el dueño en la
-action, hace dos INSERT separados y, si el segundo falla, borra el comprador a
-mano para compensar. Funciona mientras no haya concurrencia y mientras nadie se
-olvide de un chequeo.
-
-En v2 esa misma operación es **una función en la base** que valida permisos,
-escribe todo dentro de una transacción y no puede dejar estado a medias. La
-action de Astro pasa a ser una capa fina: valida el input con Zod, llama a la
-función, traduce el error a un mensaje en castellano.
-
-Esto no es purismo. Es la diferencia entre "el número se vendió dos veces y
-tenemos dos personas peleando por el mismo premio" y que no pueda pasar.
 
 ## Las capas
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  Páginas .astro          SSR, layout, meta tags          │
-│  Islas React             sólo donde hay interacción       │
-├──────────────────────────────────────────────────────────┤
-│  src/actions/            valida input · traduce errores   │
-├──────────────────────────────────────────────────────────┤
-│  src/lib/repositories/   ÚNICO lugar con queries          │
-│  src/lib/domain/         cálculos puros, sin I/O          │
-├──────────────────────────────────────────────────────────┤
-│  Supabase                RLS · vistas públicas · RPC      │
-│                          ← acá viven las reglas           │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Páginas .astro          SSR, layout, meta tags               │
+│  Islas React             sólo donde hay interacción real      │
+├──────────────────────────────────────────────────────────────┤
+│  src/actions/            valida input (Zod) · traduce errores  │
+├──────────────────────────────────────────────────────────────┤
+│  src/lib/db/             repositorios D1 · actor OBLIGATORIO   │
+│  src/lib/raffle/         cliente del Durable Object            │
+│  src/lib/domain/         cálculos puros · sin I/O              │
+├──────────────────────────────────────────────────────────────┤
+│  D1                      configuración y catálogo              │
+│  Durable Object          estado de una rifa                    │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 Reglas de la casa:
 
-- **Ninguna página arma su propio `select`.** Todo pasa por `repositories/`.
-  v1 ya lo hace bien; hay que sostenerlo.
-- **`domain/` no importa Supabase.** Son funciones puras sobre datos ya traídos.
-  Es lo único testeable sin base, y es donde va la lógica de negocio de verdad.
-- **Las `actions/` no contienen lógica.** Si una action tiene un `if` de negocio,
+- **`env.DB` no se toca fuera de `src/lib/db/`.** Hay una regla de ESLint que
+  hace fallar CI si alguien busca el atajo desde una página.
+- **`env.RAFFLE` no se toca fuera de `src/lib/raffle/`.** Mismo criterio.
+- **`domain/` no importa nada de Cloudflare.** Son funciones puras sobre datos
+  ya traídos. Es lo único testeable sin levantar nada, y es donde va la lógica
+  de negocio de verdad.
+- **Las actions no contienen lógica.** Si una action tiene un `if` de negocio,
   ese `if` está en el lugar equivocado.
 
-## Estructura de carpetas propuesta
+---
 
-Lo que cambia respecto de v1 va marcado. El resto se mantiene.
+## Estructura de carpetas
 
 ```
 src/
 ├── actions/
 │   ├── index.ts
-│   ├── raffle/
-│   │   ├── create.ts              ← createRaffle
-│   │   ├── publish.ts             △ nuevo: DRAFT → PUBLISHED
-│   │   ├── sell.ts                ← sellRaffleNumbers, ahora vía RPC
-│   │   ├── release.ts             △ nuevo: liberar números
-│   │   └── draw.ts                △ nuevo: sortear ganador
-│   ├── order/
-│   │   ├── create.ts              △ nuevo: pedido del visitante (PRO)
-│   │   ├── confirm.ts             △ nuevo
-│   │   └── cancel.ts              △ nuevo
-│   └── voucher/
-│       ├── redeem.ts              △ nuevo
-│       └── issue.ts               △ nuevo: sólo admin
+│   ├── raffle/          create · publish · sell · release · draw
+│   ├── order/           create · confirm · cancel
+│   └── voucher/         issue · redeem
+│
+├── do/
+│   ├── raffle.ts        la clase Durable Object
+│   ├── schema.ts        migración versionada  ← docs/sql/do/schema.ts
+│   └── raffle.test.ts   tests de denegación
 │
 ├── lib/
-│   ├── domain/raffle.ts           ~ ampliar: padding de números, rangos
-│   ├── repositories/
-│   │   ├── raffle.ts              ~ reescribir contra vistas + RPC
-│   │   ├── order.ts               △ nuevo
-│   │   └── voucher.ts             △ nuevo
-│   ├── og/template.ts             △ nuevo: layout satori de la imagen social
-│   ├── og/render.ts               △ nuevo: satori → SVG → PNG con resvg-wasm
-│   ├── og/fonts.ts                △ nuevo: Nunito en base64 (generado)
-│   ├── supabase/
-│   │   ├── server.ts              ~ acepta el env de runtime de Workers
-│   │   └── errors.ts              △ nuevo: código PG → mensaje en castellano
-│   ├── whatsapp/index.ts          ~ ampliar: mensaje de pedido
-│   └── formatters/index.ts        ~ ampliar: formato de número con padding
+│   ├── auth/
+│   │   ├── index.ts     createAuth(env) — por request, nunca a nivel de módulo
+│   │   └── actor.ts     Actor · actorFromSession · isAdmin
+│   ├── db/              ← ÚNICO módulo que toca env.DB
+│   │   ├── index.ts     re-exporta funciones; NO exporta el binding
+│   │   ├── profiles.ts
+│   │   ├── raffles.ts
+│   │   └── vouchers.ts
+│   ├── raffle/
+│   │   └── client.ts    ← ÚNICO módulo que toca env.RAFFLE
+│   ├── domain/
+│   │   └── raffle.ts    padding, rangos, agregados. Sin I/O
+│   ├── og/              template.ts · render.ts · fonts.ts
+│   ├── formatters/      moneda (desde centavos) y fechas
+│   ├── whatsapp/        armado de los mensajes
+│   └── errors.ts        código → mensaje en castellano
 │
+├── components/
+├── layouts/
 ├── pages/
-│   ├── index.astro                = landing, prerender
-│   ├── r/[slug].astro             △ pública, reemplaza /raffle/[id]
-│   ├── r/[slug]/pedido.astro      △ estado del pedido por token
-│   ├── dashboard/
-│   │   ├── raffle/index.astro     = listado
-│   │   ├── raffle/create.astro    = alta
-│   │   └── raffle/[id].astro      ~ + pestaña de pedidos + sorteo
-│   ├── admin/vouchers.astro       △ nuevo, sólo ADMIN
-│   └── og/raffle/[id]/[v].png.ts  ~ satori + resvg-wasm, URL versionada (ver 07)
-│
-└── components/ui/                 ⚠ unificar shadcn vs starwind
+├── middleware.ts        resuelve el Actor · protege rutas
+└── env.d.ts
 ```
 
-Leyenda: `=` sin cambios · `~` se modifica · `△` nuevo · `⚠` deuda a resolver
+### El cliente del Durable Object
 
-## La deuda de UI que hay que saldar
+Existe para que la convención de nombres viva en un solo lugar:
 
-`src/components/ui/` tiene **dos librerías completas en paralelo**:
+```ts
+// src/lib/raffle/client.ts
+import type { Raffle } from '@/do/raffle';
+
+/**
+ * El nombre del DO es el id de la rifa. Con eso, `this.ctx.id.name` dentro del
+ * objeto devuelve su propio id y no hace falta guardarlo aparte.
+ */
+export const raffleStub = (env: Env, raffleId: string): DurableObjectStub<Raffle> =>
+  env.RAFFLE.getByName(raffleId);
+```
+
+Si mañana hace falta un `locationHint` o un reintento, se agrega acá y no en
+treinta llamadas.
+
+---
+
+## Por dónde pasa cada request
+
+| Ruta | D1 | Durable Object | Cache |
+|---|:--:|:--:|---|
+| `/` landing | — | — | prerenderizada |
+| `/r/[slug]` pública | ✓ catálogo | ✓ `publicGrid()` | **s-maxage 30** |
+| `/og/raffle/[id]/[v].png` | ✓ | ✓ | **immutable** |
+| `/dashboard/raffle` listado | ✓ | — | no |
+| `/dashboard/raffle/[id]` | ✓ | ✓ `ownerGrid()` | no |
+| acciones de venta | — | ✓ | no |
+| `/admin/vouchers` | ✓ | — | no |
+
+Dos cosas a notar:
+
+**El listado del dashboard no abre ni un DO.** Lee los contadores proyectados en
+`raffles`. Por eso existe esa proyección: sin ella, mostrar 20 rifas serían 20
+round-trips a Norteamérica.
+
+**El cache de la página pública no es una optimización, es estructural.** El DO
+vive en ENAM (~120 ms desde Argentina). Con `s-maxage=30`, si una rifa se
+comparte en un grupo y entran 200 personas en un minuto, el DO recibe ~2
+llamadas en vez de 200.
 
 ```
-ui/shadcn/    button card dialog field input label progress separator textarea   (React)
-ui/starwind/  button card dialog input label progress textarea + avatar dropdown
-              input-group skeleton                                        (Astro)
+Cache-Control: public, max-age=0, s-maxage=30, stale-while-revalidate=300
 ```
 
-Siete componentes están duplicados. Hoy eso significa que un cambio de estilo en
-el botón hay que hacerlo dos veces, y que el botón de la landing y el del diálogo
-de venta pueden divergir sin que nadie se entere.
+30 segundos de desfase es aceptable: el número lo confirma el organizador por
+WhatsApp igual, y **la reserva del plan PRO se valida contra el DO en el momento
+del pedido**, no contra lo que muestra la página. Alguien puede pedir un número
+que la pantalla mostraba libre y recibir `NUMBERS_UNAVAILABLE` — está previsto y
+tiene su mensaje.
 
-**Recomendación:** starwind como base (es Astro, es lo que más se usa, no manda
-JS) y shadcn sólo para los componentes que viven dentro de una isla React y
-necesitan estado. Que quede escrito cuál es cuál, y que no haya un `Button` en
-las dos.
+---
 
-Esto **no** es parte del refactor de datos. Es una fase aparte para no mezclar.
+## Rutas
 
-## Rutas: qué cambia
-
-| v1 | v2 | Por qué |
+| Ruta | Render | Quién entra |
 |---|---|---|
-| `/raffle/[uuid]` | `/r/[slug]` | Un uuid en un estado de WhatsApp es ilegible. `rifate.app/r/rifa-del-club-2026` se lee, se dicta por teléfono y se comparte |
-| — | `/r/[slug]/pedido?t=<token>` | El visitante vuelve a ver su pedido sin cuenta |
-| — | `/admin/vouchers` | Emisión de vouchers |
-| `/dashboard/raffle/[id]` | igual | El dashboard sigue con uuid: es privado y no se comparte |
+| `/` | prerender | cualquiera |
+| `/login` | SSR | visitante |
+| `/r/[slug]` | SSR + cache | **visitante sin cuenta** |
+| `/r/[slug]/pedido?t=` | SSR | visitante, con su token |
+| `/og/raffle/[id]/[v].png` | endpoint | crawlers |
+| `/dashboard/raffle` | SSR | organizador |
+| `/dashboard/raffle/create` | SSR | organizador |
+| `/dashboard/raffle/[id]` | SSR + isla | organizador |
+| `/admin/vouchers` | SSR | **ADMIN** — si no, 404 |
+| `/api/auth/[...all]` | endpoint | Better Auth |
 
-> **Compatibilidad:** las rifas de v1 ya compartidas por WhatsApp tienen links
-> `/raffle/<uuid>` circulando en chats. Esos links tienen que seguir andando.
-> Ver [06 · Roadmap](./06-roadmap.md), fase 4: se deja un redirect permanente de
-> `/raffle/[id]` a `/r/[slug]`.
+**El slug es para lo público, el uuid para lo privado.** Un uuid en un estado de
+WhatsApp es ilegible; `rifate.app/r/rifa-del-club-2026` se lee, se dicta por
+teléfono y se comparte. El dashboard sigue con uuid porque no se comparte.
 
-## Cacheo de la página pública
+> `/admin` devuelve **404, no 403**. Un 403 confirma que la ruta existe.
 
-Es la ruta con más tráfico y la que más importa que abra rápido. Pero muestra
-estado que cambia.
+---
 
-Propuesta: `Cache-Control: public, max-age=0, s-maxage=30, stale-while-revalidate=300`
+## Landing y app en el mismo proyecto
 
-En Cloudflare Workers esto lo respeta el CDN sin configuración extra.
+Astro decide el modo de render **por página**, así que la landing estática, la
+página pública SSR y el dashboard interactivo conviven sin separar proyectos.
+Un repo, un deploy, un sistema de diseño, tipos compartidos.
 
-Traducido: el CDN sirve la respuesta cacheada hasta 30 segundos y, mientras
-revalida, sigue sirviendo la vieja hasta 5 minutos. Si la rifa se comparte en un
-grupo y entran 200 personas en un minuto, la base recibe ~2 queries en lugar de
-200.
+Queda una decisión abierta: si el dashboard vive en `rifate.app/dashboard` o en
+`app.rifate.app`. Recomiendo el dominio único — un deploy, un certificado, links
+más cortos, y la separación de cookies no es un problema real acá porque el
+visitante anónimo no recibe ninguna.
 
-30 segundos de desfase en la grilla es aceptable: el número lo confirma el
-organizador por WhatsApp igual, y la reserva del plan PRO se valida contra la
-base en el momento del pedido, no contra lo que muestra la página.
+---
+
+## La deuda de UI, todavía sin resolver
+
+En v1 convivían **dos librerías completas**: `starwind` (Astro, 2.784 líneas) y
+`shadcn` (React, 685). Siete componentes duplicados —button, card, dialog,
+input, label, progress, textarea— más la grilla de rifa, que existía en las dos
+tecnologías.
+
+**Elegir antes de portar un solo componente.** Recomendación: starwind como
+base, porque es Astro y no manda JavaScript al cliente; shadcn **sólo** para lo
+que vive dentro de una isla React con estado — el diálogo de venta y la
+selección de números de la página pública.
+
+Regla para escribir en el README y no volver a romper:
+
+> Si el componente necesita estado de cliente, es React. Si no, es Astro.
+> Nunca los dos.
+
+---
+
+## Errores
+
+Las operaciones levantan códigos estables; `src/lib/errors.ts` los traduce en un
+solo lugar. Ninguna página muestra un error crudo.
+
+| Código | Mensaje | HTTP |
+|---|---|---|
+| `NUMBERS_UNAVAILABLE` | Alguien tomó uno de esos números. Elegí otros. | 409 |
+| `RAFFLE_NOT_PUBLISHED` | Esta rifa todavía no está publicada. | 400 |
+| `RAFFLE_NOT_PRO` | Esta rifa no acepta pedidos online. | 400 |
+| `TOO_MANY_NUMBERS` | Podés pedir hasta 50 números por vez. | 400 |
+| `FORBIDDEN` | No tenés permiso para hacer esto. | 403 |
+| `ORDER_NOT_PENDING` | Este pedido ya fue confirmado o cancelado. | 409 |
+| `VOUCHER_EXPIRED` | Este código venció. | 400 |
+| `VOUCHER_EXHAUSTED` | Este código ya se usó todas las veces. | 400 |
+| `RAFFLE_HAS_SALES` | Tiene números vendidos: cancelala en lugar de borrarla. | 409 |
+| `RAFFLE_NOT_RESIZABLE` | Sólo podés cambiar el rango en borrador. | 409 |
+
+Si el mensaje se arma en cada action, tarde o temprano dos actions dicen cosas
+distintas para el mismo error.

@@ -1,15 +1,5 @@
 # 05 · Flujos
 
-> ## ⚠️ SUPERADO POR LA DECISIÓN DE STACK
->
-> Se decidió ir a **Cloudflare Workers + D1 + Better Auth**, priorizando el
-> aprendizaje del stack por encima de la eficiencia de construcción.
-> Los flujos siguen valiendo. Lo que cambia es la implementación: las funciones RPC en plpgsql pasan a ser código del Worker, y la atomicidad se resuelve con `batch()` de D1 o con un Durable Object por rifa.
->
-> Ver [README · decisiones](./README.md).
-
----
-
 ## 1 · Crear y publicar una rifa
 
 ```mermaid
@@ -29,7 +19,7 @@ sequenceDiagram
     Note over O,DB: La rifa existe pero está en borrador y no es visible
 
     O->>A: publish(id)   [+ voucher o pago]
-    A->>DB: redeem_voucher(code, id)   ó   webhook de pago
+    A->>DB: redeemVoucher(code, id)   ó   webhook de pago
     A->>DB: update raffles set status = 'PUBLISHED'
     DB-->>DB: trigger stamp_status → published_at
     A-->>O: link público /r/{slug}
@@ -52,12 +42,12 @@ sequenceDiagram
     participant DB as Postgres
 
     O->>A: sell({ raffle_id, numbers: [7,23], name, phone })
-    A->>DB: select sell_raffle_numbers(...)
+    A->>DB: select sell(userId, numeros, comprador)
 
     rect rgb(240, 245, 255)
     Note over DB: UNA transacción
-    DB->>DB: owns_raffle() · si no → FORBIDDEN
-    DB->>DB: upsert_raffle_buyer() por teléfono
+    DO->>DO: assertOwner() · si no → FORBIDDEN
+    DB->>DB: upsertBuyer() por teléfono
     DB->>DB: update numbers → SOLD  (sólo si estaban libres)
     DB->>DB: filas afectadas ≠ pedidas → NUMBERS_UNAVAILABLE → rollback total
     end
@@ -101,7 +91,7 @@ sequenceDiagram
     P-->>V: guarda /r/{slug}/pedido?t={token}
 
     V->>O: manda el mensaje
-    O->>DB: confirm_raffle_order(id)
+    O->>DB: confirmOrder(userId, id)
     DB->>DB: crea el comprador · números → SOLD · order → CONFIRMED
     O-->>V: "listo, ya son tuyos"
 ```
@@ -110,46 +100,72 @@ sequenceDiagram
 
 Dos visitantes piden el número 45 con milisegundos de diferencia.
 
-```sql
-update public.raffle_numbers n
-   set status = 'RESERVED', order_id = v_order.id, reserved_until = v_expires
- where n.raffle_id = p_raffle_id
-   and n.number = any (p_numbers)
-   and (n.status = 'AVAILABLE'
-        or (n.status = 'RESERVED' and n.reserved_until < now()));
+```ts
+// Dentro del Durable Object. Leer, decidir y escribir es seguro acá:
+// el objeto atiende UN pedido por vez, así que entre ① y ③ no puede
+// intercalarse nada.
+reserve(numeros: number[], nombre: string, telefono: string | null) {
+  const ahora = Date.now();
+  const marcas = numeros.map(() => '?').join(',');
 
-get diagnostics v_reserved = row_count;
-if v_reserved <> v_wanted then
-  raise exception 'NUMBERS_UNAVAILABLE';   -- rollback de TODO
-end if;
+  // ① LEER
+  const ocupados = this.ctx.storage.sql.exec<{ number: number }>(
+    `SELECT number FROM numbers
+      WHERE number IN (${marcas})
+        AND NOT (status = 'AVAILABLE'
+             OR (status = 'RESERVED' AND reserved_until < ?))`,
+    ...numeros, ahora,
+  ).toArray();
+
+  // ② DECIDIR
+  if (ocupados.length > 0) {
+    return { ok: false as const, ocupados: ocupados.map((o) => o.number) };
+  }
+
+  // ③ ESCRIBIR
+  /* … insertar el pedido y marcar los números como RESERVED … */
+}
 ```
 
-Qué pasa realmente: la transacción A toma el lock de la fila 45. La B se queda
-esperando ese lock. Cuando A commitea, B despierta, **vuelve a evaluar el
-predicado** con el dato nuevo, ve `status = 'RESERVED'` y no actualiza nada.
-`row_count` le da 0 en vez de 1, y la excepción revierte también el pedido que ya
-había insertado.
+Qué pasa realmente: el segundo visitante **no ejecuta nada** hasta que el primero
+termina. Su request queda encolado. Cuando le toca, el número 45 ya figura
+`RESERVED` y el `SELECT` lo devuelve como ocupado.
 
-No hace falta `SERIALIZABLE` ni locking explícito: alcanza con que la condición de
-disponibilidad esté **dentro del `WHERE` del UPDATE** y no en un `SELECT` previo.
-Chequear primero y actualizar después es justo lo que abre la ventana de carrera.
+> Esta es la razón principal por la que la grilla vive en un Durable Object y no
+> en D1. En D1 el mismo código sería incorrecto: entre ① y ③ hay una ventana, y
+> habría que meter la condición dentro del `UPDATE`, contar filas afectadas y
+> usar la tabla `_abort` para revertir el `batch()`. Funciona, pero es un truco
+> que en seis meses nadie recuerda por qué está.
 
 ### Vencimiento de reservas
 
-Un pedido que nadie confirma tiene que soltar los números. `expire_raffle_orders()`
-lo hace, y es idempotente. Se agenda con `pg_cron`:
+Un pedido que nadie confirma tiene que soltar los números. `alarm()`
+lo resuelve un **alarm del propio objeto**: no hace falta un cron global que
+recorra todas las rifas.
 
-```sql
-select cron.schedule(
-  'expire-raffle-orders', '*/10 * * * *',
-  $$ select public.expire_raffle_orders(); $$
-);
+```ts
+// Al crear el pedido, se agenda la liberación.
+this.ctx.storage.setAlarm(vence);
+
+async alarm() {
+  const ahora = Date.now();
+  this.ctx.storage.sql.exec(
+    `UPDATE numbers SET status = 'AVAILABLE', order_id = NULL, reserved_until = NULL
+      WHERE status = 'RESERVED' AND reserved_until < ?`, ahora);
+  this.ctx.storage.sql.exec(
+    `UPDATE orders SET status = 'EXPIRED'
+      WHERE status = 'PENDING' AND expires_at < ?`, ahora);
+}
 ```
 
-> Además, `create_raffle_order` acepta reservas vencidas en su predicado
-> (`status = 'RESERVED' and reserved_until < now()`). Así, si el cron se cae, los
-> números igual se pueden volver a pedir. **El cron es una optimización de la
-> vista, no la garantía de corrección.** No hay que depender de él.
+> Hay **un alarm por objeto**: `setAlarm()` reemplaza al anterior. Si hay varios
+> pedidos vivos, se agenda el vencimiento más próximo y al dispararse se
+> reprograma para el siguiente.
+
+> Además, `reserve()` acepta reservas vencidas en su condición
+> (`status = 'RESERVED' AND reserved_until < ahora`). Así, si el alarm no llegara
+> a correr, los números igual se pueden volver a pedir. **El alarm es una
+> optimización de la vista, no la garantía de corrección.**
 
 ## 4 · Sorteo y anuncio del ganador
 
@@ -159,7 +175,7 @@ sequenceDiagram
     participant DB as Postgres
     participant OG as /og/raffle/{id}.png
 
-    O->>DB: draw_raffle_winner(raffle_id)
+    O->>DB: drawWinner(userId)
     DB->>DB: elige al azar entre los VENDIDOS
     DB->>DB: graba winner_number + winner_buyer_id · status → CLOSED
     DB-->>O: { número, nombre, teléfono }
@@ -186,7 +202,7 @@ sequenceDiagram
     A->>DB: insert into vouchers (code RIFATE-ONG24, tier PRO, max_uses 5)
     A-->>O: le pasa el código
 
-    O->>DB: redeem_voucher('RIFATE-ONG24', raffle_id)
+    O->>DB: redeemVoucher('RIFATE-ONG24', raffle_id)
     DB->>DB: FOR UPDATE sobre el voucher
     DB->>DB: vigencia · usos disponibles · rifa no habilitada ya
     DB->>DB: registra el canje · used_count++ · rifa.tier = PRO
@@ -214,6 +230,6 @@ página debería mostrar un error de Postgres crudo.
 | `RAFFLE_HAS_SALES` | Tiene números vendidos: cancelala en lugar de borrarla. | 409 |
 | `RAFFLE_NOT_RESIZABLE` | Sólo podés cambiar el rango en borrador. | 409 |
 
-Va en `src/lib/supabase/errors.ts`, en un solo mapa. Si el mensaje se arma en
+Va en `src/lib/errors.ts`, en un solo mapa. Si el mensaje se arma en
 cada action, tarde o temprano dos actions dicen cosas distintas para el mismo
 error.
