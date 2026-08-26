@@ -30,7 +30,8 @@ Si algo del refactor se rompe, ese es el punto de retorno.
 | 09 | [Durable Objects](./09-durable-objects.md) | Qué son, costos reales, consumo estimado y ciclo de vida |
 | 10 | [Better Auth](./10-better-auth.md) | Auth sobre D1: configuración, middleware y gotchas |
 
-`docs/sql/` — propuesta de esquema, un archivo por área. Se lee junto con 03 y 04.
+[`docs/sql/`](./sql/) — **esquema listo para copiar**: migraciones de D1 y el
+esquema versionado del Durable Object. Se lee junto con 03 y 04.
 
 ---
 
@@ -77,6 +78,5 @@ Estas cinco están cerradas y el resto de los documentos las asume:
 
 - [ ] Reescribir [02 · Arquitectura](./02-arquitectura.md): el principio
       «la base hace cumplir las reglas» se invirtió con D1
-- [ ] Reemplazar [`docs/sql/`](./sql/) por migraciones D1 reales + esquema del DO
 - [ ] **starwind vs shadcn**: elegir antes de portar un solo componente
       → [08](./08-arranque-desde-cero.md)
