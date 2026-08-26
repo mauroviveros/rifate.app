@@ -567,3 +567,105 @@ Dashboard de Cloudflare → **Workers & Pages → rifate-app → Metrics**.
 > ```jsonc
 > { "limits": { "cpu_ms": 5000 } }
 > ```
+
+---
+
+# Ciclo de vida: dos trampas operativas
+
+Dos cosas que no aparecen hasta que ya tenés rifas en producción, y que hay que
+diseñar desde el primer día.
+
+## 1 · Migrar el esquema de N objetos
+
+Cada Durable Object tiene **su propia base SQLite**. No existe un `ALTER TABLE`
+que alcance a los 500 a la vez: no hay un lugar central desde donde correrlo.
+
+La solución es versionar el esquema dentro del objeto y migrar **cuando
+despierta**. SQLite ya trae el contador:
+
+```ts
+const VERSION = 3;
+
+export class Raffle extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    ctx.blockConcurrencyWhile(async () => this.migrar());
+  }
+
+  private migrar() {
+    const sql = this.ctx.storage.sql;
+    let v = sql.exec<{ user_version: number }>('PRAGMA user_version').one().user_version;
+
+    if (v < 1) {
+      sql.exec(`CREATE TABLE meta (k TEXT PRIMARY KEY, v TEXT NOT NULL);`);
+      sql.exec(`CREATE TABLE numbers (...);`);
+      sql.exec(`CREATE TABLE buyers (...);`);
+      sql.exec(`CREATE TABLE orders (...);`);
+      v = 1;
+    }
+
+    if (v < 2) {
+      sql.exec(`ALTER TABLE numbers ADD COLUMN note TEXT;`);
+      v = 2;
+    }
+
+    if (v < 3) {
+      sql.exec(`CREATE INDEX orders_pending_idx ON orders (status, created_at DESC);`);
+      v = 3;
+    }
+
+    sql.exec(`PRAGMA user_version = ${VERSION}`);
+  }
+}
+```
+
+Reglas que hacen que esto funcione a largo plazo:
+
+- **Los bloques `if (v < N)` no se editan nunca.** Se agregan. Un objeto que
+  estuvo dormido dos meses tiene que poder recorrer todos los escalones.
+- **Migrar sólo hacia adelante.** No hay rollback: no sabés en qué versión está
+  cada objeto.
+- **`blockConcurrencyWhile` sólo acá**, en el constructor. Nunca por request.
+- Un objeto que nadie abre **no migra**, y está bien: migra la próxima vez que
+  alguien entre a esa rifa.
+
+> Es el costo real de la arquitectura híbrida. En D1 corrés una migración y
+> listo; acá el esquema se propaga de a poco, a medida que las rifas se usan.
+
+## 2 · Storage huérfano
+
+**Un Durable Object factura storage hasta que le vacías los datos.** Borrar la
+fila de `raffles` en D1 no borra nada del objeto: el DO sigue existiendo, con su
+SQLite lleno, cobrando.
+
+```ts
+/** Deja el objeto vacío. Después de esto el sistema lo limpia solo. */
+async destroy(userId: string): Promise<void> {
+  this.assertOwner(userId);
+  await this.ctx.storage.deleteAll();
+}
+```
+
+Y el flujo de borrado tiene que ser, en este orden:
+
+```ts
+export const deleteRaffle = async (env: Env, actor: Actor, raffleId: string) => {
+  const raffle = await getOwnedRaffle(env.DB, actor, raffleId);
+  if (!raffle) throw new Forbidden();
+  if (raffle.sold_count > 0) throw new Error('RAFFLE_HAS_SALES');
+
+  // 1) Primero el DO. Si falla, la rifa sigue en D1 y se puede reintentar.
+  await env.RAFFLE.getByName(raffleId).destroy(userIdOf(actor)!);
+
+  // 2) Después el catálogo.
+  await env.DB.prepare('DELETE FROM raffles WHERE id = ?').bind(raffleId).run();
+};
+```
+
+> **El orden importa.** Si borrás primero de D1 y el `destroy()` falla, quedás
+> con un objeto que cobra storage y al que ya no tenés forma de llegar desde la
+> app: perdiste su id. Al revés, el peor caso es una rifa vacía en el catálogo,
+> que se ve y se puede volver a borrar.
+
+Igual que en el diseño Postgres: **una rifa con ventas se cancela, no se borra.**
+Borrarla destruye el registro de a quién le corresponde cada número.
