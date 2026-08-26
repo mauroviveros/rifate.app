@@ -30,6 +30,7 @@ Si algo del refactor se rompe, ese es el punto de retorno.
 | 08 | [Arranque desde cero](./08-arranque-desde-cero.md) | Qué se rescató de v1, monorepo, deuda de UI |
 | 09 | [Durable Objects](./09-durable-objects.md) | Qué son, costos reales, consumo estimado y ciclo de vida |
 | 10 | [Better Auth](./10-better-auth.md) | Auth sobre D1: configuración, middleware y gotchas |
+| 11 | [Sistema visual](./11-sistema-visual.md) | **«Talonario»:** tokens, reglas y las 16 pantallas del canvas |
 
 [`docs/sql/`](./sql/) — **esquema listo para copiar**: migraciones de D1 y el
 esquema versionado del Durable Object. Se lee junto con 03 y 04.
@@ -75,7 +76,14 @@ Estas cinco están cerradas y el resto de los documentos las asume:
 - [ ] **Dominio**: ¿el dashboard comparte `rifate.app` o va en `app.rifate.app`?
 - [ ] Pasarela de cobro cuando llegue el momento (Mercado Pago)
 
+### Diseño
+
+- [ ] **Elegir la imagen OG** entre las cuatro propuestas → [11](./11-sistema-visual.md)
+- [ ] Rehacer `src/lib/og/template.ts` sobre el artboard elegido (hoy en
+      [07](./07-guia-cloudflare.md) hay una plantilla de otro diseño)
+- [ ] ¿«Talonario» es el nombre del sistema visual o del producto?
+
 ### Técnicas — pendientes de documentar
 
-- [ ] **starwind vs shadcn**: elegir antes de portar un solo componente
-      → [08](./08-arranque-desde-cero.md)
+- [ ] ~~starwind vs shadcn~~ → con sistema visual propio, la respuesta es
+      **componentes propios sobre los tokens** → [11](./11-sistema-visual.md)

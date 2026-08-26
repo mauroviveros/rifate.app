@@ -345,6 +345,15 @@ mv src/pages/og/raffle/Nunito-*.ttf src/lib/og/
 
 ### C.3 · La plantilla
 
+> ⚠️ **La plantilla de abajo es de otro diseño.** Se escribió antes de que
+> existiera el sistema visual «Talonario» ([11](./11-sistema-visual.md)): usa un
+> gradiente verde y Nunito, y la marca es papel `#F5EEE0` + tinta `#17181C` +
+> vermellón `#CE3418`, con Bricolage Grotesque y Figtree.
+>
+> **Sirve como referencia de la mecánica** —cómo se arma el árbol para satori,
+> el padding de los números, el corte a partir de 200 celdas— pero los colores,
+> las fuentes y el layout hay que rehacerlos sobre el artboard OG que elijas.
+
 `src/lib/og/template.ts`. Ojo con la restricción principal de satori:
 
 > **satori sólo soporta flexbox.** No hay `display: grid`, no hay
