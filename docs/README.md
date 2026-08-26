@@ -26,7 +26,9 @@ Si algo del refactor se rompe, ese es el punto de retorno.
 | 05 | [Flujos](./05-flujos.md) | Los recorridos reales: crear, vender, pedir, sortear |
 | 06 | [Roadmap](./06-roadmap.md) | Fases, checklist y commits sugeridos |
 | 07 | [Guía Cloudflare](./07-guia-cloudflare.md) | Paso a paso de Workers y wrangler — **la parte de Supabase ya no aplica** |
-| 08 | [Arranque desde cero](./08-arranque-desde-cero.md) | **Leer antes de borrar:** qué rescatar de v1, monorepo, deuda de UI |
+| 08 | [Arranque desde cero](./08-arranque-desde-cero.md) | Qué se rescató de v1, monorepo, deuda de UI |
+| 09 | [Durable Objects](./09-durable-objects.md) | Qué son, costos reales, consumo estimado y ciclo de vida |
+| 10 | [Better Auth](./10-better-auth.md) | Auth sobre D1: configuración, middleware y gotchas |
 
 `docs/sql/` — propuesta de esquema, un archivo por área. Se lee junto con 03 y 04.
 
@@ -51,11 +53,14 @@ Estas cinco están cerradas y el resto de los documentos las asume:
      `REAL`; los enums son `TEXT` + `CHECK`
    - **Auth se construye.** Better Auth + adapter de D1, en vez de Supabase Auth
 3. **Una sola app, sin monorepo.** → [08](./08-arranque-desde-cero.md)
-4. **El precio es por rifa, no por suscripción.** Cada rifa se crea como BASIC o
+4. **Híbrido D1 + un Durable Object por rifa.** D1 para lo que se consulta
+   entre rifas; el DO para la grilla, compradores y pedidos de una. Hace
+   imposible la venta doble y da estado en vivo nativo. → [09](./09-durable-objects.md)
+5. **El precio es por rifa, no por suscripción.** Cada rifa se crea como BASIC o
    PRO y se paga esa rifa. Los vouchers habilitan rifas gratis. → [03](./03-modelo-de-datos.md)
-5. **La numeración es configurable por rifa** (`number_start` 0 o 1), para cubrir
+6. **La numeración es configurable por rifa** (`number_start` 0 o 1), para cubrir
    tanto 00–99 como 1–100. → [03](./03-modelo-de-datos.md)
-6. **El pedido del visitante reserva números con vencimiento.** Es el diferencial
+7. **El pedido del visitante reserva números con vencimiento.** Es el diferencial
    concreto del plan PRO. → [05](./05-flujos.md)
 
 ## Lo que queda por decidir
@@ -65,7 +70,10 @@ Estas cinco están cerradas y el resto de los documentos las asume:
 - [ ] Cuánto dura la reserva de un pedido (la propuesta asume 24 h)
 - [ ] Si la landing y la app comparten dominio o la app va en `app.rifate.app`
       → analizado en [02](./02-arquitectura.md), sin cerrar
-- [ ] Reescribir 02, 03 y 04 para D1 + Better Auth (los tres están marcados)
-- [ ] Definir el esquema SQLite a partir de `docs/sql/` (spec, no código)
-- [ ] Decidir: ¿Durable Object por rifa desde el arranque, o `batch()` de D1?
+- [ ] Reescribir `02` (el principio de arquitectura se invirtió)
+- [ ] Reescribir `06` (el roadmap todavía dice `supabase db reset`)
+- [ ] Reemplazar `docs/sql/` por migraciones D1 + esquema del DO
+- [ ] Precio de BASIC y PRO en pesos
+- [ ] Duración de la reserva (todo el diseño asume 24 h)
+- [ ] Dominio: ¿el dashboard comparte `rifate.app`?
 - [ ] starwind vs shadcn: elegir base antes de portar componentes → [08](./08-arranque-desde-cero.md)
