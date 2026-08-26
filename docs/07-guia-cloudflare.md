@@ -53,6 +53,11 @@ import icon from 'astro-icon';
 
 export default defineConfig({
   site: 'https://rifate.app',
+
+  // ⚠️ OBLIGATORIO. Astro compila en modo "static" por defecto y NO emite
+  // entrypoint de servidor: `wrangler deploy` falla con
+  //   The entry-point file at "@astrojs/cloudflare/entrypoints/server" was not found
+  // Con 'server' cada página es SSR salvo las que declaren `prerender = true`.
   output: 'server',
 
   // Ya no hace falta `includeFiles` con las .ttf: la imagen OG pasa a
@@ -127,6 +132,21 @@ EOF
 
 ### B.2 · `wrangler.jsonc` (nuevo, en la raíz)
 
+> **Cómo funciona en realidad.** `astro build` lee tu `wrangler.jsonc` y genera
+> uno derivado en `dist/server/wrangler.json`, más un puntero en
+> `.wrangler/deploy/config.json`. `wrangler deploy` sigue ese puntero:
+>
+> ```
+> Using redirected Wrangler configuration.
+>  - Configuration being used: "dist/server/wrangler.json"
+>  - Original user's configuration: "wrangler.jsonc"
+> ```
+>
+> El derivado pisa `main` (a `entry.mjs`) y `assets.directory` (a `../client`),
+> y hereda todo lo demás del tuyo. Por eso el `main` del archivo raíz casi no
+> importa — pero el build **tiene que haber corrido en modo server**, o no hay
+> nada a donde apuntar.
+
 ```jsonc
 {
   "$schema": "node_modules/wrangler/config-schema.json",
@@ -140,8 +160,11 @@ EOF
   // runtime, no en build: el error aparece recién con el primer request.
   "compatibility_flags": ["nodejs_compat"],
 
+  // El adapter lo reescribe a "../client" en el config derivado. Ponelo bien
+  // igual: apuntar a "./dist" subiría dist/server —tu código de servidor—
+  // como assets públicos si algún día el derivado no se genera.
   "assets": {
-    "directory": "./dist",
+    "directory": "./dist/client",
     "binding": "ASSETS"
   },
 
@@ -650,7 +673,8 @@ git commit -m "refactor: :recycle: render OG images with resvg-wasm and version 
 | `Cannot find module 'node:...'` en runtime | Falta `nodejs_compat` en `compatibility_flags` |
 | `env.BROWSER is undefined` en `astro dev` | Falta `platformProxy: { enabled: true }` en el adapter |
 | `quickAction is not a function` | `compatibility_date` anterior a `2026-03-24` |
-| `wrangler deploy` no encuentra el entry | `main` en `wrangler.jsonc` no coincide con la salida del build |
+| `The entry-point file at "@astrojs/cloudflare/entrypoints/server" was not found` | Falta `output: 'server'` en `astro.config.mjs`: el build salió en modo static y no generó worker |
+| `wrangler deploy` no encuentra el entry | El build no corrió, o corrió en modo static |
 | La imagen OG sale con otra tipografía | satori no encontró el peso: usá 700 o 900 |
 | `initWasm` falla en el segundo request | Falta el guard de módulo en `render.ts` |
 | `Unexpected character` al importar el `.wasm` | Falta la regla `CompiledWasm` en `wrangler.jsonc` |
