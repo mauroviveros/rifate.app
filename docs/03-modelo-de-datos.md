@@ -1,271 +1,328 @@
-# 03 · Modelo de datos
+# 03 · Modelo de datos — D1 + Durable Objects
 
-> ## ⚠️ SUPERADO POR LA DECISIÓN DE STACK
->
-> Se decidió ir a **Cloudflare Workers + D1 + Better Auth**, priorizando el
-> aprendizaje del stack por encima de la eficiencia de construcción.
-> El esquema es Postgres puro: enums, `numeric`, `gen_random_uuid()`, `generate_series` y triggers plpgsql **no existen en SQLite**. El diseño conceptual (tablas, relaciones, estados) sigue valiendo; la implementación no.
->
-> Ver [README · decisiones](./README.md).
+> Reescrito para el stack final. La versión Postgres quedó archivada en
+> [`_archivo/03-modelo-de-datos-postgres.md`](./_archivo/03-modelo-de-datos-postgres.md)
+> — sigue siendo útil como referencia del diseño conceptual y de los constraints
+> de coherencia.
 
----
+## El reparto
 
-> SQL completo en [`docs/sql/`](./sql/). Este documento explica **por qué** cada
-> cosa es como es. El SQL es el detalle; esto es el criterio.
+La regla que decide dónde va cada tabla:
 
-## Hallazgo previo: no había esquema versionado
+> **¿Se consulta esto atravesando varias rifas?**
+> Sí → D1. No → el Durable Object de esa rifa.
 
-`supabase/migrations/` está **vacío** y no existe `supabase/config.toml`. La base
-de v1 vive únicamente en el dashboard de Supabase.
-
-Consecuencias concretas hoy:
-
-- No hay forma de recrear la base desde cero.
-- No se sabe con certeza qué policies de RLS están puestas: `getOwnerRaffle()`
-  compara `raffle.owner_id !== ownerId` **en TypeScript, después de traer la
-  fila**. Eso sólo tiene sentido si RLS no está filtrando — y si RLS no filtra
-  `raffles`, tampoco está claro qué filtra en `raffle_buyers`, que es donde están
-  los teléfonos.
-- Cualquier cambio hecho a mano en producción es invisible para el repo.
-
-**Esto es lo primero que arregla el refactor**, antes que cualquier tabla nueva:
-el esquema pasa a ser código versionado.
-
----
-
-## Diagrama
-
-```mermaid
-erDiagram
-    auth_users  ||--|| profiles : "1:1 al registrarse"
-    profiles    ||--o{ raffles  : organiza
-    profiles    ||--o{ vouchers : "emite (sólo ADMIN)"
-
-    raffles       ||--|{ raffle_numbers : "grilla completa"
-    raffles       ||--o{ raffle_buyers  : compradores
-    raffles       ||--o{ raffle_orders  : "pedidos (PRO)"
-    raffles       ||--o| voucher_redemptions : "habilitada por"
-
-    raffle_buyers ||--o{ raffle_numbers : "posee"
-    raffle_orders ||--o{ raffle_numbers : "reserva"
-    vouchers      ||--o{ voucher_redemptions : canjeado
+```
+┌─ D1 · lo que se consulta entre rifas ────────────────────┐
+│  user · session · account · verification   (Better Auth) │
+│  profiles          rol y teléfono del organizador        │
+│  raffles           catálogo + contadores proyectados     │
+│  vouchers                                                 │
+│  voucher_redemptions                                      │
+└───────────────────────────────────────────────────────────┘
+                          ▲
+                          │ el DO proyecta sus contadores acá
+                          │
+┌─ Durable Object · uno por rifa ──────────────────────────┐
+│  numbers           la grilla completa                     │
+│  buyers            nombres y teléfonos ← lo más sensible  │
+│  orders            pedidos con reserva (PRO)              │
+│  + WebSockets de quienes miran la rifa                    │
+│  + alarm que vence las reservas                           │
+└───────────────────────────────────────────────────────────┘
 ```
 
+**Por qué `buyers` vive en el DO y no en D1:** los teléfonos de los compradores
+son el dato más sensible del sistema, y nunca se consultan entre rifas — siempre
+en el contexto de una. Tenerlos dentro del DO significa que ni siquiera existe
+una tabla global que alguien pueda leer de más.
+
 ---
 
-## Los tres cambios de fondo
+## Lo que cambia por ser SQLite
 
-Todo lo demás son detalles. Estos tres cambian cómo funciona el sistema.
+Cinco reglas que hay que aplicar en todo el esquema:
 
-### 1 · La grilla se materializa al crear la rifa
-
-**v1:** sólo existe una fila en `raffle_numbers` cuando alguien compra. "Disponible"
-es la *ausencia* de fila.
-
-**v2:** se crean las N filas de entrada, todas en `AVAILABLE`.
-
-Por qué importa:
-
-| | Ausencia de fila (v1) | Fila materializada (v2) |
+| Postgres | SQLite / D1 | Por qué importa |
 |---|---|---|
-| Reservar un número | Imposible: no hay qué marcar | `UPDATE ... WHERE status='AVAILABLE'` |
-| Evitar venta doble | Depende de un unique index y de atrapar el error 23505 | El predicado del UPDATE lo resuelve |
-| Nota por número | No hay dónde guardarla | Columna `note` |
-| Estado de la rifa | Traer todas las filas y reconstruir en memoria | Un `count(*) group by status` |
-| Bloquear un número | No se puede expresar | `status = 'BLOCKED'` |
+| `create type ... as enum` | `TEXT` + `CHECK (x IN (...))` | Mismo efecto, la base sigue validando |
+| `numeric(12,2)` | **`INTEGER` de centavos** | `REAL` es punto flotante: `0.1 + 0.2 ≠ 0.3`. Nunca plata en REAL |
+| `timestamptz` | `INTEGER` (epoch en ms) | Ordena bien, compara barato, sin ambigüedad de zona |
+| `gen_random_uuid()` | `crypto.randomUUID()` en el Worker | La base no genera ids |
+| `boolean` | `INTEGER` 0/1 | SQLite no tiene booleano |
+| `generate_series()` | Un `for` en TypeScript | Es lo que materializa la grilla |
 
-El costo es hasta 10.000 filas por rifa. Para Postgres eso no es nada — una rifa
-de 1.000 números ocupa menos que una sola foto de las que hoy se suben al estado.
-
-> Es el cambio que **habilita el plan PRO**. Sin filas materializadas no hay
-> forma correcta de reservar un número.
-
-### 2 · Las escrituras complejas viven en la base
-
-Hoy, en `src/lib/repositories/raffle.ts`, vender números es:
-
-```ts
-// 1. insertar comprador
-// 2. insertar números
-// 3. si (2) falló → borrar el comprador para compensar
-```
-
-Ese paso 3 es una transacción hecha a mano desde Node. Si el proceso se cae entre
-el 2 y el 3, queda un comprador huérfano para siempre. Y no hay nada que impida
-que dos requests simultáneos pasen los dos chequeos.
-
-En v2 eso es `sell_raffle_numbers()`: una función, una transacción, o pasa todo o
-no pasa nada. Lo mismo para pedidos, confirmaciones, sorteo y canje de vouchers.
-Ver [`docs/sql/…_rpc.sql`](./sql/20260824120600_rpc.sql).
-
-### 3 · El visitante nunca toca una tabla
-
-El rol `anon` no tiene permiso sobre ninguna tabla base. Ve el mundo por dos
-vistas que exponen **sólo las columnas públicas**. El detalle de por qué, en
-[04 · RLS](./04-rls-y-roles.md).
+> **La plata en centavos no es opcional.** Un precio de $2.500,50 se guarda como
+> `250050`. Si alguna vez ves un `REAL` para dinero en este proyecto, es un bug.
 
 ---
 
-## Tablas
+## D1 · el catálogo
+
+### Better Auth
+Las tablas `user`, `session`, `account` y `verification` **las genera la CLI de
+Better Auth**. No se escriben a mano ni se modifican: se tratan como esquema de
+librería.
 
 ### `profiles`
-Espejo de `auth.users`. Se crea sola al registrarse (trigger `on_auth_user_created`).
-
-| Columna | Tipo | Nota |
-|---|---|---|
-| `id` | uuid PK | FK → `auth.users`, cascade |
-| `display_name` | text | |
-| `avatar_url` | text | |
-| `contact_phone` | text | E.164, default para las rifas |
-| `role` | `app_role` | `USER` \| `ADMIN` |
-
-> **Escalada de privilegios:** la policy de UPDATE deja al usuario editar su
-> propio perfil. Sin protección extra podría mandar `{ role: 'ADMIN' }` en ese
-> mismo update. RLS filtra filas, no columnas, así que el bloqueo va en un
-> trigger (`profiles_guard_role`) que revierte el cambio de `role` si quien lo
-> hace no es admin.
-
-### `raffles`
-
-Cambios respecto de v1:
-
-| Cambio | Motivo |
-|---|---|
-| `price` → `ticket_price` | `price` a secas es ambiguo: ¿el del número o el del premio? |
-| `+ slug` | Link compartible legible |
-| `+ tier` | BASIC / PRO por rifa |
-| `+ number_start` | 0 → rifa 00–99 · 1 → rifa 1–100 |
-| `+ prize` | Hoy se mete en la descripción |
-| `+ winner_number`, `winner_buyer_id` | El anuncio del ganador es parte del ciclo |
-| `+ unlock_method`, `payment_ref`, `paid_at` | Trazabilidad del cobro sin tablas de facturación |
-| `+ currency` | Default ARS, previsto |
-| `+ published_at`, `closed_at` | Sellados por trigger |
-
-**Constraints que valen la pena mirar:**
 
 ```sql
--- El límite de números depende del plan, y lo controla la base.
--- Si sólo estuviera en Zod, cualquier llamada que no pase por ese formulario
--- lo saltea.
-constraint raffles_total_numbers_by_tier check (
-  total_numbers >= 1
-  and total_numbers <= (case when tier = 'PRO' then 10000 else 1000 end)
-)
+CREATE TABLE profiles (
+  id            TEXT PRIMARY KEY,          -- = user.id de Better Auth
+  display_name  TEXT NOT NULL,
+  avatar_url    TEXT,
+  contact_phone TEXT,                      -- E.164, default de sus rifas
+  role          TEXT NOT NULL DEFAULT 'USER'
+                  CHECK (role IN ('USER', 'ADMIN')),
+  created_at    INTEGER NOT NULL,
+  updated_at    INTEGER NOT NULL,
 
--- Una rifa publicada sin teléfono es una rifa donde nadie puede comprar.
-constraint raffles_published_needs_phone check (
-  status <> 'PUBLISHED' or contact_phone is not null
-)
+  CHECK (length(display_name) BETWEEN 1 AND 80),
+  CHECK (contact_phone IS NULL OR contact_phone GLOB '+[1-9]*')
+);
 ```
 
-### `raffle_buyers`
+> `role` sólo lo puede cambiar un ADMIN. Sin RLS ni triggers, **eso lo garantiza
+> la capa de autorización** — y por eso `updateProfile()` nunca debe aceptar un
+> objeto suelto del cliente: se listan los campos permitidos a mano.
+> Ver [04](./04-rls-y-roles.md).
 
-Se elimina `socials` (jsonb): existe en el esquema pero **no se usa en ninguna
-parte del código**. Un jsonb sin forma definida y sin lectores es deuda.
-
-Se agrega:
+### `raffles` — catálogo, no grilla
 
 ```sql
--- Un teléfono es una persona dentro de una rifa. Evita que el vecino que
--- compró tres veces figure como tres compradores distintos.
-create unique index raffle_buyers_raffle_phone_key
-  on public.raffle_buyers (raffle_id, phone)
-  where phone is not null;
+CREATE TABLE raffles (
+  id             TEXT PRIMARY KEY,
+  owner_id       TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  slug           TEXT NOT NULL UNIQUE,
+
+  title          TEXT NOT NULL,
+  description    TEXT,
+  prize          TEXT,
+
+  tier           TEXT NOT NULL DEFAULT 'BASIC' CHECK (tier IN ('BASIC','PRO')),
+  status         TEXT NOT NULL DEFAULT 'DRAFT'
+                   CHECK (status IN ('DRAFT','PUBLISHED','CLOSED','CANCELLED')),
+
+  unlock_method  TEXT NOT NULL DEFAULT 'FREE'
+                   CHECK (unlock_method IN ('FREE','VOUCHER','PAYMENT')),
+  payment_ref    TEXT,
+  paid_at        INTEGER,
+
+  ticket_price   INTEGER NOT NULL CHECK (ticket_price > 0),  -- CENTAVOS
+  currency       TEXT NOT NULL DEFAULT 'ARS',
+
+  total_numbers  INTEGER NOT NULL,
+  number_start   INTEGER NOT NULL DEFAULT 0 CHECK (number_start IN (0,1)),
+  draw_date      TEXT NOT NULL,                              -- ISO 'YYYY-MM-DD'
+  contact_phone  TEXT,
+
+  -- ── Proyección del Durable Object ──────────────────────────────
+  -- Copia de solo lectura para poder listar y ordenar sin abrir 50 DOs.
+  -- La fuente de verdad es SIEMPRE el DO. Si divergen, gana el DO.
+  sold_count     INTEGER NOT NULL DEFAULT 0,
+  reserved_count INTEGER NOT NULL DEFAULT 0,
+  winner_number  INTEGER,
+  winner_name    TEXT,
+  synced_at      INTEGER,
+  -- ───────────────────────────────────────────────────────────────
+
+  published_at   INTEGER,
+  closed_at      INTEGER,
+  created_at     INTEGER NOT NULL,
+  updated_at     INTEGER NOT NULL,
+
+  CHECK (length(title) BETWEEN 3 AND 100),
+  CHECK (description IS NULL OR length(description) <= 500),
+  CHECK (total_numbers >= 1),
+  CHECK (total_numbers <= (CASE WHEN tier = 'PRO' THEN 10000 ELSE 1000 END)),
+  CHECK (status <> 'PUBLISHED' OR contact_phone IS NOT NULL)
+);
+
+CREATE INDEX raffles_owner_idx  ON raffles (owner_id, created_at DESC);
+CREATE INDEX raffles_public_idx ON raffles (status) WHERE status IN ('PUBLISHED','CLOSED');
 ```
 
-> Los teléfonos se guardan normalizados a E.164 (`+549341…`) por trigger, no por
-> el formulario. Si la normalización vive en el front, el día que haya una
-> segunda vía de carga (import, API, otro form) vas a tener el mismo teléfono
-> escrito de tres formas y el índice único no va a servir de nada.
+> Los `CHECK` sobreviven el paso a SQLite y siguen valiendo la pena: el límite de
+> números por tier lo aplica la base, no el formulario de turno.
 
-### `raffle_numbers`
-
-PK compuesta `(raffle_id, number)` — natural y sin id sintético.
-
-| Columna | Para qué |
-|---|---|
-| `status` | `AVAILABLE` \| `RESERVED` \| `SOLD` \| `BLOCKED` |
-| `buyer_id` | Quién lo tiene (null si libre) |
-| `order_id` | Qué pedido lo reservó |
-| `reserved_until` | Vencimiento de la reserva |
-| `sold_at`, `note` | Historial y anotaciones |
-
-Dos constraints que impiden estados imposibles:
+### `vouchers` y `voucher_redemptions`
 
 ```sql
--- Un número vendido sin comprador es un número perdido: nadie sabe a quién
--- avisarle si gana.
-check (status <> 'SOLD' or buyer_id is not null)
+CREATE TABLE vouchers (
+  id         TEXT PRIMARY KEY,
+  code       TEXT NOT NULL UNIQUE,
+  tier       TEXT NOT NULL DEFAULT 'BASIC' CHECK (tier IN ('BASIC','PRO')),
+  max_uses   INTEGER NOT NULL DEFAULT 1 CHECK (max_uses BETWEEN 1 AND 10000),
+  used_count INTEGER NOT NULL DEFAULT 0,
+  expires_at INTEGER,
+  note       TEXT,
+  created_by TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
 
--- Una reserva sin vencimiento queda trabada para siempre y el número no
--- vuelve nunca a estar disponible.
-check (status <> 'RESERVED' or reserved_until is not null)
+  CHECK (used_count >= 0 AND used_count <= max_uses)
+);
+
+CREATE TABLE voucher_redemptions (
+  id          TEXT PRIMARY KEY,
+  voucher_id  TEXT NOT NULL REFERENCES vouchers(id) ON DELETE CASCADE,
+  raffle_id   TEXT NOT NULL UNIQUE REFERENCES raffles(id) ON DELETE CASCADE,
+  redeemed_by TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  redeemed_at INTEGER NOT NULL
+);
 ```
 
-### `raffle_orders` — el corazón del plan PRO
+> **El canje de un voucher es la única escritura de la app que necesita
+> atomicidad y NO vive en un DO.** Dos canjes simultáneos del último uso
+> disponible pasarían los dos. Se resuelve con el `UPDATE` condicional:
+> ```sql
+> UPDATE vouchers SET used_count = used_count + 1
+>  WHERE id = ?1 AND used_count < max_uses;
+> -- luego verificar meta.changes === 1
+> ```
+> Dentro de un `batch()` junto al INSERT del canje, con el statement guarda.
 
-Un pedido es lo que genera el visitante al preseleccionar números.
+### La tabla guarda
 
-| Columna | Para qué |
-|---|---|
-| `code` | Código corto (`A3F91C`) para nombrarlo en el chat de WhatsApp |
-| `visitor_token` | uuid secreto: le permite al visitante **sin cuenta** volver a ver su pedido |
-| `buyer_name`, `buyer_phone` | Lo que dejó. Todavía no es un comprador: puede no concretar nunca |
-| `buyer_id` | Se completa al confirmar |
-| `expires_at` | Cuándo se liberan los números |
+```sql
+-- Existe sólo para poder abortar un batch() desde una condición SQL.
+-- Insertar 1 viola el CHECK, tira error y revierte todo el batch.
+CREATE TABLE _abort (id INTEGER PRIMARY KEY CHECK (id = -1));
+```
 
-> **Por qué los datos del visitante no van directo a `raffle_buyers`:** un pedido
-> puede vencer o cancelarse. Si cada preselección creara un comprador, la lista
-> del organizador se llenaría de gente que nunca compró nada, y el índice único
-> por teléfono empezaría a chocar. Un comprador se crea recién cuando hay una
-> venta confirmada.
-
-### `vouchers` + `voucher_redemptions`
-
-Es la razón de existir del rol ADMIN.
-
-`voucher_redemptions.raffle_id` es **unique**: una rifa se habilita con un solo
-voucher. `redeem_voucher()` toma un `FOR UPDATE` sobre el voucher, porque sin eso
-dos canjes simultáneos del último uso disponible pasarían los dos.
+Es fea. Es el precio de no tener plpgsql. Documentada acá para que dentro de seis
+meses se entienda qué hace.
 
 ---
 
-## Sobre el cobro
+## Durable Object · el esquema de una rifa
 
-No se modelan tablas de facturación todavía. La habilitación de una rifa se
-resuelve con tres columnas en `raffles`:
+Se crea en el constructor con `blockConcurrencyWhile`, una sola vez.
 
+```sql
+CREATE TABLE numbers (
+  number         INTEGER PRIMARY KEY,
+  status         TEXT NOT NULL DEFAULT 'AVAILABLE'
+                   CHECK (status IN ('AVAILABLE','RESERVED','SOLD','BLOCKED')),
+  buyer_id       TEXT REFERENCES buyers(id) ON DELETE SET NULL,
+  order_id       TEXT REFERENCES orders(id) ON DELETE SET NULL,
+  reserved_until INTEGER,
+  sold_at        INTEGER,
+  note           TEXT,
+
+  CHECK (status <> 'SOLD'     OR buyer_id       IS NOT NULL),
+  CHECK (status <> 'RESERVED' OR reserved_until IS NOT NULL)
+);
+
+CREATE TABLE buyers (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  phone      TEXT,
+  note       TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+-- Un teléfono es una persona dentro de la rifa.
+CREATE UNIQUE INDEX buyers_phone_key ON buyers (phone) WHERE phone IS NOT NULL;
+
+CREATE TABLE orders (
+  id            TEXT PRIMARY KEY,
+  code          TEXT NOT NULL UNIQUE,     -- 'A3F91C', para nombrarlo en el chat
+  visitor_token TEXT NOT NULL UNIQUE,     -- credencial del visitante sin cuenta
+  buyer_name    TEXT NOT NULL,
+  buyer_phone   TEXT,
+  buyer_id      TEXT REFERENCES buyers(id) ON DELETE SET NULL,
+  status        TEXT NOT NULL DEFAULT 'PENDING'
+                  CHECK (status IN ('PENDING','CONFIRMED','CANCELLED','EXPIRED')),
+  expires_at    INTEGER NOT NULL,
+  confirmed_at  INTEGER,
+  cancelled_at  INTEGER,
+  created_at    INTEGER NOT NULL,
+  updated_at    INTEGER NOT NULL,
+
+  CHECK (status <> 'CONFIRMED' OR buyer_id IS NOT NULL)
+);
+
+CREATE INDEX numbers_status_idx ON numbers (status);
+CREATE INDEX orders_pending_idx ON orders (status, created_at DESC);
 ```
-unlock_method  FREE | VOUCHER | PAYMENT
-payment_ref    id externo del pago
-paid_at        cuándo
+
+**Sin `raffle_id` en ninguna tabla.** El DO *es* la rifa: no hay con qué
+confundirse, y desaparece toda la clase de bugs de "un comprador de otra rifa"
+que en Postgres había que atajar con un trigger.
+
+### La grilla se materializa en TypeScript
+
+```ts
+// Reemplaza al generate_series de Postgres. Va en el constructor del DO,
+// la primera vez, o en un método init() llamado al crear la rifa.
+init(totalNumbers: number, numberStart: number) {
+  const stmts = [];
+  for (let n = numberStart; n < numberStart + totalNumbers; n++) {
+    stmts.push(n);
+  }
+  // SQLite acepta multi-row VALUES; se inserta en lotes para no armar
+  // una sentencia gigante con 10.000 parámetros.
+  for (let i = 0; i < stmts.length; i += 500) {
+    const lote = stmts.slice(i, i + 500);
+    this.ctx.storage.sql.exec(
+      `INSERT INTO numbers (number) VALUES ${lote.map(() => '(?)').join(',')}`,
+      ...lote,
+    );
+  }
+}
 ```
-
-Cuando entre Mercado Pago, el webhook (con `service_role`) actualiza esas tres
-columnas. Si más adelante hace falta historial de pagos, se agrega una tabla
-`payments` que apunte a la rifa — sin migrar nada de lo existente.
-
-Es deliberadamente lo mínimo: montar `plans` + `subscriptions` + `payments` antes
-de que exista un solo cobro real es exactamente la sobreingeniería que pediste
-evitar.
 
 ---
 
-## Migración de los datos de v1
+## La sincronización DO → D1
 
-Hay datos reales en producción. El orden importa:
+El punto delicado de esta arquitectura. Reglas:
 
-1. Aplicar el esquema nuevo en un proyecto Supabase **de staging**, vacío.
-2. Exportar las tres tablas de v1 (`raffles`, `raffle_buyers`, `raffle_numbers`).
-3. Transformar:
-   - `price` → `ticket_price`
-   - `number_start = 0` (v1 numeraba desde 0: `z.number().int().min(0)`)
-   - generar `slug` desde `title`
-   - `tier = 'BASIC'`, `unlock_method = 'FREE'` para todo lo existente
-   - descartar `socials`
-4. **Materializar la grilla**: por cada rifa, crear las N filas y marcar como
-   `SOLD` sólo las que existían en v1. Este es el paso que no se puede improvisar.
-5. Verificar los totales por rifa contra v1 (vendidos, recaudado) **antes** de
-   tocar producción.
+1. **El DO escribe lo suyo primero.** Su storage es la verdad.
+2. **Después proyecta a D1**, sin bloquear la respuesta al usuario.
+3. **Si la proyección falla, no se revierte nada.** D1 es caché reconstruible.
+4. **Existe un método `resync()`** que recalcula los contadores desde el DO y
+   pisa D1. Es la salida cuando algo divergió.
 
-Detalle operativo en [06 · Roadmap](./06-roadmap.md), fase 4.
+```ts
+private async proyectar() {
+  const [{ sold, reserved }] = this.ctx.storage.sql.exec<{ sold: number; reserved: number }>(
+    `SELECT
+       COUNT(*) FILTER (WHERE status = 'SOLD')     AS sold,
+       COUNT(*) FILTER (WHERE status = 'RESERVED') AS reserved
+     FROM numbers`,
+  ).toArray();
+
+  // waitUntil: no demora la respuesta al organizador.
+  this.ctx.waitUntil(
+    this.env.DB.prepare(
+      `UPDATE raffles SET sold_count = ?, reserved_count = ?, synced_at = ?
+        WHERE id = ?`,
+    ).bind(sold, reserved, Date.now(), this.ctx.id.name).run(),
+  );
+}
+```
+
+> `this.ctx.id.name` devuelve el nombre con el que se creó el DO — usá el
+> `raffle.id` como nombre (`getByName(raffleId)`) y no hace falta guardarlo.
+
+---
+
+## Lo que se pierde y cómo se compensa
+
+| Se pierde | Compensación |
+|---|---|
+| Enums | `TEXT` + `CHECK` — la base sigue validando |
+| `numeric` | `INTEGER` de centavos, formateado en la UI |
+| Triggers de `updated_at` | Se setea en cada repositorio, sin excepción |
+| Normalización de teléfono en la base | Función `normalizePhone()` llamada en **un solo** punto de entrada |
+| FK entre rifas | Innecesaria: el DO ya aísla cada rifa |
+| RLS | Capa de autorización tipada → [04](./04-rls-y-roles.md) |
+
+> Las dos filas del medio son las que más fácil se rompen: sin trigger, alcanza
+> con que un repositorio se olvide de `updated_at` o de normalizar el teléfono
+> para que el índice único de compradores deje de servir. Por eso ambas cosas
+> viven en **una** función y los repositorios la llaman — nunca escriben el
+> campo a mano.
