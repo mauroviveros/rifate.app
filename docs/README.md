@@ -21,10 +21,10 @@ Si algo del refactor se rompe, ese es el punto de retorno.
 | 01 | [Stack](./01-stack.md) | Astro vs Next vs TanStack vs Angular. Landing + app juntas |
 | 01b | [Infraestructura](./01b-infraestructura.md) | **Vercel vs Cloudflare · Supabase vs D1.** Revisión hecha asumiendo proyecto de cero |
 | 02 | [Arquitectura](./02-arquitectura.md) | Capas, estructura de carpetas, mapa de rutas |
-| 03 | [Modelo de datos](./03-modelo-de-datos.md) | Tablas, claves, relaciones y qué cambia respecto de v1 |
-| 04 | [RLS y roles](./04-rls-y-roles.md) | Matriz de permisos completa por actor y por tabla |
+| 03 | [Modelo de datos](./03-modelo-de-datos.md) | Reparto D1 / Durable Object, esquema SQLite y sincronización |
+| 04 | [Autorización](./04-rls-y-roles.md) | **Lo que reemplaza a RLS:** cinco defensas en TypeScript |
 | 05 | [Flujos](./05-flujos.md) | Los recorridos reales: crear, vender, pedir, sortear |
-| 06 | [Roadmap](./06-roadmap.md) | Fases, checklist y commits sugeridos |
+| 06 | [Roadmap](./06-roadmap.md) | **Las 10 fases, con checkpoint y riesgo por cada una** |
 | 07 | [Guía Cloudflare](./07-guia-cloudflare.md) | Paso a paso de Workers y wrangler — **la parte de Supabase ya no aplica** |
 | 08 | [Arranque desde cero](./08-arranque-desde-cero.md) | Qué se rescató de v1, monorepo, deuda de UI |
 | 09 | [Durable Objects](./09-durable-objects.md) | Qué son, costos reales, consumo estimado y ciclo de vida |
@@ -65,15 +65,18 @@ Estas cinco están cerradas y el resto de los documentos las asume:
 
 ## Lo que queda por decidir
 
-- [ ] Precio real de BASIC y PRO en pesos
-- [ ] Pasarela de cobro (Mercado Pago es lo natural en Argentina)
-- [ ] Cuánto dura la reserva de un pedido (la propuesta asume 24 h)
-- [ ] Si la landing y la app comparten dominio o la app va en `app.rifate.app`
-      → analizado en [02](./02-arquitectura.md), sin cerrar
-- [ ] Reescribir `02` (el principio de arquitectura se invirtió)
-- [ ] Reescribir `06` (el roadmap todavía dice `supabase db reset`)
-- [ ] Reemplazar `docs/sql/` por migraciones D1 + esquema del DO
-- [ ] Precio de BASIC y PRO en pesos
-- [ ] Duración de la reserva (todo el diseño asume 24 h)
-- [ ] Dominio: ¿el dashboard comparte `rifate.app`?
-- [ ] starwind vs shadcn: elegir base antes de portar componentes → [08](./08-arranque-desde-cero.md)
+### Producto — sólo vos podés cerrarlas
+
+- [ ] **Precio de BASIC y PRO** en pesos
+- [ ] **Duración de la reserva** de un pedido — todo el diseño asume 24 h, y el
+      valor aparece en el código del Durable Object
+- [ ] **Dominio**: ¿el dashboard comparte `rifate.app` o va en `app.rifate.app`?
+- [ ] Pasarela de cobro cuando llegue el momento (Mercado Pago)
+
+### Técnicas — pendientes de documentar
+
+- [ ] Reescribir [02 · Arquitectura](./02-arquitectura.md): el principio
+      «la base hace cumplir las reglas» se invirtió con D1
+- [ ] Reemplazar [`docs/sql/`](./sql/) por migraciones D1 reales + esquema del DO
+- [ ] **starwind vs shadcn**: elegir antes de portar un solo componente
+      → [08](./08-arranque-desde-cero.md)
