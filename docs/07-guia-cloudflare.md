@@ -1,26 +1,11 @@
 # 07 · Guía de migración a Cloudflare Workers
 
-> ## ⏸ DIFERIDA
+> Detalle de configuración de **Astro + Cloudflare Workers** y de la generación
+> de imágenes OG. El orden de trabajo general está en
+> [06 · Roadmap](./06-roadmap.md); esto es el "cómo" de sus fases 2 y 7.
 >
-> Se decidió **quedarse en Vercel** hasta activar el cobro. Motivo: Vercel Hobby
-> es $0 mientras no haya uso comercial, y Cloudflare Workers Free **no alcanza
-> para Astro SSR** (10 ms de CPU por request; la propia doc de Cloudflare dice
-> que SSR usa 10-20 ms). Cloudflare recién conviene cuando Vercel Pro pase a ser
-> obligatorio: ahí son $5/mes contra $20.
->
-> **Esta guía queda lista para ese momento.** Nada de acá se ejecuta ahora.
->
-> **Excepción — la etapa C sí se hace ya**, adaptada: la URL versionada del OG y
-> la plantilla de satori son independientes de la plataforma y arreglan un bug
-> real (WhatsApp muestra la imagen vieja al recompartir). En Vercel se mantiene
-> `@resvg/resvg-js` nativo; la mudanza futura son ~10 líneas.
-
-> Guía para tipear paso a paso. Cada etapa termina con algo **verificable**: si
-> no funciona, no seguís a la siguiente.
->
-> Orden elegido a propósito: primero la infraestructura con el código actual
-> (v1), y recién después el esquema nuevo. Así, si algo se rompe, sabés que fue
-> el cambio de plataforma y no el rediseño de la base.
+> La autenticación va aparte, en [10 · Better Auth](./10-better-auth.md), y el
+> esquema en [`docs/sql/`](./sql/).
 
 ## Índice
 
@@ -29,7 +14,7 @@
 | A | Astro 7 + adapter Cloudflare | `pnpm build` sin errores |
 | B | wrangler + deploy | La app v1 andando en `*.workers.dev` |
 | C | OG con satori + resvg-wasm | La imagen se genera con Nunito, < 400 ms |
-| D | Supabase CLI + esquema v2 | `supabase db reset` limpio |
+| — | Auth y esquema | → [10](./10-better-auth.md) y [`docs/sql/`](./sql/) |
 | E | Adaptar la app | → [06 · Roadmap](./06-roadmap.md), fase 5 |
 
 Antes de empezar:
@@ -151,8 +136,8 @@ EOF
   // quickAction() de Browser Run necesita 2026-03-24 o posterior.
   "compatibility_date": "2026-08-01",
 
-  // supabase-js usa APIs de Node (streams, buffer). Sin esto falla en runtime,
-  // no en build: el error aparece recién con el primer request.
+  // Better Auth y kysely usan APIs de Node (crypto, buffer). Sin esto falla en
+  // runtime, no en build: el error aparece recién con el primer request.
   "compatibility_flags": ["nodejs_compat"],
 
   "assets": {
@@ -176,25 +161,28 @@ EOF
 
 ### B.3 · Variables de entorno
 
-Cloudflare no lee `.env`. Para desarrollo local usa `.dev.vars`:
+Cloudflare no lee `.env`. Para desarrollo local usa **`.dev.vars`** (ya está en
+`.gitignore`), con los mismos nombres que los secrets de producción:
 
-```bash
-cp .env .dev.vars
+```
+BETTER_AUTH_SECRET=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+PUBLIC_APP_URL=http://localhost:8787
 ```
 
-Y para producción, cargalas como secrets (te las va a pedir por stdin):
+Y en producción, como secrets:
 
 ```bash
-npx wrangler secret put PUBLIC_SUPABASE_URL
-npx wrangler secret put PUBLIC_SUPABASE_KEY
+npx wrangler secret put BETTER_AUTH_SECRET
+npx wrangler secret put GOOGLE_CLIENT_ID
+npx wrangler secret put GOOGLE_CLIENT_SECRET
 ```
 
-> **Por qué las dos cosas.** `import.meta.env.PUBLIC_*` lo inlinea Vite en tiempo
-> de build desde `.env`, y eso sigue funcionando. Pero un valor inlineado sólo se
-> cambia rebuildeando. Los secrets de Cloudflare se leen en runtime y se rotan
-> sin tocar el código. Para la anon key da igual (es pública por diseño); para el
-> día que sumes `SUPABASE_SERVICE_ROLE_KEY` o las claves de Mercado Pago, **no**
-> da igual. El paso B.5 deja el patrón listo.
+> **Todo se lee de `locals.runtime.env`, no de `import.meta.env`.** Vite inlinea
+> las `PUBLIC_*` en tiempo de build, y un valor inlineado sólo se cambia
+> rebuildeando. Los secrets de runtime se rotan sin tocar el código — que es lo
+> que querés para una clave de sesión o de OAuth.
 
 ### B.4 · Tipos de los bindings
 
@@ -213,88 +201,34 @@ type Runtime = import('@astrojs/cloudflare').Runtime<Env>;
 
 declare namespace App {
   interface Locals extends Runtime {
-    user: import('@supabase/supabase-js').User | null;
+    actor: import('@/lib/auth/actor').Actor;
   }
 }
 ```
 
 A partir de acá `Astro.locals.runtime.env.BROWSER` está tipado.
 
-### B.5 · `src/lib/supabase/server.ts`
+### B.5 · Bindings en `wrangler.jsonc`
 
-Un solo cambio: aceptar el env de runtime, con fallback a `import.meta.env`.
-Todas las llamadas existentes siguen funcionando sin tocarlas.
+Además del browser y los assets, hacen falta D1 y el Durable Object:
 
-```ts
-import {
-  createServerClient as createSupabaseServerClient,
-  parseCookieHeader,
-} from '@supabase/ssr';
-import type { AstroCookies } from 'astro';
-
-import type { Database } from '@/types';
-
-/**
- * En Cloudflare los secrets viven en el runtime, no en el bundle. Se pasa
- * `runtimeEnv` cuando está disponible (`Astro.locals.runtime.env`) y se cae a
- * `import.meta.env` para `astro dev` y para las variables PUBLIC_ inlineadas.
- */
-const getSupabaseEnv = (runtimeEnv?: Partial<Env>) => {
-  const url = runtimeEnv?.PUBLIC_SUPABASE_URL ?? import.meta.env.PUBLIC_SUPABASE_URL;
-  const anonKey = runtimeEnv?.PUBLIC_SUPABASE_KEY ?? import.meta.env.PUBLIC_SUPABASE_KEY;
-
-  if (!url || !anonKey) {
-    throw new Error(
-      'Faltan las variables de Supabase: PUBLIC_SUPABASE_URL y PUBLIC_SUPABASE_KEY',
-    );
-  }
-
-  return { url, anonKey };
-};
-
-export type ServerClient = ReturnType<typeof createServerClient>;
-
-export function createServerClient({
-  request,
-  cookies,
-  runtimeEnv,
-}: {
-  request: Request;
-  cookies: AstroCookies;
-  runtimeEnv?: Partial<Env>;
-}) {
-  const { url, anonKey } = getSupabaseEnv(runtimeEnv);
-
-  return createSupabaseServerClient<Database>(url, anonKey, {
-    cookies: {
-      getAll() {
-        return parseCookieHeader(request.headers.get('Cookie') ?? '').filter(
-          (cookie): cookie is { name: string; value: string } =>
-            typeof cookie.value === 'string',
-        );
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          cookies.set(name, value, {
-            ...options,
-            maxAge: 60 * 60 * 24 * 7,
-          });
-        });
-      },
-    },
-  });
+```jsonc
+{
+  "d1_databases": [
+    { "binding": "DB", "database_name": "rifate-db", "database_id": "<id>" }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "RAFFLE", "class_name": "Raffle" }]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Raffle"] }
+  ]
 }
 ```
 
-Y en `src/middleware.ts`, pasale el env de runtime:
-
-```ts
-const supabase = createServerClient({
-  cookies,
-  request,
-  runtimeEnv: locals.runtime?.env,
-});
-```
+> **`new_sqlite_classes`, no `new_classes`.** La variante SQLite es la que trae
+> `ctx.storage.sql` y la que tiene free tier. Con `new_classes` (backend
+> key-value) nada de lo diseñado en [03](./03-modelo-de-datos.md) funciona.
 
 ### B.6 · Scripts en `package.json`
 
@@ -591,40 +525,39 @@ Renombrá el archivo a `src/pages/og/raffle/[id]/[v].png.ts`:
 ```ts
 import type { APIRoute } from 'astro';
 
-import { countSold, soldNumbersOf } from '@/lib/domain/raffle';
 import { renderRaffleOg } from '@/lib/og/render';
 import { getPublicRaffle } from '@/lib/repositories/raffle';
-import { createServerClient } from '@/lib/supabase/server';
+import { getPublicRaffleById } from '@/lib/db';
+import { raffleStub } from '@/lib/raffle/client';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params, request, cookies, locals }) => {
+export const GET: APIRoute = async ({ params, locals }) => {
   if (!params.id) return new Response('Not found', { status: 404 });
 
-  const supabase = createServerClient({
-    request,
-    cookies,
-    runtimeEnv: locals.runtime?.env,
-  });
+  const env = locals.runtime.env;
 
-  const raffle = await getPublicRaffle(supabase, params.id);
+  // Configuración desde D1, estado desde el Durable Object.
+  const raffle = await getPublicRaffleById(env.DB, params.id);
   if (!raffle) return new Response('Not found', { status: 404 });
+
+  const grid = await raffleStub(env, raffle.id).publicGrid();
 
   const png = await renderRaffleOg({
     title: raffle.title,
     description: raffle.description?.slice(0, 120) ?? null,
     totalNumbers: raffle.total_numbers,
-    numberStart: 0,            // ← raffle.number_start en la etapa E
-    soldNumbers: soldNumbersOf(raffle.numbers),
-    ticketPrice: raffle.price, // ← raffle.ticket_price en la etapa E
+    numberStart: raffle.number_start,
+    soldNumbers: grid.filter((n) => n.status === 'SOLD').map((n) => n.number),
+    ticketPrice: raffle.ticket_price,      // centavos
     drawDate: raffle.draw_date,
-    winnerNumber: null,        // ← raffle.winner_number en la etapa E
+    winnerNumber: raffle.winner_number,
   });
 
   // El `v` de la URL es la cantidad de vendidos: si cambió el estado, cambió la
   // URL. Por eso esta respuesta concreta es inmutable y se puede cachear para
   // siempre, tanto en el CDN como en el cache de WhatsApp.
-  const current = countSold(raffle.numbers);
+  const current = grid.filter((n) => n.status === 'SOLD').length;
   const isCurrent = String(current) === params.v;
 
   return new Response(png, {
@@ -673,32 +606,12 @@ Abrí `http://localhost:8787/og/raffle/<id>/0.png`. Tres cosas a mirar:
 3. En la consola de `wrangler dev`, el CPU time del request. Tiene que estar
    holgadamente abajo de 30 s (va a dar ~150–400 ms).
 
-## Etapa D · Supabase CLI y esquema v2
+## Auth y esquema
 
-Esta etapa no cambia respecto de lo planificado: seguí
-[06 · Roadmap](./06-roadmap.md), fases 2 y 3. Los ocho archivos de
-[`docs/sql/`](./sql/) siguen valiendo tal cual — Postgres no se toca.
+No van acá:
 
-Resumen de comandos:
-
-```bash
-brew install supabase/tap/supabase
-supabase init
-supabase link --project-ref <tu-ref>
-
-# Respaldo del esquema actual ANTES de tocar nada
-supabase db dump --schema public > docs/sql/_v1_snapshot.sql
-
-# Aplicar el esquema nuevo en local (necesita Docker corriendo)
-git mv docs/sql/2026*.sql supabase/migrations/
-supabase start
-supabase db reset
-
-# Regenerar tipos
-supabase gen types typescript --local > src/types/database.ts
-```
-
----
+- **Better Auth sobre D1** → [10 · Better Auth](./10-better-auth.md)
+- **Migraciones de D1 y esquema del Durable Object** → [`docs/sql/`](./sql/)
 
 ## Comandos de git por etapa
 
@@ -709,16 +622,14 @@ git rm --cached src/pages/og/raffle/Nunito-*.ttf
 git commit -m "build: :arrow_up: upgrade to Astro 7 and swap Vercel adapter for Cloudflare"
 
 # Etapa B
-git add wrangler.jsonc .gitignore src/env.d.ts src/lib/supabase/server.ts src/middleware.ts package.json
+git add wrangler.jsonc .gitignore src/env.d.ts src/middleware.ts package.json
 git commit -m "build: :construction_worker: configure wrangler with browser binding and runtime env"
 
 # Etapa C
 git add src/lib/og/ src/pages/og/ package.json pnpm-lock.yaml
 git commit -m "refactor: :recycle: render OG images with resvg-wasm and version their URL"
 
-# Etapa D
-git add supabase/
-git commit -m "feat: :database: add v2 schema with RLS policies and RPC functions"
+# Auth y esquema → ver 10 y docs/sql/
 ```
 
 ---
@@ -735,8 +646,8 @@ git commit -m "feat: :database: add v2 schema with RLS policies and RPC function
 | `initWasm` falla en el segundo request | Falta el guard de módulo en `render.ts` |
 | `Unexpected character` al importar el `.wasm` | Falta la regla `CompiledWasm` en `wrangler.jsonc` |
 | WhatsApp muestra la imagen vieja | Falta el token de versión en la URL del OG |
-| Login rompe después de desplegar | La URL de callback en Supabase todavía apunta a Vercel |
+| Login rompe después de desplegar | Falta la URI de callback de producción en Google Cloud Console |
 
-> El último es fácil de pasar por alto: en el dashboard de Supabase, en
-> **Authentication → URL Configuration**, hay que agregar el dominio de
-> Cloudflare a las *Redirect URLs*.
+> El último es fácil de pasar por alto: en **Google Cloud Console → Credentials**
+> hay que tener las **tres** URIs de redirección (local, `workers.dev` y el
+> dominio propio). Ver [10 · Better Auth](./10-better-auth.md).

@@ -3,10 +3,11 @@
 > **Estado: arranque de v2.** El código de v1 fue eliminado; el repo queda con
 > `docs/` como única herencia.
 >
-> ⚠️ **Varios documentos están marcados como SUPERADOS.** Se escribieron
-> asumiendo Supabase + Postgres y la decisión final fue **Cloudflare + D1 +
-> Better Auth**. Su diseño conceptual sigue valiendo; su implementación no.
-> Cada uno lleva un banner al principio explicando qué cambia.
+> **La planificación está cerrada.** Todos los documentos reflejan el stack
+> final. Las versiones que asumían Supabase quedaron en
+> [`_archivo/`](./_archivo/) como registro del análisis.
+>
+> Próximo paso: [06 · Roadmap](./06-roadmap.md), fase 2.
 
 Punto de partida congelado en el tag **`v1.0.0`** y la rama **`v1-stable`**.
 Si algo del refactor se rompe, ese es el punto de retorno.
@@ -20,12 +21,12 @@ Si algo del refactor se rompe, ese es el punto de retorno.
 | 00 | [Contexto y alcance](./00-contexto-y-alcance.md) | Qué problema resuelve, quiénes lo usan, qué queda afuera |
 | 01 | [Stack](./01-stack.md) | Astro vs Next vs TanStack vs Angular. Landing + app juntas |
 | 01b | [Infraestructura](./01b-infraestructura.md) | **Vercel vs Cloudflare · Supabase vs D1.** Revisión hecha asumiendo proyecto de cero |
-| 02 | [Arquitectura](./02-arquitectura.md) | Capas, estructura de carpetas, mapa de rutas |
+| 02 | [Arquitectura](./02-arquitectura.md) | Capas, carpetas, rutas y por dónde pasa cada request |
 | 03 | [Modelo de datos](./03-modelo-de-datos.md) | Reparto D1 / Durable Object, esquema SQLite y sincronización |
 | 04 | [Autorización](./04-rls-y-roles.md) | **Lo que reemplaza a RLS:** cinco defensas en TypeScript |
-| 05 | [Flujos](./05-flujos.md) | Los recorridos reales: crear, vender, pedir, sortear |
+| 05 | [Flujos](./05-flujos.md) | Los recorridos reales: crear, vender, pedir, sortear, canjear |
 | 06 | [Roadmap](./06-roadmap.md) | **Las 10 fases, con checkpoint y riesgo por cada una** |
-| 07 | [Guía Cloudflare](./07-guia-cloudflare.md) | Paso a paso de Workers y wrangler — **la parte de Supabase ya no aplica** |
+| 07 | [Guía Cloudflare](./07-guia-cloudflare.md) | Cómo configurar Astro + Workers + wrangler, y la imagen OG |
 | 08 | [Arranque desde cero](./08-arranque-desde-cero.md) | Qué se rescató de v1, monorepo, deuda de UI |
 | 09 | [Durable Objects](./09-durable-objects.md) | Qué son, costos reales, consumo estimado y ciclo de vida |
 | 10 | [Better Auth](./10-better-auth.md) | Auth sobre D1: configuración, middleware y gotchas |
@@ -76,7 +77,5 @@ Estas cinco están cerradas y el resto de los documentos las asume:
 
 ### Técnicas — pendientes de documentar
 
-- [ ] Reescribir [02 · Arquitectura](./02-arquitectura.md): el principio
-      «la base hace cumplir las reglas» se invirtió con D1
 - [ ] **starwind vs shadcn**: elegir antes de portar un solo componente
       → [08](./08-arranque-desde-cero.md)
