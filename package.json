@@ -13,16 +13,18 @@
     "generate-types": "wrangler types"
   },
   "dependencies": {
-    "astro": "^7.2.7",
+    "astro": "^7.2.8",
+    "better-auth": "^1.7.2",
+    "kysely": "^0.29.5",
+    "kysely-d1": "^0.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
-  },
-  "allowScripts": {
-    "esbuild": true
   },
   "devDependencies": {
     "@astrojs/cloudflare": "^14.2.5",
     "@astrojs/react": "^6.0.4",
+    "@better-auth/cli": "^1.4.21",
+    "@types/node": "^26.3.0",
     "wrangler": "^4.126.0"
   }
 }
