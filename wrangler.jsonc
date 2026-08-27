@@ -5,7 +5,7 @@
 		"global_fetch_strictly_public",
 		"nodejs_compat"
 	],
-	"name": "rifate_app",
+	"name": "rifate",
 	"main": "@astrojs/cloudflare/entrypoints/server",
 	"assets": {
 		"directory": "./dist/client",
@@ -13,5 +13,15 @@
 	},
 	"observability": {
 		"enabled": true
-	}
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "rifate-db",
+			"database_id": "a51287a4-2f3d-44d8-815a-b63cdaaac582"
+		}
+	],
+	"vars": {
+		"PUBLIC_APP_URL": "https://rifate.mauroviveros.workers.dev"
+	},
 }

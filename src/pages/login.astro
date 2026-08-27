@@ -1,0 +1,12 @@
+<button id="google-signin" type="button">Entrar con Google</button>
+
+<script>
+  import { createAuthClient } from 'better-auth/client';
+
+  const { signIn } = createAuthClient();
+
+  document.getElementById('google-signin')?.addEventListener('click', () => {
+    const next = new URLSearchParams(window.location.search).get('next') ?? '/dashboard/raffle';
+    signIn.social({ provider: 'google', callbackURL: next });
+  })
+</script>
