@@ -1,27 +1,44 @@
 {
-	"$schema": "./node_modules/wrangler/config-schema.json",
-	"compatibility_date": "2026-08-01",
-	"compatibility_flags": [
-		"global_fetch_strictly_public",
-		"nodejs_compat"
-	],
-	"name": "rifate",
-	"main": "@astrojs/cloudflare/entrypoints/server",
-	"assets": {
-		"directory": "./dist/client",
-		"binding": "ASSETS"
-	},
-	"observability": {
-		"enabled": true
-	},
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "rifate-db",
-			"database_id": "a51287a4-2f3d-44d8-815a-b63cdaaac582"
-		}
-	],
-	"vars": {
-		"PUBLIC_APP_URL": "https://rifate.mauroviveros.workers.dev"
-	},
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": [
+    "global_fetch_strictly_public",
+    "nodejs_compat"
+  ],
+  "name": "rifate",
+  "main": "./src/worker.ts",
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true,
+    // Con el volumen actual conviene ver el 100% de las invocaciones. Si algún
+    // día el volumen sube, esto es lo que se baja para no inflar la factura.
+    "head_sampling_rate": 1
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rifate-db",
+      "database_id": "a51287a4-2f3d-44d8-815a-b63cdaaac582"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RAFFLE",
+        "class_name": "Raffle"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["Raffle"]
+    }
+  ],
+  "vars": {
+    "PUBLIC_APP_URL": "https://rifate.mauroviveros.workers.dev"
+  },
 }
