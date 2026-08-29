@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
+
 import { getMeta, migrate, seedNumbers, setMeta } from './schema';
 
 /** La config que el DO copia de D1 para poder validar por su cuenta. */

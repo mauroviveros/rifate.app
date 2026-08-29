@@ -1,23 +1,26 @@
-import { defineMiddleware } from "astro:middleware";
-import { createAuth } from "./lib/auth";
-import { env } from "cloudflare:workers";
-import { actorFromSession, isAdmin } from "./lib/auth/actor";
+import { defineMiddleware } from 'astro:middleware';
+import { env } from 'cloudflare:workers';
 
-export const onRequest = defineMiddleware(async ({ request, locals, url, redirect }, next) => {
-  const result = await createAuth(env).api.getSession({
-    headers: request.headers
-  });
+import { createAuth } from './lib/auth';
+import { actorFromSession, isAdmin } from './lib/auth/actor';
 
-  locals.actor = await actorFromSession(env.DB, result?.session ?? null);
+export const onRequest = defineMiddleware(
+  async ({ request, locals, url, redirect }, next) => {
+    const result = await createAuth(env).api.getSession({
+      headers: request.headers,
+    });
 
-  const protegida = /^\/dashboard|^\/admin/.test(url.pathname);
-  if (protegida && locals.actor.kind === 'visitor'){
-    return redirect(`/login?next=${encodeURIComponent(url.pathname)}`);
-  }
+    locals.actor = await actorFromSession(env.DB, result?.session ?? null);
 
-  if (url.pathname.startsWith('/admin') && !isAdmin(locals.actor)){
-    return new Response('No encontrado', { status: 404 });
-  }
+    const protegida = /^\/dashboard|^\/admin/.test(url.pathname);
+    if (protegida && locals.actor.kind === 'visitor') {
+      return redirect(`/login?next=${encodeURIComponent(url.pathname)}`);
+    }
 
-  return next();
-});
+    if (url.pathname.startsWith('/admin') && !isAdmin(locals.actor)) {
+      return new Response('No encontrado', { status: 404 });
+    }
+
+    return next();
+  },
+);

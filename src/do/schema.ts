@@ -28,7 +28,11 @@ export const SCHEMA_VERSION = 1;
 
 /** Deja constancia de que el escalón `v` ya corrió, y lo devuelve. */
 const aplicado = (sql: SqlStorage, v: number): number => {
-  sql.exec('INSERT INTO _migrations (id, applied_at) VALUES (?, ?)', v, Date.now());
+  sql.exec(
+    'INSERT INTO _migrations (id, applied_at) VALUES (?, ?)',
+    v,
+    Date.now(),
+  );
   return v;
 };
 
@@ -192,14 +196,15 @@ export type MetaKey =
   // si el objeto se creó con getByName/idFromName. Depender de eso se rompe
   // en silencio. La fase 5 lo necesita para saber qué fila proyectar.
   | 'raffle_id'
-  | 'owner_id'      // quién puede escribir  → assertOwner
-  | 'tier'          // BASIC | PRO           → habilita pedidos
-  | 'status'        // DRAFT | PUBLISHED | … → habilita pedidos
+  | 'owner_id' // quién puede escribir  → assertOwner
+  | 'tier' // BASIC | PRO           → habilita pedidos
+  | 'status' // DRAFT | PUBLISHED | … → habilita pedidos
   | 'number_start'
   | 'total_numbers';
 
 export const getMeta = (sql: SqlStorage, key: MetaKey): string | null =>
-  sql.exec<{ v: string }>('SELECT v FROM meta WHERE k = ?', key).toArray()[0]?.v ?? null;
+  sql.exec<{ v: string }>('SELECT v FROM meta WHERE k = ?', key).toArray()[0]
+    ?.v ?? null;
 
 export const setMeta = (sql: SqlStorage, key: MetaKey, value: string): void => {
   sql.exec(

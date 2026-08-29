@@ -14,5 +14,5 @@
  * Así que alcanza con reexportar el default del adapter y sumar las clases.
  */
 
-export { default } from '@astrojs/cloudflare/entrypoints/server';
 export { Raffle } from './do/raffle';
+export { default } from '@astrojs/cloudflare/entrypoints/server';
