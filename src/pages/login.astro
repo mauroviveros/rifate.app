@@ -6,7 +6,9 @@
   const { signIn } = createAuthClient();
 
   document.getElementById('google-signin')?.addEventListener('click', () => {
-    const next = new URLSearchParams(window.location.search).get('next') ?? '/dashboard/raffle';
+    const next =
+      new URLSearchParams(window.location.search).get('next') ??
+      '/dashboard/raffle';
     signIn.social({ provider: 'google', callbackURL: next });
-  })
+  });
 </script>
