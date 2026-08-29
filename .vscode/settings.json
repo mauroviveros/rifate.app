@@ -1,0 +1,34 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Astro necesita que el formatter se declare por lenguaje: la extensión de
+  // Astro se registra a sí misma como formatter y le gana al default.
+  "[astro]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // Usa el prettier del proyecto (3.9.6 + prettier-plugin-astro), no el que
+  // trae la extensión: así el editor y `pnpm format` no discrepan.
+  "prettier.prettierPath": "./node_modules/prettier",
+
+  // eslint --fix al guardar, que es lo que ordena los imports y saca los
+  // que no se usan. La regla de env.DB NO tiene autofix a propósito:
+  // tiene que romper y que la arregles vos pasando por un repositorio.
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.validate": ["javascript", "typescript", "astro"]
+}

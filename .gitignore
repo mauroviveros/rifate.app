@@ -39,5 +39,6 @@ worker-configuration.d.ts
 
 # skills vendorizadas: el contenido se regenera desde skills-lock.json,
 # que sí se commitea. .claude/skills son symlinks a .agents/skills.
+# Ojo: se ignora .claude/skills/, NO todo .claude/ — ahí vive settings.json.
 .agents/
-.claude/
+.claude/skills/
