@@ -15,7 +15,7 @@ export const onRequest = defineMiddleware(async ({ request, locals, url, redirec
     return redirect(`/login?next=${encodeURIComponent(url.pathname)}`);
   }
 
-  if (url.pathname.startsWith('/admin') && isAdmin(locals.actor)){
+  if (url.pathname.startsWith('/admin') && !isAdmin(locals.actor)){
     return new Response('No encontrado', { status: 404 });
   }
 

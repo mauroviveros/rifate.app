@@ -27,15 +27,3 @@ export const isAdmin = (a: Actor): a is Extract<Actor, { kind: 'admin' }> => a.k
 
 // Devuelve el userId del actor, o null si es un visitante.
 export const userIdOf = (a: Actor): string | null => a.kind === 'visitor' ? null : a.userId;
-
-
-//   return row?.role === 'ADMIN'
-//     ? { kind: 'admin', userId: session.userId }
-//     : { kind: 'organizer', userId: session.userId };
-// };
-
-// export const isAdmin = (a: Actor): a is Extract<Actor, { kind: 'admin' }> =>
-//   a.kind === 'admin';
-
-// export const userIdOf = (a: Actor): string | null =>
-//   a.kind === 'visitor' ? null : a.userId;

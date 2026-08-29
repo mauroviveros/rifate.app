@@ -30,6 +30,12 @@ export const createAuth = (env: Env) => betterAuth({
     }
   },
 
+  // Better Auth activa rate limiting solo en producción, pero su storage por
+  // defecto es "memory" — inútil en Workers: cada isolate tiene su propia
+  // memoria, son efímeros y están repartidos en cientos de datacenters, así
+  // que el límite terminaría siendo por isolate y no global. En D1 es real.
+  rateLimit: { storage: 'database' },
+
   advanced: {
     // Cloudflare sirve todo por HTTPS: no hay motivo para aceptar cookies inseguras.
     useSecureCookies: true,
