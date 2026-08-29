@@ -36,3 +36,8 @@ worker-configuration.d.ts
 *.sqlite-shm
 *.sqlite-wal
 *.db
+
+# skills vendorizadas: el contenido se regenera desde skills-lock.json,
+# que sí se commitea. .claude/skills son symlinks a .agents/skills.
+.agents/
+.claude/
