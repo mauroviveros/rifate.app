@@ -127,17 +127,27 @@ Lo que reemplaza a RLS. Guía en [04](./04-rls-y-roles.md).
 pnpm add -D vitest @cloudflare/vitest-pool-workers
 ```
 
-- [ ] Tipos `PublicNumber` / `OwnerNumber` — el público **sin** campos de comprador
-- [ ] Repositorios D1 en `src/lib/db/`, todos con `actor` obligatorio
-- [ ] Regla de ESLint que prohíbe `env.DB` fuera de `src/lib/db/`
-- [ ] `assertOwner` en el DO + superficies pública y de organizador separadas
-- [ ] `normalizePhone()` y `updated_at` en **un solo** lugar
-- [ ] Proyección DO → D1 con `waitUntil` + método `resync()`
-- [ ] **Tests de denegación:**
-      - [ ] usuario ajeno → `FORBIDDEN` en `ownerGrid` y `sell`
-      - [ ] `publicGrid()` serializado no contiene teléfonos
-      - [ ] un organizador no puede auto-promoverse a `ADMIN`
-- [ ] **✅ Checkpoint: los tests de denegación pasan**
+- [x] Tipos `PublicNumber` / `OwnerNumber` — el público **sin** campos de comprador
+- [x] Repositorios D1 en `src/lib/db/`, todos con `actor` obligatorio
+- [x] Regla de ESLint que prohíbe `env.DB` fuera de `src/lib/db/`
+- [x] `assertOwner` en el DO + superficies pública y de organizador separadas
+- [x] `normalizePhone()` y `updated_at` en **un solo** lugar
+- [x] Proyección DO → D1 con `waitUntil` + método `resync()`
+- [x] **Tests de denegación:**
+      - [x] usuario ajeno → `FORBIDDEN` en `ownerGrid` y `sell`
+      - [x] `publicGrid()` serializado no contiene teléfonos
+      - [x] un organizador no puede auto-promoverse a `ADMIN`
+- [x] **✅ Checkpoint: los tests de denegación pasan** — 63 tests en verde,
+      `pnpm check` y `pnpm lint` limpios
+
+> Dos cosas del armado que la doc de Cloudflare todavía no dice, encontradas
+> corriéndolo:
+>
+> 1. `reset()` del pool 0.22 borra los Durable Objects **y D1** (local, D1 vive
+>    sobre un DO). Llamar `abortAllDurableObjects()` antes lo deja sin efecto.
+> 2. Toda excepción que cruza el RPC de un DO queda además como "unhandled
+>    rejection" aunque el test la capture. Los tests que esperan un rechazo van
+>    por `runInDurableObject`.
 
 ---
 
