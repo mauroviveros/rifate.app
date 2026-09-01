@@ -2,9 +2,9 @@ dist/
 .astro/
 node_modules/
 pnpm-lock.yaml
-
-# La documentación de planificación está formateada a mano: tablas alineadas,
-# diagramas ASCII y ejemplos de código compactos donde la alineación de los
-# marcadores (① ②) es parte de la explicación. Prettier los reflowea y los
-# vuelve ilegibles.
 docs/
+src/styles/starwind.css
+src/components/starwind/
+src/components/starwind-primitives/
+starwind.config.json
+.vscode/starwind.code-snippets

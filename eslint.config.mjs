@@ -6,7 +6,15 @@ import unusedImports from 'eslint-plugin-unused-imports';
 import tseslint from 'typescript-eslint';
 
 export default [
-  { ignores: ['dist/', '.astro/', 'node_modules/'] },
+  {
+    ignores: [
+      'dist/',
+      '.astro/',
+      'node_modules/',
+      'src/components/starwind/',
+      'src/components/starwind-primitives/',
+    ],
+  },
 
   // TypeScript recommended rules for .ts/.tsx
   ...tseslint.configs.recommended.map((conf) => ({
