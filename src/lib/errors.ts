@@ -17,6 +17,7 @@ export type ErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'NUMBERS_UNAVAILABLE'
+  | 'NUMBERS_NOT_RELEASABLE'
   | 'INVALID_NUMBERS'
   | 'TOO_MANY_NUMBERS'
   | 'INVALID_PHONE'
@@ -45,6 +46,10 @@ export const ERRORES: Record<ErrorCode, ErrorDescription> = {
   },
   NUMBERS_UNAVAILABLE: {
     mensaje: 'Alguien tomó uno de esos números. Elegí otros.',
+    status: 409,
+  },
+  NUMBERS_NOT_RELEASABLE: {
+    mensaje: 'Ese número ya está libre.',
     status: 409,
   },
   INVALID_NUMBERS: {

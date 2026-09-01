@@ -204,6 +204,72 @@ export class Raffle extends DurableObject<Env> {
   }
 
   /**
+   * Libera números vendidos o reservados: vuelven a AVAILABLE.
+   *
+   * Es la contracara de sell() y existe porque el organizador se equivoca —
+   * cargó el 47 en vez del 74, o la venta se cayó. Sin esto, el único arreglo
+   * es borrar la rifa entera.
+   *
+   * Mismo transactionSync y mismo todo-o-nada que sell(): si el tercero de
+   * cuatro números no se podía liberar, los dos primeros vuelven atrás. Media
+   * liberación es peor que ninguna, porque nadie se entera de cuál quedó.
+   *
+   * ⚠️ NO borra al comprador aunque se quede sin números, y es a propósito:
+   *   · el teléfono ES la identidad con la que deduplica upsertBuyer(), así
+   *     que si vuelve a comprar tiene que seguir siendo la misma persona;
+   *   · desde la fase 8 `orders.buyer_id` lo referencia con un CHECK que no
+   *     tolera NULL en un pedido confirmado — borrarlo acá lo rompería.
+   * Que quede el teléfono de alguien que ya no tiene números es deuda de
+   * privacidad, anotada para la fase 10.
+   */
+  release(userId: string, numeros: number[]): number[] {
+    this.assertOwner(userId);
+
+    const unicos = [...new Set(numeros)];
+    if (unicos.length === 0) throw new AppError('INVALID_NUMBERS');
+    if (unicos.length > MAX_NUMEROS_POR_OPERACION) {
+      throw new AppError('TOO_MANY_NUMBERS');
+    }
+
+    const ts = now();
+    const sql = this.ctx.storage.sql;
+
+    const liberados = this.ctx.storage.transactionSync<number[]>(() => {
+      for (const n of unicos) {
+        const fila = sql
+          .exec<{ status: string }>(
+            'SELECT status FROM numbers WHERE number = ?',
+            n,
+          )
+          .toArray()[0];
+
+        if (fila === undefined) throw new AppError('INVALID_NUMBERS');
+
+        // Liberar algo que ya está libre no es inofensivo: significa que el
+        // que llamó estaba mirando una grilla vieja, y conviene que se entere.
+        if (fila.status !== 'SOLD' && fila.status !== 'RESERVED') {
+          throw new AppError('NUMBERS_NOT_RELEASABLE');
+        }
+
+        sql.exec(
+          `UPDATE numbers
+              SET status = 'AVAILABLE', buyer_id = NULL, order_id = NULL,
+                  reserved_until = NULL, sold_at = NULL, note = NULL,
+                  updated_at = ?
+            WHERE number = ?`,
+          ts,
+          n,
+        );
+      }
+
+      return unicos;
+    });
+
+    this.proyectar();
+    return liberados;
+  }
+
+  /**
    * Actualiza la copia local de la config cuando D1 cambia.
    *
    * `owner_id` no está: el dueño se fija en init() y no se mueve más. Un patch
