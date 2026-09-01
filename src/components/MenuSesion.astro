@@ -1,0 +1,70 @@
+---
+/**
+ * El menú de sesión del panel.
+ *
+ * Va sobre <details> y no sobre un dropdown propio: abre, cierra, se maneja
+ * con teclado y respeta Escape sin una línea de JavaScript. Por la regla de
+ * las tres puertas (docs/11) no califica para traer un componente: no hay foco
+ * que administrar acá.
+ *
+ * Lo único que necesita script es cerrar sesión.
+ */
+const { user } = Astro.locals;
+---
+
+{
+  user && (
+    <details class="relative" id="menu-sesion">
+      <summary class="flex h-12 cursor-pointer list-none items-center gap-2 rounded-full border-2 bg-paper py-1 pr-4 pl-1 [&::-webkit-details-marker]:hidden">
+        {user.image ? (
+          <img
+            src={user.image}
+            alt=""
+            width="36"
+            height="36"
+            referrerpolicy="no-referrer"
+            class="size-9 rounded-full"
+          />
+        ) : (
+          <span class="grid size-9 place-items-center rounded-full bg-ink text-support font-bold text-paper">
+            {user.name.trim().charAt(0).toUpperCase()}
+          </span>
+        )}
+
+        <span class="hidden text-label font-semibold sm:inline">
+          {user.name}
+        </span>
+      </summary>
+
+      <div class="absolute right-0 z-20 mt-2 w-64 rounded-card border-2 bg-paper-light p-3">
+        <p class="px-2 pb-3 text-label text-muted-foreground">{user.email}</p>
+
+        <button
+          type="button"
+          id="cerrar-sesion"
+          class="h-button w-full rounded-cell border-2 px-4 text-left text-support font-semibold hover:bg-accent"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    </details>
+  )
+}
+
+<script>
+  import { createAuthClient } from 'better-auth/client';
+
+  const { signOut } = createAuthClient();
+  const boton = document.getElementById('cerrar-sesion');
+
+  boton?.addEventListener('click', async () => {
+    boton.setAttribute('disabled', '');
+    boton.textContent = 'Cerrando…';
+
+    await signOut();
+
+    // Recarga entera y no una navegación del cliente: hay que soltar la cookie
+    // y todo lo que el middleware puso en locals a partir de ella.
+    window.location.href = '/';
+  });
+</script>

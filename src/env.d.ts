@@ -4,5 +4,6 @@
 declare namespace App {
   interface Locals {
     actor: import('@/lib/auth/actor').Actor;
+    user: { name: string; email: string; image: string | null } | null;
   }
 }
