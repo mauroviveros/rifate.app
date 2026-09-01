@@ -32,6 +32,13 @@ vendiendo números por WhatsApp desde un celular, muchas veces al sol.
 Grises de apoyo: `#4A4C55` (texto secundario), `#6B6D76` (**el más claro
 permitido**), `#E4DAC6` / `#D8CDB6` (bordes), `#EAE2D1` (vendido).
 
+Dos colores más, que estaban en los artboards pero no en esta tabla:
+
+| Token | Hex | Uso |
+|---|---|---|
+| **Sombra vermellón** | `#8F2410` | El sello del botón principal, y sólo eso |
+| **Gris deshabilitado** | `#8A857A` | El texto de un botón apagado |
+
 El fondo lleva una trama de puntos: `radial-gradient(#E7DECA 1.1px, transparent
 1.1px)` a `16px 16px`.
 
@@ -66,7 +73,58 @@ Etiqueta 15px   "Sortea el 20 sep"
 .cell  { width: 60px; height: 60px; border-radius: 14px; border: 2px solid transparent; }
 ```
 
-Botones: **altura mínima 56px.** Campos: **altura 60px.**
+Botones: **altura mínima 56px** — pero en el artboard `Sistema` están todos
+dibujados a **60px con radio 16**. El 56 es el piso, no la medida corriente.
+Campos: **altura 60px**, radio 15.
+
+### El sello
+
+```css
+box-shadow: 0 5px 0 0 <sombra>;   /* sin blur, sin spread */
+```
+
+El borde inferior grueso que hace que la cosa parezca una tecla. **Lo lleva
+sólo la acción principal**: la secundaria y la terciaria van planas. Es lo que
+separa la única acción principal de la pantalla (regla 2) sin depender del
+color, que es la regla 8 aplicada a los botones.
+
+La sombra es siempre la versión **oscura de la propia superficie**:
+
+| Superficie | Sombra |
+|---|---|
+| Vermellón `#CE3418` | `#8F2410` |
+| Papel o blanco | Tinta `#17181C` |
+| Tinta `#17181C` (celda elegida) | Vermellón `#CE3418` |
+
+### Las cuatro acciones
+
+Del artboard `Sistema`. Ojo que **la secundaria no es la de borde**:
+
+| | Superficie | Sello |
+|---|---|---|
+| **Principal** | vermellón | sí |
+| **Secundaria** | tinta llena | no |
+| **Terciaria** | borde 2px de tinta, peso 700 | no |
+| **Deshabilitada** | `#E4DAC6` con texto `#8A857A` | no |
+
+El deshabilitado es una superficie **diseñada**, no una opacidad: con la regla 7
+el botón apagado explica el motivo en su etiqueta, así que tiene que leerse.
+
+### El troquelado
+
+```css
+background-image: repeating-linear-gradient(90deg, #D8CDB6 0 5px, transparent 5px 11px);
+height: 2px;
+```
+
+Aparece 17 veces en los artboards (13 horizontal, 4 vertical): es la línea por
+donde se corta el talón, y es un componente del sistema.
+
+### La hoja de atrás
+
+La tarjeta protagonista de una pantalla lleva un pliego `#E7DECA` desplazado
+detrás (`inset: 14px -12px -12px 12px`) más una sombra suave. El talonario es
+un **bloc**, no una hoja suelta.
 
 ### Los tres estados del número
 
@@ -197,7 +255,7 @@ librería queda decidido por la ventana.
 Por eso el reparto de hojas es:
 
 ```
-src/styles/starwind.css   lo escribe `starwind init`, lo reescribe `starwind update`.
+src/styles/starwind.css   lo escribe `starwind init` — y SÓLO `init`.
                           Es el entry de Tailwind y define el CONTRATO:
                           @theme inline { --color-primary: var(--primary) } + :root neutro.
                           NO SE TOCA. Está en .prettierignore y en los ignores de eslint.
@@ -208,8 +266,24 @@ src/styles/global.css     nuestro. Importa el anterior y pisa los valores crudos
 ```
 
 Ese doble salto `--color-primary → --primary` parecía indirección de más al no
-haber modo oscuro. **Tiene otro pagador:** es la costura que deja al CLI
-reescribir su archivo entero sin llevarse el tema puesto.
+haber modo oscuro. **Tiene otro pagador, pero no el que estaba escrito acá.**
+
+Lo que decía antes —que `starwind update` reescribe la hoja— es falso: `update`
+refresca *component source*, no el CSS. El único comando que toca
+`starwind.css` es `init`, que se corre una vez.
+
+El pagador real es que **los componentes del CLI leen las variables crudas
+adentro de clases arbitrarias**. El hover de `secondary` en `button/variants.ts`
+era, literal, `hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]`.
+Si pisás `--color-secondary` en vez de `--secondary`, esa clase se sigue
+comiendo el `neutral-200` de starwind y el botón salta a gris. Por eso el
+override va en `:root` sobre los valores crudos, que es además el flujo de
+tokens que documenta el propio starwind.
+
+> El costo de mantener las dos hojas es el `:root`/`.dark` neutro de starwind,
+> que se emite igual aunque esté íntegramente pisado: **1,5 KB** y 20 variables
+> de paleta sin uso. Medido sobre el build, no estimado. Alcanza para no
+> justificar colapsar los archivos.
 
 Un solo `@import "tailwindcss"` en todo el proyecto, y vive en el archivo del
 CLI. En v1 había **tres** hojas con tres imports y dos layouts cargaban
@@ -243,8 +317,20 @@ Un componente **se escribe a mano** salvo que pase las tres:
 
 #### Cómo se porta
 
-- Lo del CLI **no se reformatea ni se corrige a mano**: cada arreglo de estilo
-  es un conflicto en el próximo `starwind update`.
+- Lo del CLI **no se reformatea** ni se le corrigen cosas de estilo al voleo.
+  Pero **sí se le editan los `variants.ts`**, y es el camino que documenta
+  starwind para una variante reutilizable. La red es
+  `starwind update <componente> --diff <path>`, que muestra el diff planeado
+  archivo por archivo antes de aceptar nada.
+
+  La alternativa —pasar la forma de Talonario por `class` en cada llamada— es
+  peor y además **no funciona**: `tailwind-variants` mergea con `tailwind-merge`,
+  que sólo conoce la escala de fábrica. `text-title` no le pisa al `text-xl` del
+  componente (quedan los dos, y gana el que la hoja emita último) y `text-support`
+  cae en el grupo de COLOR, donde se come al `text-muted-foreground`. Por eso
+  los `variants.ts` importan `tv` de `@/lib/tv`, que es un `createTV` con las
+  claves propias declaradas. Si agregás un `--text-*` o `--spacing-*` a
+  `global.css`, va también ahí.
 - Si un componente pide un token que no tenemos (`--info`, `--outline`), se le
   da un **valor diseñado**, no un placeholder. Talonario no tiene azul: un
   aviso informativo es texto sobre papel, y eso es una decisión, no un relleno.
@@ -261,8 +347,13 @@ producto pasa a llamarse así.
 
 ## Al construir
 
-- [ ] `src/global.css` con estos tokens como custom properties
-- [ ] Fuentes por `fontProviders` de Astro (Bricolage Grotesque + Figtree)
+- [x] `src/styles/global.css` con estos tokens como custom properties
+- [x] Fuentes por `fontProviders` de Astro (Bricolage Grotesque + Figtree)
+- [x] **Iconos: `@iconify-json/lucide` vía astro-icon.** Los glifos del canvas
+      están dibujados sobre lucide —`check`, `chevron-down`, `plus` y `share-2`
+      calcan exacto—, así que la colección es la base y no un reemplazo. El
+      logotipo del ticket vive en `src/icons/ticket.svg` porque su perforación
+      punteada es marca, no icono. La G de Google sale de `@iconify-json/logos`.
 - [ ] `tabular-nums` en todo lo que sea número
 - [ ] Grilla: 5 columnas en celular (64px), 10 en escritorio (60px)
 - [ ] Barra de compra fija abajo en la pública
