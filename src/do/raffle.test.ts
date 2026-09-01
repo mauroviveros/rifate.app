@@ -197,6 +197,80 @@ describe('Raffle · venta', () => {
   });
 });
 
+describe('Raffle · liberar', () => {
+  it('un usuario ajeno no puede liberar', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+
+    await expect(
+      enElObjeto(rifa, (r) => r.release('beto', [7])),
+    ).rejects.toThrow('FORBIDDEN');
+
+    // Y el número sigue vendido: la negación no dejó nada a medias.
+    const fila = (await rifa.ownerGrid('ana')).find((n) => n.number === 7);
+    expect(fila?.status).toBe('SOLD');
+  });
+
+  it('liberar deja el número como nuevo, sin rastro del comprador', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+
+    await rifa.release('ana', [7]);
+
+    const fila = (await rifa.ownerGrid('ana')).find((n) => n.number === 7);
+
+    expect(fila?.status).toBe('AVAILABLE');
+    expect(fila?.buyerId).toBeNull();
+    expect(fila?.buyerName).toBeNull();
+    expect(fila?.buyerPhone).toBeNull();
+  });
+
+  it('liberar un número que ya estaba libre no pasa', async () => {
+    const rifa = await rifaDeAna();
+
+    await expect(
+      enElObjeto(rifa, (r) => r.release('ana', [7])),
+    ).rejects.toThrow('NUMBERS_NOT_RELEASABLE');
+  });
+
+  it('si uno del lote no se puede liberar, no se libera ninguno', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [1, 2], CARLA);
+
+    // El 3 nunca se vendió, así que el lote entero tiene que volver atrás.
+    await expect(
+      enElObjeto(rifa, (r) => r.release('ana', [1, 2, 3])),
+    ).rejects.toThrow('NUMBERS_NOT_RELEASABLE');
+
+    const grilla = await rifa.ownerGrid('ana');
+    expect(grilla.find((n) => n.number === 1)?.status).toBe('SOLD');
+    expect(grilla.find((n) => n.number === 2)?.status).toBe('SOLD');
+  });
+
+  it('los contadores bajan al liberar', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [1, 2, 3], CARLA);
+
+    await rifa.release('ana', [2]);
+    const stats = await rifa.stats();
+
+    expect(stats.sold).toBe(2);
+    expect(stats.available).toBe(98);
+  });
+
+  it('el comprador sobrevive a que le liberen todos sus números', async () => {
+    // No es un descuido: el teléfono es la identidad con la que deduplica
+    // upsertBuyer(), y desde la fase 8 orders.buyer_id lo referencia.
+    const rifa = await rifaDeAna();
+
+    const venta = await rifa.sell('ana', [7], CARLA);
+    await rifa.release('ana', [7]);
+    const revancha = await rifa.sell('ana', [8], CARLA);
+
+    expect(revancha.buyerId).toBe(venta.buyerId);
+  });
+});
+
 describe('Raffle · proyección a D1', () => {
   it('resync() pisa los contadores de la fila de D1', async () => {
     // El DO es la verdad del estado; D1 es caché reconstruible. resync() es la
