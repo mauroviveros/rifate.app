@@ -1,303 +1,330 @@
-/* ══════════════════════════════════════════════════════════════════════════
-   «Talonario» · el sistema visual de rifate.app
-   ---------------------------------------------------------------------------
-   Los valores salen de docs/11-sistema-visual.md, que es copia del canvas de
-   diseño. Si el canvas cambia, gana el canvas: se actualiza el doc y después
-   esto. Nadie inventa un color acá.
+/* ═══════════════════════════════════════════════════════════════════════════
+   Talonario · el tema de rifate.app
+   ═══════════════════════════════════════════════════════════════════════════
+   Fuente de verdad: docs/11-sistema-visual.md (y el canvas que ese doc cita).
 
-   CÓMO SE REPARTE CON starwind.css
-   --------------------------------
-   `starwind.css` lo escribe `starwind init` y lo reescribe `starwind update`.
-   Es el entry de Tailwind (trae el único `@import "tailwindcss"` del proyecto)
-   y define el CONTRATO contra el que están escritos sus componentes: un
-   `@theme inline` que mapea `--color-primary: var(--primary)`, más un `:root`
-   con valores neutros de relleno. NO SE TOCA — está en .prettierignore y en
-   los ignores de eslint. Ese doble salto es la costura que le deja al CLI
-   reescribir su archivo sin llevarse nuestro tema puesto.
+   Reparto de hojas (docs/11 · "Cómo se porta"):
+     starwind.css   lo escribe `starwind init`. Define el CONTRATO de nombres:
+                    @theme inline { --color-primary: var(--primary) } + :root
+                    neutro. NO SE TOCA.
+     global.css     este archivo. Importa el anterior y pisa los valores crudos.
 
-   LA REGLA QUE ORDENA ESTE ARCHIVO
-   --------------------------------
-        @theme  declara tokens NUESTROS.
-        :root   pisa los valores de OTRO.
-
-   Y no es una preferencia de estilo. Tailwind **levanta todos los bloques
-   `@theme` al principio del CSS final**, sin importar dónde los escribiste, así
-   que un override escrito en `@theme` queda ARRIBA del `:root` de starwind y
-   pierde por cascada. Verificado compilando el mismo override de las dos
-   formas:
-
-        override en @theme            override en :root
-        --primary: #ce3418;  nuestro  --primary: blue;     starwind
-        --primary: blue;     starwind --primary: #ce3418;  nuestro
-              gana blue  ✘                  gana el nuestro ✔
-
-   Las dos compilan y ninguna tira error: la de arriba simplemente pinta el
-   botón azul. Por eso los overrides van en `:root` plano y no hay excepción.
-
-   (`@theme static` se probó y se sacó: existía por miedo a que Tailwind podara
-   las variables sin uso, pero sí ve las referencias adentro de un `@utility`,
-   así que no poda nada de lo de acá. Era miedo infundado.)
-   ══════════════════════════════════════════════════════════════════════════ */
+   Por qué los valores van en :root y no en un @theme propio: los componentes
+   del CLI escriben las variables CRUDAS dentro de clases arbitrarias — mirá el
+   hover de `secondary` en button/variants.ts, que es literalmente
+   `hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]`.
+   Si pisás `--color-secondary` en vez de `--secondary`, esa clase se sigue
+   comiendo el neutral-200 de starwind y el botón salta a gris en el hover.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 @import './starwind.css';
 
-/* ── ① LOS VALORES ────────────────────────────────────────────────────────
-   Cada color de Talonario, una sola vez, pisando los neutros de starwind. Los
-   nombres son los del contrato porque son los que leen sus componentes.
-   Todo hex del sistema vive acá y en ningún otro lado. */
+/* ───────────────────────────────────────────────────────────────────────────
+   1 · Colores semánticos propios
+   El patrón de starwind para agregar un color: registrar la utilidad en
+   `@theme inline` y definir el valor abajo en `:root`, igual que los suyos.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-trama: var(--trama);
+  --color-primary-shadow: var(--primary-shadow);
+  --color-disabled: var(--disabled);
+  --color-disabled-foreground: var(--disabled-foreground);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   2 · Los valores crudos de Talonario
+   ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Papel y tinta: el fondo de toda la app y todo el texto. */
-  --background: #f5eee0;
-  --foreground: #17181c;
+  /* Papel y tinta */
+  --background: oklch(0.9508 0.02 84.59); /* papel        #F5EEE0 */
+  --foreground: oklch(0.2097 0.008 274.53); /* tinta        #17181C */
 
   /* Papel claro: tarjetas, campos y todo lo que flota sobre el papel. */
-  --card: #fffcf6;
-  --card-foreground: #17181c;
-  --popover: #fffcf6;
-  --popover-foreground: #17181c;
+  --card: oklch(0.9917 0.0085 84.57); /* papel claro  #FFFCF6 */
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
 
-  /* Vermellón. UNA sola acción principal por pantalla (regla 2). Si en una
-     pantalla hay dos botones primary, una de las dos está mal. */
-  --primary: #ce3418;
-  --primary-foreground: #fffcf6;
-  --primary-accent: #ce3418;
+  /* Vermellón. UNA sola acción principal por pantalla (regla 2). */
+  --primary: oklch(0.5613 0.1946 32.39); /* vermellón    #CE3418 */
+  --primary-foreground: var(--card);
+  --primary-accent: var(--primary);
 
   /* La acción secundaria de Talonario es borde de 2px sobre el papel, no una
      pastilla gris: por eso `secondary` es el papel y no un relleno propio. */
-  --secondary: #f5eee0;
-  --secondary-foreground: #17181c;
-  --secondary-accent: #17181c;
+  --secondary: var(--background);
+  --secondary-foreground: var(--foreground);
+  --secondary-accent: var(--foreground);
 
   /* `muted-foreground` es el texto secundario de cualquier componente, y por
      eso es el #4A4C55 y no el #6B6D76: regla 6, nada de gris finito. El
      #6B6D76 es el más claro PERMITIDO, no el de uso corriente — vive abajo
      como `--subtle-foreground`, para poder decir "hasta acá y no más". */
-  --muted: #eae2d1;
-  --muted-foreground: #4a4c55;
+  --muted: oklch(0.9145 0.0243 85.79); /* vendido      #EAE2D1 */
+  --muted-foreground: oklch(0.418 0.0151 275.76); /* texto 2º     #4A4C55 */
+  --subtle-foreground: oklch(0.5361 0.0142 275.91); /* el más claro #6B6D76 */
 
   /* El hover de los ítems de un menú: papel sobre papel claro. Se ve y no
      grita. El amarillo NO entra acá — de fondo de hover convertiría cada
      dropdown en un semáforo. */
-  --accent: #f5eee0;
-  --accent-foreground: #17181c;
+  --accent: var(--background);
+  --accent-foreground: var(--foreground);
 
   /* El verde de docs/11: progreso, vendido, confirmaciones. */
-  --success: #1b6e45;
-  --success-foreground: #fffcf6;
-
+  --success: oklch(0.4787 0.1023 156.82); /* verde        #1B6E45 */
+  --success-foreground: var(--card);
   /* El amarillo. En el contrato de starwind ocupa el lugar de `warning`, pero
-     su rol en Talonario es ÉNFASIS (bloques y etiquetas). El alias que lo dice
-     bien es `--color-highlight`, más abajo. */
-  --warning: #f5c544;
-  --warning-foreground: #17181c;
-
+     su rol en Talonario es ÉNFASIS (bloques y etiquetas), no alarma. */
+  --warning: oklch(0.8441 0.1501 87.67); /* amarillo     #F5C544 */
+  --warning-foreground: var(--foreground);
   /* Talonario tiene UN solo rojo y ya está hablado: es el mismo vermellón. No
      colisiona con primary gracias a la regla 2 — en un diálogo de confirmación
      "Borrar" ES la única acción principal de esa pantalla. Lo que sostiene el
      resto es la regla 8: el botón dice qué se borra, no dice "Confirmar". */
-  --error: #ce3418;
-  --error-foreground: #fffcf6;
-
+  --error: var(--primary);
+  --error-foreground: var(--card);
   /* Talonario no tiene azul, así que un aviso informativo es lo que sería en
      papel: texto sobre papel. Es una decisión, no un placeholder — el sky-300
      que trae starwind sería el primer color fuera de la paleta. */
-  --info: #eae2d1;
-  --info-foreground: #17181c;
+  --info: var(--muted);
+  --info-foreground: var(--foreground);
 
   /* El borde de los campos es más fuerte que el de las tarjetas a propósito:
      un campo tiene que leerse como campo desde lejos y al sol. */
-  --border: #e4dac6;
-  --input: #d8cdb6;
-  --outline: #ce3418;
+  --border: oklch(0.891 0.029 84.59); /* borde        #E4DAC6 */
+  --input: oklch(0.8511 0.0334 85.48); /* borde campo  #D8CDB6 */
+  --outline: var(--primary);
 
-  /* 14px, la celda. starwind deriva el resto con calc(); el único escalón que
-     pisamos es --radius-xl, abajo, para que la tarjeta dé los 20px exactos de
-     docs/11 y no los 18 que saldrían de su calc(). */
-  --radius: 0.875rem;
+  /* EL SELLO. `box-shadow: 0 5px 0 0` sin blur ni spread — el borde de abajo
+     grueso que hace que el botón parezca una tecla. En el artboard `Sistema`
+     lo lleva SÓLO la «Acción principal»: la secundaria (tinta llena) y la
+     terciaria (borde de tinta) van planas. Es lo que separa la única acción
+     principal de la pantalla (regla 2) sin depender del color, que es la
+     regla 8 aplicada a los botones.
 
-  /* ── Lo que no tiene lugar en el contrato ────────────────────────────── */
+     La sombra es siempre la versión OSCURA de la propia superficie:
+       vermellón #CE3418  →  #8F2410     (el CTA)
+       papel/blanco       →  tinta       (el botón de Google del login)
+       tinta   #17181C    →  vermellón   (la celda elegida)                */
+  --primary-shadow: oklch(0.4316 0.1458 32.63); /* vermellón oscuro #8F2410 */
 
-  --subtle-foreground: #6b6d76; /* el más claro PERMITIDO (regla 6) */
-  --dot: #e7deca; /* la trama del fondo               */
+  /* El deshabilitado de Talonario es una superficie DISEÑADA, no una opacidad:
+     el papel apagado del borde con texto gris. Va con la regla 7 — un botón
+     apagado explica el motivo en su etiqueta, así que tiene que leerse. */
+  --disabled: var(--border);
+  --disabled-foreground: oklch(0.6178 0.0173 86.45); /* #8A857A */
 
-  --sold: #eae2d1;
-  --sold-border: #e0d7c4;
-  --sold-foreground: #a7a192;
-  --sold-line: #beb5a2; /* el tachado en diagonal */
+  /* La trama de puntos del fondo. */
+  --trama: oklch(0.9024 0.0285 86.65); /* trama        #E7DECA */
+
+  /* LA SEMILLA DE RADIOS. starwind deriva toda la escala de acá, así que este
+     único valor es el que hace que `rounded-md` sea la celda de 14px y
+     `rounded-xl` la tarjeta de 20px, sin hardcodear ningún escalón:
+       xs 10 · sm 12 · md 14 · lg 16 · xl 20 · 2xl 24 · 3xl 32              */
+  --radius: 1rem;
+
+  /* El panel usa las mismas dos superficies que el resto: papel claro para la
+     barra, papel para el hover. Sin esto, el día que entre `starwind add
+     sidebar` el panel aparece en azul y gris neutro. */
+  --sidebar-background: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--background);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-outline: var(--outline);
 }
 
-/* ── ② LOS ALIAS DE MARCA ─────────────────────────────────────────────────
-   `bg-vermilion` dice lo que el diseño quiere decir —la única acción de la
-   pantalla— y `bg-primary` no lo dice. Apuntan al mismo color: se usa el que
-   explique mejor la intención en ese lugar.
+/* Talonario no tiene modo oscuro: es papel. El bloque `.dark` de starwind
+   queda inerte porque este `:root` va después con la misma especificidad, y
+   eso es deliberado, no un olvido. Por lo mismo NO va `ThemeInitScript` en el
+   layout: sin un `.dark` diseñado, el toggle sólo activaría las variantes
+   `dark:` sueltas que traen los componentes del CLI. */
 
-   Van en `@theme inline` porque todos son referencias a otra variable, y así
-   Tailwind sustituye el valor en la utilidad en vez de encadenar un var() más:
-   `bg-ink` compila a `var(--foreground)` y no a `var(--color-ink)`. */
-
-@theme inline {
-  --color-ink: var(--foreground);
-  --color-paper: var(--background);
-  --color-paper-light: var(--card);
-  --color-vermilion: var(--primary);
-
-  /* `ring` es como lo llama shadcn y `outline` como lo llama starwind. Los dos
-     existen para que cualquiera de los dos caiga parado. */
-  --color-ring: var(--outline);
-
-  --color-highlight: var(--warning);
-  --color-highlight-foreground: var(--warning-foreground);
-  --color-subtle-foreground: var(--subtle-foreground);
-  --color-dot: var(--dot);
-
-  --color-sold: var(--sold);
-  --color-sold-border: var(--sold-border);
-  --color-sold-foreground: var(--sold-foreground);
-  --color-sold-line: var(--sold-line);
-}
-
-/* ── ③ TIPOGRAFÍA, MEDIDAS Y FORMAS ──────────────────────────────────────
-   Tokens nuestros con valor literal. Nada de esto es color, así que no pasa
-   por el `:root` de arriba. */
+/* ───────────────────────────────────────────────────────────────────────────
+   3 · Escalas propias
+   Esto no son colores semánticos de starwind sino escalas de Tailwind, así
+   que van con valor directo y no con la indirección de arriba.
+   ─────────────────────────────────────────────────────────────────────────── */
 
 @theme {
   /* ROLES TIPOGRÁFICOS
      ------------------
        font-sans     Figtree              todo el texto de la interfaz
        font-display  Bricolage Grotesque  sólo títulos y cifras grandes
+       font-heading  = display            el alias que leen los del CLI
        font-mono     la default           códigos e IDs (el A3F91C de fase 8)
        font-serif    NO EXISTE            Talonario no tiene serif
-
-     `--font-figtree` y `--font-bricolage` las define el componente <Font> de
-     Astro en :root. Por eso NO se declaran acá: dos definiciones de la misma
-     variable las resuelve el orden de carga, y eso no falla con un error —
-     falla con la fuente equivocada de vez en cuando. */
-  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-
-  /* Bricolage es una grotesca, no una serif: mapearla a `serif` sería mentir
-     en el token. `initial` borra la utilidad, así que `font-serif` deja de
-     existir en vez de quedar disponible por descuido con la Georgia del
-     navegador. Verificado: la clase no aparece en el CSS generado. */
+     Las familias las declara el <Font> de Astro en :root; acá sólo se mapean. */
+  --font-sans: var(--googlefont-figtree);
+  --font-display: var(--googlefont-bricolage);
+  --font-heading: var(--font-display);
   --font-serif: initial;
 
-  /* Regla 6 vuelta estructura: pisando la escala de Tailwind, un componente de
-     starwind que use `text-sm` no puede bajar de 15px aunque quiera. */
-  --text-sm: 0.9375rem; /* 15px · el piso   */
-  --text-base: 1.125rem; /* 18px · el cuerpo */
+  /* Regla 6: el cuerpo arranca en 18px y nada baja de 15px. `text-xs` no se
+     borra, se APOYA en el piso: si mañana un componente del CLI lo pide, cae
+     en los 15px legales en vez de quedarse sin utilidad y heredar cualquier
+     cosa. */
+  --text-xs: 0.9375rem; /* 15px · el piso */
+  --text-sm: 0.9375rem; /* 15px */
+  --text-base: 1.125rem; /* 18px */
 
-  /* Los cinco tamaños de docs/11, con nombre de rol y no de medida. */
-  --text-display: 2.875rem; /* 46px · "Mis rifas"         */
+  /* Los cinco tamaños con nombre de rol y no de medidas. Cada uno lleva su
+     interlínea: una utilidad de tamaño sin `--*--line-height` hereda el 1.5
+     del body, y un display de 46px con 69px de interlínea no es el diseño. */
+  --text-display: 2.875rem; /* 46px · "Mis rifas" */
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.025em;
   --text-title: 1.75rem; /* 28px · "Elegí tus números" */
-  --text-body: var(--text-base); /* 18px                       */
-  --text-support: 1rem; /* 16px                       */
-  --text-label: var(--text-sm); /* 15px                       */
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.025em;
+  --text-body: var(--text-base); /* 18px · "Tocá los que quieras." */
+  --text-body--line-height: 1.5;
+  --text-support: 1rem; /* 16px · "Podés elegir varios." */
+  --text-support--line-height: 1.5;
+  --text-label: var(--text-sm); /* 15px · "Sortea el 20 sep" */
+  --text-label--line-height: 1.4;
 
-  /* El único escalón de starwind que pisamos: su calc() daría 18px. */
-  --radius-xl: 1.25rem; /* 20px */
+  /* La elevación del papel: sólo para la tarjeta protagonista de una pantalla,
+     no para todas. En el canvas aparece 4 veces con distinto desenfoque; me
+     quedo con la del Login, que es la mediana. */
+  --shadow-papel: 0 22px 48px -32px oklch(0.2097 0.008 274.53 / 0.6);
 
-  --radius-cell: var(--radius); /* 14px */
-  --radius-card: var(--radius-xl); /* 20px */
-
-  /* Regla 9: botones ≥56px, campos 60px. Entran al namespace de spacing, así
-     que salen h-button, min-h-button, size-cell… sin clases arbitrarias. */
-  --spacing-button: 56px;
+  /* Regla 9: botones ≥56px, campos 60px. En el artboard `Sistema` los botones
+     están dibujados a 60 — el 56 es el PISO, no la medida corriente, así que
+     `button` es 60 y el piso vive en `button-min`. El radio de 16px del canvas
+     sale de `rounded-lg` sin token nuevo, porque --radius es 1rem. */
+  --spacing-button: 60px;
+  --spacing-button-min: 56px;
+  --spacing-button-lg: 68px; /* el CTA único de Login y Create */
   --spacing-field: 60px;
   --spacing-cell: 60px;
   --spacing-cell-mobile: 64px;
 }
 
-/* ── ④ BASE ───────────────────────────────────────────────────────────────
-   starwind.css ya pone el borde por defecto, el fondo y el color del body, y
-   el cursor de los botones. Acá va sólo lo que agrega Talonario. */
+/* ───────────────────────────────────────────────────────────────────────────
+   4 · Base
+   ─────────────────────────────────────────────────────────────────────────── */
 
 @layer base {
   body {
-    font-family: var(--font-sans);
-    font-size: var(--text-base);
-    -webkit-text-size-adjust: 100%;
+    @apply font-sans text-body;
+    text-size-adjust: 100%;
   }
 
   h1,
   h2,
   h3 {
-    font-family: var(--font-display);
-    font-weight: 800;
-    letter-spacing: -0.025em;
+    @apply font-display font-extrabold tracking-tight;
   }
 
-  /* La usuaria vende al sol, desde el celular: el foco tiene que verse. */
+  /* "Los números siempre con tabular-nums" (docs/11). Acá y no clase por
+     clase: si depende de que alguien se acuerde, no pasa. */
+  th,
+  td,
+  time,
+  output,
+  [data-numero] {
+    font-variant-numeric: tabular-nums;
+  }
+
   :focus-visible {
-    outline: 3px solid var(--color-ring);
-    outline-offset: 2px;
+    @apply outline-3 outline-offset-2 outline-outline;
   }
 }
 
-/* ── ⑤ UTILIDADES DE LA MARCA ──────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   5 · Utilidades de marca
+   ─────────────────────────────────────────────────────────────────────────── */
 
-/* La trama de puntos del fondo. Va como utilidad y no suelta en `body` para
-   que la página pública de la fase 7 la pueda apagar en una sección. */
-@utility dot-grid {
-  background-image: radial-gradient(var(--color-dot) 1.1px, transparent 1.1px);
+/* La trama de puntos del papel. */
+@utility trama {
+  background-image: radial-gradient(
+    var(--color-trama) 1.1px,
+    transparent 1.1px
+  );
   background-size: 16px 16px;
 }
 
-/* LOS TRES ESTADOS DEL NÚMERO
-   ---------------------------
-   Los nombres son los que ya usa docs/11: free, picked, sold. Viven acá y no
-   en el componente de la grilla porque los comparten el panel (fase 6) y la
-   página pública (fase 7), y tienen que ser el mismo píxel.
+/* El sello del número elegido y el tachado diagonal del vendido: los dos
+   gestos que vienen del talonario de papel (docs/11 · "Los tres estados del
+   número"). Viven acá y no en la grilla porque son marca, no layout — la OG
+   de la fase 7 va a necesitar el mismo tachado.
 
-   Regla 8: ningún estado depende sólo del color. Libre tiene borde, elegido
-   tiene el sello vermellón abajo, vendido tiene el tachado en diagonal. */
+   `sello-*` toma el color por parámetro porque la sombra depende de la
+   superficie: la celda elegida es tinta con base vermellón, el CTA es
+   vermellón con base vermellón oscuro. */
+@utility sello-* {
+  box-shadow: 0 5px 0 0 --value(--color-*);
+}
 
-@utility cell {
-  display: grid;
-  place-items: center;
-  block-size: var(--spacing-cell-mobile);
-  border-radius: var(--radius-cell);
-  border: 2px solid transparent;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
+/* "Se levanta 2px" (artboard Sistema, sobre la celda elegida). Al presionar
+   baja los 5px del sello y la sombra desaparece: el botón se hunde. Esto el
+   canvas no lo dibuja —no tiene estado :active— pero una tecla con relieve
+   que no se hunde al tocarla se siente rota. */
+@utility sello-press {
+  transition:
+    box-shadow 90ms ease-out,
+    translate 90ms ease-out;
 
-  @media (width >= 48rem) {
-    block-size: var(--spacing-cell);
+  &:active:not(:disabled, [data-disabled]) {
+    box-shadow: 0 0 0 0 transparent;
+    translate: 0 5px;
   }
 }
 
-@utility cell-free {
-  background-color: var(--color-paper-light);
-  border-color: var(--color-input);
-  color: var(--color-ink);
-}
-
-@utility cell-picked {
-  background-color: var(--color-ink);
-  border-color: var(--color-ink);
-  color: var(--color-paper);
-  /* El "sello" vermellón. Es el gesto de la marca, no una sombra decorativa. */
-  box-shadow: 0 5px 0 0 var(--color-vermilion);
-}
-
-@utility cell-sold {
-  background-color: var(--color-sold);
-  border-color: var(--color-sold-border);
-  color: var(--color-sold-foreground);
-  /* El tachado diagonal del talonario de papel: es exactamente lo que la app
-     viene a automatizar, convertido en su propio lenguaje visual. */
+@utility tachado {
   background-image: linear-gradient(
     to top right,
     transparent calc(50% - 1.4px),
-    var(--color-sold-line) calc(50% - 1.4px),
-    var(--color-sold-line) calc(50% + 1.4px),
+    var(--input) calc(50% - 1.4px),
+    var(--input) calc(50% + 1.4px),
     transparent calc(50% + 1.4px)
   );
 }
 
-@utility cell-reserved {
-  background-color: var(--color-paper-light);
-  border-color: var(--color-highlight);
-  border-style: dashed;
-  color: var(--color-muted-foreground);
+/* El troquelado. En el canvas aparece 17 veces —13 horizontales y 4
+   verticales—, así que es un componente del sistema y no un detalle del
+   login: es la línea por donde se corta el talón. */
+@utility perforado {
+  border: 0;
+  height: 2px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--input) 0 5px,
+    transparent 5px 11px
+  );
+}
+
+@utility perforado-y {
+  border: 0;
+  width: 2px;
+  background-image: repeating-linear-gradient(
+    180deg,
+    var(--input) 0 5px,
+    transparent 5px 11px
+  );
+}
+
+/* La hoja de atrás: el talonario es un BLOC, no una hoja suelta. Se aplica al
+   envoltorio de la tarjeta protagonista, no a la tarjeta — así el pliego queda
+   detrás sin pelear con el fondo propio de la tarjeta ni pedir z-index. */
+@utility talonario {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 14px -12px -12px 12px;
+    border-radius: var(--radius-xl);
+    background: var(--trama);
+  }
+
+  & > * {
+    position: relative;
+  }
 }
