@@ -23,11 +23,10 @@ const { title, description } = Astro.props;
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
 
-    <Font cssVariable="--font-bricolage" />
-    <Font cssVariable="--font-figtree" preload />
+    <Font cssVariable="--googlefont-bricolage" />
+    <Font cssVariable="--googlefont-figtree" preload />
   </head>
-
-  <body class="min-h-dvh dot-grid antialiased">
+  <body>
     <slot />
   </body>
 </html>

@@ -1,43 +1,174 @@
 ---
-import Base from '@/layouts/Base.astro';
+import { Icon } from 'astro-icon/components';
+
+import { Button } from '@/components/starwind/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/starwind/card';
+import Layout from '@/layouts/Layout.astro';
 
 // Con sesión abierta esta pantalla no tiene nada que ofrecer.
 if (Astro.locals.actor.kind !== 'visitor') {
   return Astro.redirect('/dashboard/raffle');
 }
+
+const garantias = [
+  'Solo vos entrás acá. Los que compran no necesitan cuenta.',
+  'No pedimos datos de tarjeta ni de banco.',
+];
 ---
 
-<Base title="Ingresar · rifate.app">
-  <main class="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5">
-    <div class="rounded-card border-2 bg-paper-light p-7">
-      <p class="font-display text-title font-extrabold tracking-tight">
-        rifate<span class="text-vermilion">.app</span>
-      </p>
-
-      <h1 class="mt-6 text-display leading-none">Entrá</h1>
-
-      <p class="mt-3 text-body text-muted-foreground">
-        Con tu cuenta de Google. No hay que inventar ninguna contraseña.
-      </p>
-
-      <button
-        id="google-signin"
-        type="button"
-        class="mt-7 h-button w-full rounded-cell bg-vermilion px-6 text-body font-bold text-primary-foreground disabled:opacity-60"
+<Layout title="Ingresar · rifate.app">
+  <main class="grid min-h-dvh place-items-center trama px-5 py-10">
+    <div class="w-full max-w-md">
+      <a
+        href="/"
+        class="mx-auto flex w-fit items-center gap-2.5"
+        aria-label="rifate · ir al inicio"
       >
-        Entrar con Google
-      </button>
+        <span
+          class="grid size-11 place-items-center rounded-md bg-foreground text-background"
+        >
+          <Icon name="ticket" class="size-6" />
+        </span>
+        <span class="font-display text-title font-extrabold tracking-tight">
+          rifate<span class="text-primary">.app</span>
+        </span>
+      </a>
+
+      <div class="talonario mt-8">
+        <Card class="shadow-papel">
+          <CardHeader class="text-center">
+            <CardTitle>Entrá a tu panel</CardTitle>
+            <CardDescription class="text-body">
+              Usá la misma cuenta de Google que tenés en el celular. No hay que
+              inventar ninguna contraseña.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent class="flex flex-col gap-6">
+            <Button
+              id="google-signin"
+              variant="outline"
+              size="lg"
+              class="w-full sello-press bg-card font-extrabold sello-foreground"
+            >
+              <span
+                data-estado="listo"
+                class="inline-flex items-center gap-2.5"
+              >
+                <Icon name="logos:google-icon" />
+                Continuar con Google
+              </span>
+              <span
+                data-estado="cargando"
+                class="inline-flex items-center gap-2.5"
+                hidden
+              >
+                <Icon name="lucide:loader-circle" class="animate-spin" />
+                Abriendo Google…
+              </span>
+            </Button>
+
+            <p
+              id="google-error"
+              class="flex items-start gap-2 text-support font-bold text-error"
+              role="alert"
+              hidden
+            >
+              <Icon name="lucide:circle-alert" class="mt-0.5 size-5 shrink-0" />
+              <span>
+                No pudimos abrir Google. Fijate la conexión y probá de nuevo.
+              </span>
+            </p>
+
+            <hr class="perforado" />
+
+            <ul class="flex flex-col gap-3 text-support text-muted-foreground">
+              {
+                garantias.map((texto) => (
+                  <li class="flex gap-2.5">
+                    <Icon
+                      name="lucide:check"
+                      class="mt-0.5 size-5 shrink-0 text-success"
+                    />
+                    {texto}
+                  </li>
+                ))
+              }
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+
+      <p class="mt-5 text-center text-support text-subtle-foreground">
+        Al entrar aceptás los <a href="/terminos" class="text-primary"
+          >términos</a
+        >. · <a href="/" class="text-primary">Volver al inicio</a>
+      </p>
     </div>
   </main>
-</Base>
+</Layout>
 
 <script>
   import { createAuthClient } from 'better-auth/client';
+
   const { signIn } = createAuthClient();
 
-  const next =
-    new URLSearchParams(window.location.search).get('next') ??
-    '/dashboard/raffle';
+  const boton = document.getElementById(
+    'google-signin',
+  ) as HTMLButtonElement | null;
+  const error = document.getElementById('google-error');
 
-  signIn.social({ provider: 'google', callbackURL: next });
+  if (boton) {
+    const next =
+      new URLSearchParams(window.location.search).get('next') ??
+      '/dashboard/raffle';
+
+    /** Intercambia los dos juegos de hijos del botón. */
+    const pintar = (cargando: boolean) => {
+      for (const el of boton.querySelectorAll<HTMLElement>('[data-estado]')) {
+        el.hidden = (el.dataset.estado === 'cargando') !== cargando;
+      }
+      boton.disabled = cargando;
+      boton.ariaBusy = String(cargando);
+    };
+
+    let enVuelo = false;
+
+    boton.addEventListener('click', async () => {
+      // El click puede llegar dos veces antes de que `disabled` haga efecto.
+      if (enVuelo) return;
+      enVuelo = true;
+      error?.setAttribute('hidden', '');
+      pintar(true);
+
+      // Si la red se cuelga, el botón no se queda muerto para siempre.
+      const rendirse = setTimeout(() => {
+        if (enVuelo) fallar();
+      }, 12_000);
+
+      const fallar = () => {
+        clearTimeout(rendirse);
+        enVuelo = false;
+        pintar(false);
+        error?.removeAttribute('hidden');
+      };
+
+      try {
+        // En el camino feliz esto navega a Google y nunca resuelve.
+        const res = await signIn.social({
+          provider: 'google',
+          callbackURL: next,
+        });
+        if (res?.error) fallar();
+      } catch {
+        fallar();
+      }
+    });
+  }
 </script>
