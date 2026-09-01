@@ -1,14 +1,43 @@
-<button id="google-signin" type="button">Entrar con Google</button>
+---
+import Base from '@/layouts/Base.astro';
+
+// Con sesión abierta esta pantalla no tiene nada que ofrecer.
+if (Astro.locals.actor.kind !== 'visitor') {
+  return Astro.redirect('/dashboard/raffle');
+}
+---
+
+<Base title="Ingresar · rifate.app">
+  <main class="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5">
+    <div class="rounded-card border-2 bg-paper-light p-7">
+      <p class="font-display text-title font-extrabold tracking-tight">
+        rifate<span class="text-vermilion">.app</span>
+      </p>
+
+      <h1 class="mt-6 text-display leading-none">Entrá</h1>
+
+      <p class="mt-3 text-body text-muted-foreground">
+        Con tu cuenta de Google. No hay que inventar ninguna contraseña.
+      </p>
+
+      <button
+        id="google-signin"
+        type="button"
+        class="mt-7 h-button w-full rounded-cell bg-vermilion px-6 text-body font-bold text-primary-foreground disabled:opacity-60"
+      >
+        Entrar con Google
+      </button>
+    </div>
+  </main>
+</Base>
 
 <script>
   import { createAuthClient } from 'better-auth/client';
-
   const { signIn } = createAuthClient();
 
-  document.getElementById('google-signin')?.addEventListener('click', () => {
-    const next =
-      new URLSearchParams(window.location.search).get('next') ??
-      '/dashboard/raffle';
-    signIn.social({ provider: 'google', callbackURL: next });
-  });
+  const next =
+    new URLSearchParams(window.location.search).get('next') ??
+    '/dashboard/raffle';
+
+  signIn.social({ provider: 'google', callbackURL: next });
 </script>

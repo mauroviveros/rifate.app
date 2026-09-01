@@ -12,6 +12,14 @@ export const onRequest = defineMiddleware(
 
     locals.actor = await actorFromSession(env.DB, result?.session ?? null);
 
+    locals.user = result?.user
+      ? {
+          name: result.user.name,
+          email: result.user.email,
+          image: result.user.image ?? null,
+        }
+      : null;
+
     const protegida = /^\/dashboard|^\/admin/.test(url.pathname);
     if (protegida && locals.actor.kind === 'visitor') {
       return redirect(`/login?next=${encodeURIComponent(url.pathname)}`);
