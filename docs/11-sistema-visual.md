@@ -37,10 +37,17 @@ El fondo lleva una trama de puntos: `radial-gradient(#E7DECA 1.1px, transparent
 
 ### Tipografía
 
-| Familia | Para qué |
-|---|---|
-| **Bricolage Grotesque** (700, 800) | Sólo títulos y cifras grandes. `letter-spacing: -0.025em` |
-| **Figtree** (400–900) | Todo el texto corrido y la interfaz |
+| Familia | Para qué | Clase |
+|---|---|---|
+| **Bricolage Grotesque** (700, 800) | Sólo títulos y cifras grandes. `letter-spacing: -0.025em` | `font-display` |
+| **Figtree** (400–900) | Todo el texto corrido y la interfaz | `font-sans` (el default) |
+| la del sistema | Códigos e IDs: el `A3F91C` de un pedido | `font-mono` |
+| — | **`font-serif` no existe.** Bricolage es una grotesca, no una serif, y mapearla ahí sería mentir en el token: se borra con `--font-serif: initial` | — |
+
+Las variables `--font-bricolage` y `--font-figtree` **no se declaran en el tema**:
+las define el componente `<Font>` de Astro en `:root`. Declararlas dos veces lo
+resuelve el orden de carga, y eso no falla con un error — falla con la fuente
+equivocada de vez en cuando.
 
 ```
 Display  46px   "Mis rifas"
@@ -177,8 +184,72 @@ radios de 14/20px, alturas de 56/60px, tres estados de celda hechos a medida— 
 pregunta cambia: no se adopta una librería y se la pelea, **se escriben los
 componentes contra estos tokens**.
 
-- [ ] Cerrar: componentes propios sobre los tokens, y una librería sólo si
-      aparece algo complejo de verdad (un dropdown accesible, por ejemplo)
+- [x] **Cerrado (fase 6).** La pregunta estaba mal planteada: no era qué
+      librería, era **qué contrato de nombres**. Ver abajo.
+
+#### Lo que en realidad decide: el contrato, no la librería
+
+Los componentes de starwind **y** los de shadcn están escritos, literal, contra
+`bg-primary`, `border-border`, `bg-card` y la escala `--radius`. Si el
+stylesheet no define esos nombres, no se puede portar nada nunca — y elegir
+librería queda decidido por la ventana.
+
+Por eso el reparto de hojas es:
+
+```
+src/styles/starwind.css   lo escribe `starwind init`, lo reescribe `starwind update`.
+                          Es el entry de Tailwind y define el CONTRATO:
+                          @theme inline { --color-primary: var(--primary) } + :root neutro.
+                          NO SE TOCA. Está en .prettierignore y en los ignores de eslint.
+
+src/styles/global.css     nuestro. Importa el anterior y pisa los valores crudos
+                          (--primary, --background, …) con Talonario, más los
+                          alias de marca y las utilidades de la grilla.
+```
+
+Ese doble salto `--color-primary → --primary` parecía indirección de más al no
+haber modo oscuro. **Tiene otro pagador:** es la costura que deja al CLI
+reescribir su archivo entero sin llevarse el tema puesto.
+
+Un solo `@import "tailwindcss"` en todo el proyecto, y vive en el archivo del
+CLI. En v1 había **tres** hojas con tres imports y dos layouts cargaban
+distintas: esa era la deuda real detrás de los «siete componentes duplicados»
+de [02](./02-arquitectura.md).
+
+#### La regla de las tres puertas
+
+Un componente **se escribe a mano** salvo que pase las tres:
+
+1. **¿Administra foco o `aria-*` que cambia con la interacción?** Focus trap,
+   roving tabindex, `aria-expanded`, devolver el foco al cerrar. Si no —un
+   botón, una tarjeta, un input, una etiqueta— se escribe: son veinte líneas y
+   salen exactos a estos tokens.
+2. **Si sí, se instala con el CLI**, nunca se copia de v1:
+   `npx starwind@latest add <componente>`. La copia de v1 está congelada y no
+   tiene `starwind update`; además starwind 3.x apoya la accesibilidad en
+   `@starwind-ui/astro`, un paquete que se actualiza por npm. Un componente
+   copiado a mano no recibe nunca un arreglo de accesibilidad.
+3. **shadcn sólo adentro de una isla de React**, que es el único lugar donde
+   starwind no llega: un `.astro` no entra en un árbol de React. Hoy no hay
+   ninguna isla, así que shadcn no se usa. El primer candidato real es la
+   grilla en vivo de la fase 8.
+
+> **En v1 la duplicación fue obligada, no un descuido.** `@starwind/*` se
+> importaba sólo desde `.astro` y `@shadcn/*` sólo desde `.tsx`; cuando «crear
+> rifa» y «detalle» pasaron a ser islas `client:only`, hubo que tener un gemelo
+> React de Button, Card e Input. La duplicación fue el síntoma; la causa fue la
+> isla. No se previene eligiendo una librería, se previene **no creando islas
+> de más**.
+
+#### Cómo se porta
+
+- Lo del CLI **no se reformatea ni se corrige a mano**: cada arreglo de estilo
+  es un conflicto en el próximo `starwind update`.
+- Si un componente pide un token que no tenemos (`--info`, `--outline`), se le
+  da un **valor diseñado**, no un placeholder. Talonario no tiene azul: un
+  aviso informativo es texto sobre papel, y eso es una decisión, no un relleno.
+- Lo vendorizado vive en `src/components/starwind/`; lo propio en
+  `src/components/`. Que se vea de un vistazo qué es nuestro y qué es de otro.
 
 ### 3 · El nombre
 

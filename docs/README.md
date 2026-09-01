@@ -85,5 +85,6 @@ Estas cinco están cerradas y el resto de los documentos las asume:
 
 ### Técnicas — pendientes de documentar
 
-- [ ] ~~starwind vs shadcn~~ → con sistema visual propio, la respuesta es
-      **componentes propios sobre los tokens** → [11](./11-sistema-visual.md)
+- [x] ~~starwind vs shadcn~~ → la pregunta era **qué contrato de nombres**, no
+      qué librería. Componentes propios sobre los tokens, con la **regla de las
+      tres puertas** para cuándo no → [11](./11-sistema-visual.md)

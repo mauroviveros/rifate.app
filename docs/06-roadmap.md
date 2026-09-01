@@ -274,14 +274,53 @@ pnpm add -D vitest@^4.1.0 @cloudflare/vitest-pool-workers@^0.22.0
 
 ## Fase 6 — Dashboard
 
-- [ ] Layout de la app + menú de sesión
+```bash
+npx starwind@latest init --astro     # trae tailwind v4 y el contrato de tokens
+pnpm add -D prettier-plugin-tailwindcss
+```
+
+- [x] Sistema visual «Talonario» en `src/styles/global.css` + fuentes por la
+      API de Astro
+- [x] Layout de la app + menú de sesión
+- [x] `release()` en el Durable Object — faltaba la contracara de `sell()`
 - [ ] `/dashboard/raffle` — listado (lee el catálogo de D1, no abre DOs)
 - [ ] `/dashboard/raffle/create` — alta con Zod
 - [ ] `/dashboard/raffle/[id]` — detalle con la grilla del DO
 - [ ] Vender números / liberar
 - [ ] Publicar (`DRAFT → PUBLISHED`)
-- [ ] Decidir **starwind vs shadcn** y portar sólo la elegida
+- [x] ~~Decidir **starwind vs shadcn** y portar sólo la elegida~~
+      → **la pregunta estaba mal planteada.** No era qué librería: los
+      componentes de las dos están escritos contra `bg-primary` /
+      `border-border` / `--radius`, así que **el `global.css` es el que decide
+      si algún día se puede portar algo**. Se escribió con ese contrato más
+      alias de marca encima. Cuándo usar cada una: la regla de las tres puertas
+      en [11](./11-sistema-visual.md).
 - [ ] **✅ Checkpoint: crear, publicar, vender y liberar sin tocar la base a mano**
+
+> **Tres decisiones de la fase, con el porqué:**
+>
+> 1. **La grilla va en Astro puro**, no en React. Medido: el markup de una rifa
+>    BASIC (tope 1000) pesa **2,5 KB en brotli**, contra ~45 KB gzip que pesa el
+>    runtime de React antes de dibujar la primera celda. Pero el argumento
+>    grande es la forma del estado: un `Set` de elegidos, un solo listener con
+>    delegación, y actualizaciones puntuales por clave (`[data-n="47"]`). La
+>    fase 8 lo refuerza en vez de invertirlo — los mensajes del WebSocket van a
+>    ser exactamente «cambió el número N».
+> 2. **Nada de `server:defer` acá.** Verificado que el island corre el
+>    middleware (`/_server-islands/[name]` se inyecta como ruta real del
+>    manifest), así que autorización no es el problema. El problema es que
+>    `/dashboard/raffle/[id]` es 100 % personalizada y no hay nada que cachear:
+>    el island sólo agrega un round trip, una invocación y una llamada más al
+>    DO. Y la grilla **es** el contenido de esa pantalla: diferirla es diferir
+>    la página. El caso de manual es la fase 7, `/r/[slug]`, y ahí se decide
+>    midiendo — un island deja la grilla siempre fresca pero despierta el DO en
+>    cada visita, que es lo peor que puede pasar con un link que se viraliza.
+> 3. **10.000 números en el DOM es pesado con cualquier tecnología.** Cuando
+>    llegue PRO la respuesta no es virtualizar, es **producto**: el talonario de
+>    papel se maneja por centenas y la grilla también debería. Queda para la
+>    fase 8; con el tope de 1000 de BASIC no hace falta. Ojo que `ownerGrid()`
+>    devuelve todos los números en un solo RPC: si se pagina, se pagina también
+>    ahí.
 
 ---
 
