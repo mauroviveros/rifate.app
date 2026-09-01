@@ -6,7 +6,20 @@
     "source": "bundled",
     "version": "2.2.0"
   },
-  "components": [],
+  "components": [
+    {
+      "name": "card",
+      "version": "2.3.1",
+      "framework": "astro",
+      "registry": "default"
+    },
+    {
+      "name": "button",
+      "version": "3.0.1",
+      "framework": "astro",
+      "registry": "default"
+    }
+  ],
   "tailwind": {
     "css": "src/styles/starwind.css",
     "baseColor": "neutral",
