@@ -5,7 +5,13 @@ import { createAuth } from './lib/auth';
 import { actorFromSession, isAdmin } from './lib/auth/actor';
 
 export const onRequest = defineMiddleware(
-  async ({ request, locals, url, redirect }, next) => {
+  async ({ request, locals, url, redirect, isPrerendered }, next) => {
+    if (isPrerendered) {
+      locals.actor = { kind: 'visitor' };
+      locals.user = null;
+      return next();
+    }
+
     const result = await createAuth(env).api.getSession({
       headers: request.headers,
     });
