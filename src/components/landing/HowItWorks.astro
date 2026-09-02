@@ -1,0 +1,45 @@
+---
+const pasos: { title: string; description: string }[] = [
+  {
+    title: 'Cargá los datos',
+    description:
+      'Qué se sortea, cuántos números, cuánto sale cada uno y tu WhatsApp. Cinco campos.',
+  },
+  {
+    title: 'Mandá el link',
+    description:
+      'Al grupo del barrio, a la familia, al club. Cada uno elige sus números desde el celular.',
+  },
+  {
+    title: 'Anotá la venta',
+    description:
+      'Te escriben, cobrás como siempre y marcás el número como vendido. Se actualiza para todos.',
+  },
+];
+---
+
+<section id="como-funciona" class="bg-foreground text-background">
+  <div class="mx-auto max-w-wrap px-5 py-20 sm:px-8">
+    <h2 class="text-[2.25rem] sm:text-5xl">Tres pasos y listo</h2>
+    <p class="mt-3 max-w-xl text-xl text-background/65">
+      No hace falta saber de computación. Si sabés usar WhatsApp, sabés usar
+      rifate.
+    </p>
+
+    <ol class="mt-11 grid gap-6 sm:grid-cols-3">
+      {
+        pasos.map(({ title, description }, index) => (
+          <li class="rounded-3xl bg-white/6 p-7">
+            <span class="grid size-13 place-items-center rounded-lg bg-primary font-display text-2xl font-extrabold">
+              {index + 1}
+            </span>
+            <h3 class="mt-5 text-2xl">{title}</h3>
+            <p class="mt-2.5 leading-relaxed text-background/65">
+              {description}
+            </p>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>

@@ -1,0 +1,41 @@
+---
+const dudas: { question: string; answer: string }[] = [
+  {
+    question: '¿La plata pasa por acá?',
+    answer:
+      'No. Cobrás como siempre: efectivo, transferencia, lo que uses. rifate solo lleva la cuenta de qué número es de quién.',
+  },
+  {
+    question: '¿Se tienen que registrar los compradores?',
+    answer:
+      'No. Abren el link, tocan sus números y te escriben por WhatsApp. Nada más.',
+  },
+  {
+    question: '¿Y si dos eligen el mismo número?',
+    answer:
+      'Apenas lo marcás como vendido, ese número queda tachado para todos los que abran el link.',
+  },
+  {
+    question: '¿Cuánto cuesta?',
+    answer:
+      'Estamos cerrando los planes. Mientras tanto podés crear tu rifa y probarla sin pagar.',
+  },
+];
+---
+
+<section id="preguntas" class="mx-auto max-w-wrap px-5 py-20 sm:px-8">
+  <h2 class="text-[2.25rem] sm:text-5xl">Lo que todos preguntan</h2>
+
+  <dl class="mt-9 grid gap-5 sm:grid-cols-2">
+    {
+      dudas.map(({ answer, question }) => (
+        <div class="rounded-2xl border-2 border-border bg-card p-7">
+          <dt class="font-display text-2xl font-extrabold tracking-tight">
+            {question}
+          </dt>
+          <dd class="mt-2 leading-relaxed text-muted-foreground">{answer}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</section>
