@@ -1,7 +1,11 @@
 ---
-import Hero from '@/components/landing/Hero.astro';
-import Marketing from '@/layouts/Marketing.astro';
 export const prerender = true;
+
+import CTA from '@/components/landing/CTA.astro';
+import FAQs from '@/components/landing/FAQs.astro';
+import Hero from '@/components/landing/Hero.astro';
+import HowItWorks from '@/components/landing/HowItWorks.astro';
+import Marketing from '@/layouts/Marketing.astro';
 
 const title = 'rifate.app · rifas de barrio por WhatsApp';
 const description =
@@ -10,7 +14,7 @@ const description =
 
 <Marketing title={title} description={description}>
   <Hero />
-  <!-- <HowItWorks /> -->
-  <!-- <Faq /> -->
-  <!-- <CTA /> -->
+  <HowItWorks />
+  <FAQs />
+  <CTA />
 </Marketing>
