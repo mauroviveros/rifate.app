@@ -1,13 +1,36 @@
 ---
+import { Brand } from '@/components/brand';
+
 import Base, { type Props as BaseProps } from './Base.astro';
-import Header from './components/Header.astro';
+import User from './components/User.astro';
 
 type Props = BaseProps;
 ---
 
 <Base {...Astro.props}>
   <div class="min-h-dvh trama">
-    <Header />
+    <header
+      class="sticky top-0 z-20 h-16 bg-foreground text-background sm:h-19.5"
+    >
+      <div
+        class="mx-auto flex h-full max-w-wrap items-center justify-between gap-4 px-5 sm:px-8"
+      >
+        <div class="flex min-w-0 items-center gap-4 sm:gap-4.5">
+          <Brand href="/panel" size="bar" color="primary" />
+
+          {
+            Astro.slots.has('nav') && (
+              <>
+                <span class="hidden h-6.5 w-0.5 bg-background/18 sm:block" />
+                <slot name="nav" />
+              </>
+            )
+          }
+        </div>
+
+        <User />
+      </div>
+    </header>
 
     <main class="mx-auto max-w-wrap px-5 py-9 sm:px-8 sm:py-10">
       <slot />
