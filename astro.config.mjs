@@ -9,7 +9,22 @@ export default defineConfig({
   site: 'https://rifate.app',
   output: 'server',
   adapter: cloudflare(),
-  integrations: [icon()],
+  integrations: [
+    icon({
+      include: {
+        lucide: [
+          'check',
+          'chevron-down',
+          'circle-alert',
+          'house',
+          'loader-circle',
+          'log-out',
+          'ticket',
+        ],
+        logos: ['google-icon'],
+      },
+    }),
+  ],
   vite: {
     plugins: [tailwindcss()],
   },
