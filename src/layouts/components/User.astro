@@ -1,0 +1,110 @@
+---
+import { Icon } from 'astro-icon/components';
+
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/components/starwind/avatar';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownLabel,
+  DropdownLinkItem,
+  DropdownSeparator,
+  DropdownTrigger,
+} from '@/components/starwind/dropdown';
+import { initials } from '@/lib/format';
+
+const { user } = Astro.locals;
+if (!user) return null;
+---
+
+<Dropdown>
+  <DropdownTrigger
+    class="group h-11 gap-2 rounded-full border-2 border-background/22 pr-3.5 pl-1.5 transition-colors hover:border-background/40 sm:h-12.5 sm:gap-2.5 sm:pr-4.5 sm:pl-2"
+    aria-label={`Tu cuenta · ${user.name || user.email}`}
+  >
+    <Avatar
+      class="size-7.5 border-0 bg-primary text-primary-foreground sm:size-8.5"
+    >
+      {user.image && <AvatarImage src={user.image} alt="" />}
+      <AvatarFallback class="text-sm font-extrabold">
+        {initials(user.name, user.email)}
+      </AvatarFallback>
+    </Avatar>
+
+    <span class="hidden max-w-44 truncate text-support font-bold sm:block">
+      {user.name || user.email}
+    </span>
+
+    <Icon
+      name="lucide:chevron-down"
+      class="size-4.25 shrink-0 text-background/75 transition-transform group-data-[state=open]:-rotate-180 sm:size-4.5"
+      aria-hidden="true"
+    />
+  </DropdownTrigger>
+
+  <DropdownContent
+    align="end"
+    sideOffset={10}
+    class="w-72 rounded-lg border-2 p-2 shadow-papel"
+  >
+    <DropdownLabel class="flex items-center gap-2.5 p-2 text-foreground">
+      <Avatar
+        class="size-10 shrink-0 border-0 bg-primary text-primary-foreground"
+      >
+        {user.image && <AvatarImage src={user.image} alt="" />}
+        <AvatarFallback class="text-sm font-extrabold">
+          {initials(user.name, user.email)}
+        </AvatarFallback>
+      </Avatar>
+      <span class="grid min-w-0">
+        <span class="truncate text-support font-bold">{user.name}</span>
+        <span class="truncate text-label text-subtle-foreground">
+          {user.email}
+        </span>
+      </span>
+    </DropdownLabel>
+
+    <DropdownSeparator class="my-2 perforado h-0.5 bg-transparent" />
+
+    <DropdownLinkItem
+      href="/panel"
+      class="h-11 gap-2.5 rounded-sm px-2.5 text-support font-bold [&>svg]:size-5"
+    >
+      <Icon name="lucide:ticket" />
+      Mis rifas
+    </DropdownLinkItem>
+
+    <DropdownItem
+      id="cerrar-sesion"
+      class="h-11 gap-2.5 rounded-sm px-2.5 text-support font-bold [&>svg]:size-5"
+    >
+      <Icon name="lucide:log-out" />
+      Cerrar sesión
+    </DropdownItem>
+  </DropdownContent>
+</Dropdown>
+
+<script>
+  import { createAuthClient } from 'better-auth/client';
+
+  const { signOut } = createAuthClient();
+
+  const salir = document.getElementById('cerrar-sesion');
+
+  let enVuelo = false;
+
+  salir?.addEventListener('click', async () => {
+    if (enVuelo) return;
+    enVuelo = true;
+
+    try {
+      await signOut();
+    } finally {
+      window.location.href = '/ingresar';
+    }
+  });
+</script>

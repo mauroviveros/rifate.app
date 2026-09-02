@@ -31,4 +31,5 @@ export default defineConfig({
       fallbacks: ['ui-sans-serif', 'system-ui', 'sans-serif'],
     },
   ],
+  redirects: { '/login': '/ingresar' },
 });

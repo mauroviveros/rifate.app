@@ -1,0 +1,16 @@
+---
+import Base, { type Props as BaseProps } from './Base.astro';
+import Header from './components/Header.astro';
+
+type Props = BaseProps;
+---
+
+<Base {...Astro.props}>
+  <div class="min-h-dvh trama">
+    <Header />
+
+    <main class="mx-auto max-w-wrap px-5 py-9 sm:px-8 sm:py-10">
+      <slot />
+    </main>
+  </div>
+</Base>

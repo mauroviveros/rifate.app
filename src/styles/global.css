@@ -204,6 +204,14 @@
   --spacing-field: 60px;
   --spacing-cell: 60px;
   --spacing-cell-mobile: 64px;
+
+  /* EL ANCHO DE LA HOJA. La barra del panel y el contenido de abajo tienen que
+     arrancar en la misma línea: si el ancho vive en dos lugares, el día que uno
+     cambie el logotipo queda corrido respecto del título. En el canvas son
+     1180px (`Dashboard` y `Landing`); `Detail` estira a 1240 y `Create` achica
+     a 1120 porque son pantallas de una sola columna, y eso se pisa con una
+     clase en esa pantalla, no acá. */
+  --container-wrap: 1180px;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -321,7 +329,7 @@
     position: absolute;
     inset: 14px -12px -12px 12px;
     border-radius: var(--radius-xl);
-    background: var(--trama);
+    /* background: var(--trama); */
   }
 
   & > * {
