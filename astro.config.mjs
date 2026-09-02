@@ -13,12 +13,14 @@ export default defineConfig({
     icon({
       include: {
         lucide: [
+          'arrow-right',
           'check',
           'chevron-down',
           'circle-alert',
           'house',
           'loader-circle',
           'log-out',
+          'share-2',
           'ticket',
         ],
         logos: ['google-icon'],
