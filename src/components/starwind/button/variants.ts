@@ -34,8 +34,13 @@ export const button = tv({
       default: "bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50",
       secondary: "bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50",
       // ACCIÓN TERCIARIA: borde de 2px de tinta, plana, peso 700.
-      outline:
-        "border-2 border-foreground bg-transparent font-bold text-foreground hover:bg-accent focus-visible:ring-outline/50",
+      // El hover es el "se levanta 2px" de la celda libre del canvas. El
+      // `hover:bg-accent` de starwind no iba: `--accent` ES el papel, así que
+      // sobre el fondo de la app sólo borraba la trama adentro del botón.
+      outline: [
+        "border-2 border-foreground bg-transparent font-bold text-foreground focus-visible:ring-outline/50",
+        "hover:bg-foreground/5 hover:-translate-y-0.5 active:translate-y-0",
+      ],
       ghost: "hover:bg-accent hover:text-foreground focus-visible:ring-outline/50",
       success: "bg-success text-success-foreground hover:bg-success/90 focus-visible:ring-success/50",
       warning: "bg-warning text-warning-foreground hover:bg-warning/90 focus-visible:ring-warning/50",
