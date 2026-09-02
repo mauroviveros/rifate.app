@@ -281,13 +281,23 @@ pnpm add -D prettier-plugin-tailwindcss
 
 - [x] Sistema visual «Talonario» en `src/styles/global.css` + fuentes por la
       API de Astro
-- [x] Layout de la app + menú de sesión
+- [x] Layout de la app + menú de sesión (`src/layouts/Dashboard.astro` +
+      `layouts/components/Header.astro` · `User.astro`)
+- [x] Pantalla `Login` (`src/pages/ingresar.astro`) contra el artboard — no
+      estaba como ítem: la fase 3 sólo la nombraba como destino de redirect
+- [x] Pantalla `NotFound` (`src/pages/404.astro`) contra el artboard
 - [x] `release()` en el Durable Object — faltaba la contracara de `sell()`
-- [ ] `/dashboard/raffle` — listado (lee el catálogo de D1, no abre DOs)
-- [ ] `/dashboard/raffle/create` — alta con Zod
-- [ ] `/dashboard/raffle/[id]` — detalle con la grilla del DO
-- [ ] Vender números / liberar
-- [ ] Publicar (`DRAFT → PUBLISHED`)
+- [ ] `/panel` — hoy es un stub (`<Dashboard title="dashboard" />`). Falta el
+      listado: lee el catálogo con `listOwnRaffles(db, actor)`, no abre DOs
+- [ ] `/panel/rifa/crear` — alta con Zod → `createRaffleWithGrid` (ya escrito en
+      `src/lib/raffles.ts`); falta el schema Zod de `NewRaffle` y la pantalla
+- [ ] `/panel/rifa/[id]` — detalle con la grilla del DO (`getOwnRaffle` +
+      `ownerGrid(userId)`)
+- [ ] Vender números / liberar → `sell()` / `release()` del DO, con una action
+      que traduzca el error con `describeError()` (acá se cierra la deuda de la
+      fase 5: verificar que el código del error sobrevive el RPC)
+- [ ] Publicar (`DRAFT → PUBLISHED`) → `publishRaffle` (ya escrito); exige
+      `contact_phone` cargado
 - [x] ~~Decidir **starwind vs shadcn** y portar sólo la elegida~~
       → **la pregunta estaba mal planteada.** No era qué librería: los
       componentes de las dos están escritos contra `bg-primary` /
@@ -296,6 +306,24 @@ pnpm add -D prettier-plugin-tailwindcss
       alias de marca encima. Cuándo usar cada una: la regla de las tres puertas
       en [11](./11-sistema-visual.md).
 - [ ] **✅ Checkpoint: crear, publicar, vender y liberar sin tocar la base a mano**
+
+> ⚠️ **Las rutas van en castellano**, no como las nombraba este documento antes.
+> Los ítems de arriba decían `/dashboard/raffle/...`; el código quedó así:
+>
+> | Antes (este doc) | Real |
+> |---|---|
+> | `/dashboard` | `/panel` |
+> | `/login` | `/ingresar` |
+> | `/admin` | `/administracion` |
+>
+> `src/middleware.ts` protege `/^\/(panel|administracion)(\/|$)/` y redirige a
+> `/ingresar?next=…`. El paréntesis `(\/|$)` no es adorno: sin él `/panel`
+> también matchea `/panelazo`.
+>
+> El módulo que toca **D1 y el DO en el mismo acto** —crear con grilla, publicar—
+> es `src/lib/raffles.ts` (`createRaffleWithGrid`, `publishRaffle`), no un repo
+> de `src/lib/db/`: recibe además el namespace del DO, así que no es un
+> repositorio. La regla de qué escribe primero está en [03](./03-modelo-de-datos.md).
 
 > **Tres decisiones de la fase, con el porqué:**
 >
@@ -309,7 +337,7 @@ pnpm add -D prettier-plugin-tailwindcss
 > 2. **Nada de `server:defer` acá.** Verificado que el island corre el
 >    middleware (`/_server-islands/[name]` se inyecta como ruta real del
 >    manifest), así que autorización no es el problema. El problema es que
->    `/dashboard/raffle/[id]` es 100 % personalizada y no hay nada que cachear:
+>    `/panel/rifa/[id]` es 100 % personalizada y no hay nada que cachear:
 >    el island sólo agrega un round trip, una invocación y una llamada más al
 >    DO. Y la grilla **es** el contenido de esa pantalla: diferirla es diferir
 >    la página. El caso de manual es la fase 7, `/r/[slug]`, y ahí se decide
@@ -390,7 +418,10 @@ Conventional Commits + gitmoji, en inglés.
 | 8 | `feat: :sparkles: add PRO orders with reservations and live grid` |
 | 9 | `feat: :sparkles: add winner draw, vouchers and admin panel` |
 
-Trabajá en una rama: `git switch -c v2-refactor`. `main` refleja lo desplegado.
+~~Trabajá en una rama: `git switch -c v2-refactor`. `main` refleja lo desplegado.~~
+→ **El refactor va en `main`** (decidido 2026-08-26). v1 quedó congelado en el
+tag `v1.0.0` y la rama `v1-stable`, así que no hace falta una rama de trabajo
+aparte: `main` es el refactor y el punto de retorno es el tag.
 
 ---
 
