@@ -2,12 +2,12 @@
 import { Icon } from 'astro-icon/components';
 
 import { Button } from '@/components/starwind/button';
-import Layout from '@/layouts/Layout.astro';
+import Base from '@/layouts/Base.astro';
 
 const fila = [40, 41, 404, 43, 44];
 ---
 
-<Layout
+<Base
   title="Ese número no existe · rifate.app"
   description="La página que buscabas no está o la rifa ya se dio de baja."
 >
@@ -46,9 +46,8 @@ const fila = [40, 41, 404, 43, 44];
           <Icon name="lucide:house" />
           Ir al inicio
         </Button>
-        <Button href="/dashboard/raffle" variant="outline">Ver mis rifas</Button
-        >
+        <Button href="/panel" variant="outline">Ver mis rifas</Button>
       </div>
     </div>
   </main>
-</Layout>
+</Base>

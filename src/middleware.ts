@@ -20,12 +20,14 @@ export const onRequest = defineMiddleware(
         }
       : null;
 
-    const protegida = /^\/dashboard|^\/admin/.test(url.pathname);
+    // El `(\/|$)` no es adorno: sin él `/^\/panel/` también da verdadero para
+    // `/panelazo`, y una ruta pública que empiece igual entraría a pedir sesión.
+    const protegida = /^\/(panel|administracion)(\/|$)/.test(url.pathname);
     if (protegida && locals.actor.kind === 'visitor') {
-      return redirect(`/login?next=${encodeURIComponent(url.pathname)}`);
+      return redirect(`/ingresar?next=${encodeURIComponent(url.pathname)}`);
     }
 
-    if (url.pathname.startsWith('/admin') && !isAdmin(locals.actor)) {
+    if (url.pathname.startsWith('/administracion') && !isAdmin(locals.actor)) {
       return new Response('No encontrado', { status: 404 });
     }
 

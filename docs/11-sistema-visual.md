@@ -334,8 +334,15 @@ Un componente **se escribe a mano** salvo que pase las tres:
 - Si un componente pide un token que no tenemos (`--info`, `--outline`), se le
   da un **valor diseñado**, no un placeholder. Talonario no tiene azul: un
   aviso informativo es texto sobre papel, y eso es una decisión, no un relleno.
-- Lo vendorizado vive en `src/components/starwind/`; lo propio en
-  `src/components/`. Que se vea de un vistazo qué es nuestro y qué es de otro.
+- Lo vendorizado vive en `src/components/starwind/` y lo propio en
+  `src/components/`, salvo lo que **sólo arma un layout** —el header del panel y
+  el menú de la cuenta—, que vive en `src/layouts/components/`. Que se vea de un
+  vistazo qué es nuestro, qué es de otro, y qué no tiene sentido fuera de su
+  layout: `Brand` lo usan el login y el panel, así que es de todos; `Header` y
+  `User` no se pueden llamar desde una página sin el layout puesto.
+
+  La regla para decidir es la misma de siempre: **si dos pantallas que no
+  comparten layout lo van a usar, es de `src/components/`.**
 
 ### 3 · El nombre
 
@@ -344,6 +351,44 @@ que quede claro si es el nombre del design system dentro de rifate.app, o si el
 producto pasa a llamarse así.
 
 ---
+
+### 4 · El logotipo dice la dirección, no el nombre
+
+En los nueve artboards de pantalla la palabra es **`rifate`** a secas, y el
+`rifate.app` completo aparece sólo en las cuatro OG. **Acá le ganamos al canvas
+a propósito:** el logotipo dice siempre la dirección.
+
+- Quien abre `/r/club-estrella` llegó de un WhatsApp. Nunca eligió venir, y el
+  logotipo es el único lugar de la pantalla que le dice a qué sitio entró. Es el
+  mismo motivo por el que el canvas ya lo escribe completo en la OG — sólo que
+  ese motivo no se termina en la imagen del preview.
+- `rifate` solo es un verbo en voseo; `rifate.app` es un nombre.
+- Una marca con dos formas obliga a decidir cuál va cada vez, y esa decisión se
+  toma mal a las seis de la tarde.
+
+Medido antes de decidirlo, no después: en la barra del celular la palabra pasa
+de 52 a 93px, y de los 375 quedan 254 ocupados. Entra con aire.
+
+El `.app` va en **vermellón, en las dos superficies.** Las cuatro OG escriben la
+palabra en un solo color, así que esto también le gana al canvas.
+
+Lo que se descartó y por qué: que el `.app` siguiera **al color de la caja del
+ticket** suena razonable hasta que se mira sobre papel, donde la caja es tinta y
+la palabra también — el acento se anula justo en la superficie donde mejor se ve
+(4.41:1) y sobrevive sólo en la barra oscura, que es donde peor contrasta.
+
+| | contraste | |
+|---|---|---|
+| vermellón sobre papel | 4.41:1 | cómodo |
+| vermellón sobre tinta | **3.49:1** | alcanza **porque es texto grande** |
+
+Los 3.49 pasan AA por los pelos, y por una razón que hay que tener presente: el
+logotipo es de 20 y 22px en peso 800, arriba del piso de 18.66px en negrita que
+AA considera texto grande. **Si el logotipo alguna vez se achica, este acento es
+lo primero del sistema que deja de ser legal.**
+
+> Lo reversible que es: cambiar esto es cambiar la marca, no el CSS. Si algún
+> día hay dominio propio o `rifate.com`, el TLD adentro del logotipo envejece.
 
 ## Al construir
 

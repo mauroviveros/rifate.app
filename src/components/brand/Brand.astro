@@ -1,0 +1,27 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import { Icon } from 'astro-icon/components';
+import type { VariantProps } from 'tailwind-variants';
+
+import { brand } from './variants';
+
+type Props = HTMLAttributes<'a'> & VariantProps<typeof brand>;
+
+/**
+ * El logotipo de rifate. La forma la deciden dos props —`size` y `color`— y las
+ * dos están en `variants.ts` con la tabla de qué artboard usa cada una:
+ *
+ *   <Brand size="xl" />                       login: caja tinta, 42px
+ *   <Brand size="md" color="primary" />       panel: caja vermellón sobre la barra
+ */
+const { size, color, href = '/', class: className, ...rest } = Astro.props;
+
+const { base, ticket, icon, word, suffix } = brand({ size, color });
+---
+
+<a href={href} class={base({ class: className })} {...rest}>
+  <span class={ticket()}>
+    <Icon name="ticket" class={icon()} aria-hidden="true" />
+  </span>
+  <span class={word()}>rifate<span class={suffix()}>.app</span></span>
+</a>
