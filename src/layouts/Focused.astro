@@ -1,0 +1,10 @@
+---
+import Base, { type Props as BaseProps } from './Base.astro';
+interface Props extends BaseProps {}
+---
+
+<Base {...Astro.props}>
+  <main class="grid min-h-dvh place-items-center trama px-5 py-10">
+    <slot />
+  </main>
+</Base>
