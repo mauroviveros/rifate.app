@@ -1,0 +1,106 @@
+---
+import { Icon } from 'astro-icon/components';
+
+import Section from '@/components/article/Section.astro';
+import Article from '@/layouts/Article.astro';
+
+export const prerender = true;
+---
+
+<Article
+  title="Términos"
+  description="Qué es rifate.app, qué hace y qué no, y las responsabilidades de quien organiza una rifa."
+  lead="Qué es rifate.app, qué hace y qué no, y las responsabilidades de quien organiza una rifa."
+  updated="2026-09-02"
+>
+  <p class="text-[1.1875rem] leading-relaxed text-pretty text-muted-foreground">
+    rifate.app es una herramienta para organizar rifas: armás la rifa, compartís
+    el link y llevás la cuenta de qué número es de quién. Al usarla aceptás lo
+    que sigue.
+  </p>
+
+  <Section number={1} title="Qué hace rifate y qué no">
+    <ul>
+      <li>
+        Te da la página pública, la grilla de números y el panel para
+        administrarla.
+      </li>
+    </ul>
+
+    <div class="flex items-start gap-3.5 rounded-lg bg-warning px-5 py-4">
+      <Icon
+        name="lucide:circle-alert"
+        class="mt-0.5 size-5.5 shrink-0 text-foreground"
+        aria-hidden="true"
+      />
+
+      <span class="text-body leading-[1.55] text-foreground">
+        <strong
+          >No cobra los números, no maneja la plata y no entrega el premio.</strong
+        > Eso es entre vos y quienes te compran.
+      </span>
+    </div>
+
+    <ul>
+      <li>
+        La función de sorteo elige un número al azar entre los vendidos.
+        Comunicar y hacer efectivo el resultado queda a tu cargo.
+      </li>
+    </ul>
+  </Section>
+
+  <Section number={2} title="Tu responsabilidad como organizador">
+    <ul>
+      <li>
+        Cumplir las leyes de tu país o provincia sobre rifas, sorteos y bonos
+        contribución. En muchos lados hace falta un permiso.
+      </li>
+      <li>
+        Que la rifa sea real: premio existente, sorteo efectivo y entrega al
+        ganador.
+      </li>
+      <li>
+        Los datos de tus compradores los cargás vos y sos responsable de
+        tratarlos bien. Ver <a href="/privacidad">Privacidad</a>.
+      </li>
+      <li>No usar rifate para estafas, lavado de dinero ni nada ilegal.</li>
+    </ul>
+  </Section>
+
+  <Section number={3} title="La cuenta">
+    <ul>
+      <li>
+        Entrás con tu cuenta de Google y sos responsable de lo que pase desde
+        ella.
+      </li>
+      <li>
+        Podés dejar de usar el servicio cuando quieras. Podemos suspender una
+        cuenta que use rifate para algo ilegal o que perjudique a otros.
+      </li>
+    </ul>
+  </Section>
+
+  <Section number={4} title="El servicio">
+    <ul>
+      <li>
+        rifate se ofrece «tal cual está». Ponemos lo mejor para que ande, pero
+        no garantizamos que esté siempre disponible ni libre de errores.
+      </li>
+      <li>
+        No nos hacemos responsables por pérdidas derivadas de una rifa: eso
+        queda entre el organizador y los participantes.
+      </li>
+    </ul>
+  </Section>
+
+  <Section number={5} title="Cambios">
+    <p>
+      Estos términos pueden cambiar. Si eso pasa, actualizamos la fecha de
+      arriba; si el cambio es importante, avisamos.
+    </p>
+  </Section>
+
+  <Section number={6} title="Contacto">
+    <p><a href="/contacto">Escribinos</a> si tenés alguna duda.</p>
+  </Section>
+</Article>

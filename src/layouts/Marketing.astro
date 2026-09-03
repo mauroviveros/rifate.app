@@ -3,7 +3,14 @@ import { Brand } from '@/components/brand';
 
 import Base, { type Props as BaseProps } from './Base.astro';
 
-type Props = BaseProps;
+export type Props = BaseProps;
+
+const actual = Astro.url.pathname.replace(/\/$/, '');
+const enlaces: { href: string; text: string }[] = [
+  { href: '/terminos', text: 'Términos' },
+  { href: '/privacidad', text: 'Privacidad' },
+  { href: '/contacto', text: 'Contacto' },
+];
 ---
 
 <Base {...Astro.props}>
@@ -44,12 +51,24 @@ type Props = BaseProps;
     >
       <Brand size="sm" href="/" />
 
-      <p class="text-support text-subtle-foreground">
-        <a href="/terminos" class="hover:text-foreground">Términos</a>
-        <span> · </span>
-        <a href="/privacidad" class="hover:text-foreground">Privacidad</a>
-        <span> · </span>
-        <a href="/contacto" class="hover:text-foreground">Contacto</a>
+      <p class="flex items-center gap-2 text-support text-subtle-foreground">
+        {
+          enlaces.map(({ href, text }, index) => (
+            <>
+              {index > 0 && <span aria-hidden="true"> · </span>}
+              <a
+                href={href}
+                aria-current={actual === href ? 'page' : undefined}
+                class:list={[
+                  'hover:text-foreground',
+                  'aria-[current]:font-extrabold aria-[current]:text-foreground',
+                ]}
+              >
+                {text}
+              </a>
+            </>
+          ))
+        }
       </p>
     </div>
   </footer>
