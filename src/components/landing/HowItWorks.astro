@@ -1,4 +1,6 @@
 ---
+import { Tile } from '@/components/tile';
+
 const pasos: { title: string; description: string }[] = [
   {
     title: 'Cargá los datos',
@@ -30,9 +32,9 @@ const pasos: { title: string; description: string }[] = [
       {
         pasos.map(({ title, description }, index) => (
           <li class="rounded-3xl bg-white/6 p-7">
-            <span class="grid size-13 place-items-center rounded-lg bg-primary font-display text-2xl font-extrabold">
+            <Tile size="lg" tone="primary">
               {index + 1}
-            </span>
+            </Tile>
             <h3 class="mt-5 text-2xl">{title}</h3>
             <p class="mt-2.5 leading-relaxed text-background/65">
               {description}
