@@ -25,7 +25,7 @@
 > lo de mayor consecuencia si sale mal, y **autorización** porque es lo que
 > reemplaza a RLS. Las dos pasaron su checkpoint.
 >
-> ¹ Queda abierto lo de `docs/sql/` y las decisiones de producto — ver fase 1.
+> ¹ Queda abierto sólo el cierre de las decisiones de producto — ver fase 1.
 >
 > **Convención de este documento:** cuando un ítem planificado resultó estar mal,
 > no se borra: se tacha y abajo va lo que se hizo en su lugar. El error es la
@@ -41,7 +41,7 @@
 - [x] Push del tag y las ramas al remoto — `v1.0.0`, `main` y `v1-stable` están
       en `origin` (`git@github.com:mauroviveros/rifate.app.git`)
 
-## Fase 1 — Planificación ✅ *(quedan dos pendientes, ninguno bloquea)*
+## Fase 1 — Planificación ✅ *(queda un pendiente, no bloquea)*
 
 - [x] Contexto y alcance → [00](./00-contexto-y-alcance.md)
 - [x] Stack e infraestructura → [01](./01-stack.md) · [01b](./01b-infraestructura.md)
@@ -50,14 +50,14 @@
 - [x] Durable Objects: costos y ciclo de vida → [09](./09-durable-objects.md)
 - [x] Better Auth → [10](./10-better-auth.md)
 - [x] Reescribir [02 · Arquitectura](./02-arquitectura.md) — commit `f1f5321`
-- [ ] ~~Reemplazar `docs/sql/` por migraciones D1 + esquema del DO~~
-      → **borrar `docs/sql/`.** La verdad ya vive en `migrations/` y en
-      `src/do/schema.ts`; la copia de `docs/` quedó vieja y ahora miente:
-      - la numeración está corrida (`0002_profiles` acá, `0001_profiles` en el
-        repo), así que copiar y pegar rompe el orden de las migraciones
-      - su README manda a correr `@better-auth/cli generate`, que se sacó del
-        proyecto por generar un esquema incompleto (ver fase 3)
-      - `do/schema.ts` tiene las cuatro cosas que la fase 4 encontró mal
+- [x] ~~Reemplazar `docs/sql/` por migraciones D1 + esquema del DO~~
+      → **`docs/sql/` borrado.** La verdad vive en `migrations/` (D1) y en
+      `src/do/schema.ts` (DO). La copia de `docs/` mentía: numeración corrida
+      (`0002_profiles` vs `0001_profiles` en el repo), su README mandaba a correr
+      `@better-auth/cli generate` —que se sacó del proyecto— y su `do/schema.ts`
+      tenía las cuatro cosas que la fase 4 encontró mal. Quedan enlaces colgados
+      a `docs/sql/` en `07`, `08`, `01b`, `02` y el `README` de `docs/`: se
+      limpian cuando se toque cada uno.
 - [ ] Cerrar: precio BASIC/PRO · duración de la reserva · dominio
       *(bloquea la fase 6: sin precio no hay pantalla de plan)*
 
@@ -286,6 +286,20 @@ pnpm add -D prettier-plugin-tailwindcss
 - [x] Pantalla `Login` (`src/pages/ingresar.astro`) contra el artboard — no
       estaba como ítem: la fase 3 sólo la nombraba como destino de redirect
 - [x] Pantalla `NotFound` (`src/pages/404.astro`) contra el artboard
+- [x] Landing `/` (`src/pages/index.astro`, `prerender = true`) contra los
+      artboards `Landing` / `LandingMobile`: `Hero` · `HowItWorks` · `FAQs` ·
+      `CTA` en `src/components/landing/`, sobre `src/layouts/Marketing.astro`
+      (nav + footer del sitio público)
+- [x] Legales `/terminos` · `/privacidad` · `/contacto` contra sus artboards de
+      la página «Lo que ve el comprador» del canvas, sobre
+      `src/layouts/Article.astro` (título + bajada + fecha + secciones) y
+      `src/components/article/Section.astro` (sección numerada). Las tres
+      `prerender = true`
+- [x] `src/layouts/Focused.astro` — extraído de `ingresar` y `404`, que tenían
+      duplicado el `<main>` centrado sobre la trama
+- [x] `src/components/tile/Tile.astro` — el cuadradito con ícono o número, con
+      variants `size` (sm–xl) y `tone` (ink/muted/primary). Unifica el badge de
+      `Section`, los pasos de `HowItWorks` y los íconos de las tarjetas de contacto
 - [x] `release()` en el Durable Object — faltaba la contracara de `sell()`
 - [ ] `/panel` — hoy es un stub (`<Dashboard title="dashboard" />`). Falta el
       listado: lee el catálogo con `listOwnRaffles(db, actor)`, no abre DOs
@@ -324,6 +338,21 @@ pnpm add -D prettier-plugin-tailwindcss
 > es `src/lib/raffles.ts` (`createRaffleWithGrid`, `publishRaffle`), no un repo
 > de `src/lib/db/`: recibe además el namespace del DO, así que no es un
 > repositorio. La regla de qué escribe primero está en [03](./03-modelo-de-datos.md).
+
+> **Los layouts**, para no mezclarlos:
+>
+> | Layout | Qué arma | Lo usan |
+> |---|---|---|
+> | `Base.astro` | shell `<html>` + fuentes | todos |
+> | `Marketing.astro` | nav + footer del sitio público | landing · legales |
+> | `Article.astro` | página de texto larga, sobre `Marketing` | `/terminos` · `/privacidad` · `/contacto` |
+> | `Focused.astro` | una tarjeta centrada sobre la trama | `/ingresar` · `/404` |
+> | `Dashboard.astro` | la app | `/panel/*` |
+>
+> El middleware corta antes de resolver sesión en las rutas `prerender = true`
+> (chequea `isPrerendered` en `src/middleware.ts`): la landing y las legales se
+> sirven como HTML estático desde el asset storage, sin invocar el Worker ni
+> tocar D1. Corre igual durante el build, y ahí no hay bindings.
 
 > **Tres decisiones de la fase, con el porqué:**
 >
