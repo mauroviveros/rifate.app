@@ -32,8 +32,8 @@ Si algo del refactor se rompe, ese es el punto de retorno.
 | 10 | [Better Auth](./10-better-auth.md) | Auth sobre D1: configuración, middleware y gotchas |
 | 11 | [Sistema visual](./11-sistema-visual.md) | **«Talonario»:** tokens, reglas y las 16 pantallas del canvas |
 
-[`docs/sql/`](./sql/) — **esquema listo para copiar**: migraciones de D1 y el
-esquema versionado del Durable Object. Se lee junto con 03 y 04.
+> `docs/sql/` fue borrado: la verdad del esquema vive en `migrations/` (D1) y
+> en `src/do/schema.ts` (Durable Object). Algún doc viejo todavía lo enlaza.
 
 ---
 
