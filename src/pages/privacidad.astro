@@ -1,0 +1,104 @@
+---
+import { Icon } from 'astro-icon/components';
+
+import Section from '@/components/article/Section.astro';
+import { Card, CardContent } from '@/components/starwind/card';
+import Article from '@/layouts/Article.astro';
+
+export const prerender = true;
+
+const noHacemos = [
+  'No vendemos ni cedemos tus datos.',
+  'No usamos rastreadores de publicidad.',
+  'No mandamos mails de marketing.',
+];
+---
+
+<Article
+  title="Privacidad"
+  description="Qué datos guarda rifate.app, dónde y para qué. En criollo."
+  lead="Qué datos guarda rifate.app, dónde y para qué. En criollo."
+  updated="2026-09-02"
+>
+  <Section number={1} title="Qué guardamos">
+    <ul>
+      <li>
+        <strong>De vos (organizador):</strong> nombre, email y foto de tu cuenta de
+        Google, para identificarte y mostrarte en el panel. Nada de contraseñas: la
+        autenticación la maneja Google.
+      </li>
+      <li>
+        <strong>De tus rifas:</strong> título, premio, precio, cantidad de números,
+        tu WhatsApp de contacto y el estado de cada número (libre, vendido o reservado).
+      </li>
+      <li>
+        <strong>De los compradores:</strong> el nombre y el teléfono que <em
+          >vos</em
+        > cargás al marcar una venta. Los compradores no tienen cuenta ni se registran.
+      </li>
+      <li>
+        <strong>Técnico:</strong> una cookie para mantener tu sesión abierta.
+      </li>
+    </ul>
+  </Section>
+
+  <Section number={2} title="Dónde">
+    <p>
+      En la infraestructura de Cloudflare (base de datos D1 y Durable Objects).
+      No se comparte con terceros con fines publicitarios.
+    </p>
+  </Section>
+
+  <Section number={3} title="Qué no hacemos">
+    <Card>
+      <CardContent class="flex flex-col gap-3.5">
+        {
+          noHacemos.map((texto) => (
+            <div class="flex items-start gap-3">
+              <Icon
+                name="lucide:check"
+                class="mt-0.5 size-5 shrink-0 text-success"
+                aria-hidden="true"
+              />
+              <span class="text-body leading-relaxed font-semibold text-foreground">
+                {texto}
+              </span>
+            </div>
+          ))
+        }
+      </CardContent>
+    </Card>
+  </Section>
+
+  <Section number={4} title="Terceros">
+    <ul>
+      <li>Google, solo para el login: recibimos nombre, email y foto.</li>
+      <li>Cloudflare, como hosting.</li>
+    </ul>
+  </Section>
+
+  <Section number={5} title="Tus datos">
+    <ul>
+      <li>
+        Podés pedir que borremos tu cuenta y tus rifas escribiendo a <a
+          href="/contacto">contacto</a
+        >.
+      </li>
+      <li>
+        Al borrar una rifa se elimina su grilla y los datos de compradores
+        asociados.
+      </li>
+    </ul>
+  </Section>
+
+  <Section number={6} title="Si compraste un número">
+    <p>
+      Para corregir o borrar tus datos, hablá con quien te pasó el link: el
+      organizador de esa rifa es quien los cargó y quien los controla.
+    </p>
+  </Section>
+
+  <Section number={7} title="Cambios">
+    <p>Si esto cambia, actualizamos la fecha de arriba.</p>
+  </Section>
+</Article>

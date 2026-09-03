@@ -1,0 +1,85 @@
+---
+import { Icon } from 'astro-icon/components';
+
+import { Button } from '@/components/starwind/button';
+import { Card, CardContent, CardTitle } from '@/components/starwind/card';
+import { Tile } from '@/components/tile';
+import Article from '@/layouts/Article.astro';
+
+export const prerender = true;
+
+// TODO: confirmar que esta dirección exista o redirija a una casilla real.
+const email = 'hola@rifate.app';
+---
+
+<Article
+  title="Contacto"
+  description="Cómo escribirnos por una duda, un problema con una rifa o para borrar tu cuenta."
+  lead="¿Tenés una duda, un problema con una rifa o querés que borremos tu cuenta? Escribinos."
+>
+  <div class="flex flex-col gap-5">
+    <Card>
+      <CardContent
+        class:list={[
+          'flex flex-col items-start gap-5',
+          'sm:flex-row sm:items-center sm:gap-6',
+        ]}
+      >
+        <Tile size="xl" tone="ink">
+          <Icon name="lucide:mail" aria-hidden="true" />
+        </Tile>
+
+        <div class="flex grow flex-col gap-1">
+          <span
+            class="font-display text-[1.625rem] font-extrabold tracking-tight break-all sm:text-[2.125rem]"
+          >
+            {email}
+          </span>
+          <span class="text-support font-semibold text-subtle-foreground">
+            Respondemos en un par de días.
+          </span>
+        </div>
+
+        <Button
+          href={`mailto:${email}`}
+          variant="primary"
+          size="md"
+          class="w-full sm:w-auto"
+        >
+          Escribir
+          <Icon name="lucide:arrow-right" class="size-5.5" aria-hidden="true" />
+        </Button>
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardContent class="flex items-start gap-5">
+        <Tile size="md" tone="muted">
+          <Icon name="lucide:message-circle" aria-hidden="true" />
+        </Tile>
+
+        <div class="flex flex-col gap-1.5">
+          <CardTitle class="text-2xl">
+            ¿Compraste un número en una rifa?
+          </CardTitle>
+          <p
+            class="text-body leading-relaxed text-pretty text-muted-foreground"
+          >
+            Si es sobre una rifa puntual, lo más rápido es hablar con quien te
+            pasó el link: esa persona la organiza y maneja sus datos.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+
+    <p
+      class:list={[
+        'text-support text-subtle-foreground',
+        '[&>a]:font-bold [&>a]:text-primary',
+      ]}
+    >
+      Para borrar tu cuenta y tus rifas, escribinos desde el mismo mail con el
+      que entrás. Ver <a href="/privacidad">Privacidad</a>.
+    </p>
+  </div>
+</Article>
