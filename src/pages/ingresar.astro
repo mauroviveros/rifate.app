@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/starwind/card';
-import Base from '@/layouts/Base.astro';
+import Focused from '@/layouts/Focused.astro';
 
 // Con sesión abierta esta pantalla no tiene nada que ofrecer.
 if (Astro.locals.actor.kind !== 'visitor') {
@@ -23,84 +23,78 @@ const garantias = [
 ];
 ---
 
-<Base title="Ingresar · rifate.app">
-  <main class="grid min-h-dvh place-items-center trama px-5 py-10">
-    <div class="w-full max-w-md">
-      <Brand size="xl" class="mx-auto flex" />
+<Focused title="Ingresar · rifate.app">
+  <div class="w-full max-w-md">
+    <Brand size="xl" class="mx-auto flex" />
 
-      <div class="talonario mt-8">
-        <Card class="shadow-papel">
-          <CardHeader class="text-center">
-            <CardTitle>Entrá a tu panel</CardTitle>
-            <CardDescription class="text-body">
-              Usá la misma cuenta de Google que tenés en el celular. No hay que
-              inventar ninguna contraseña.
-            </CardDescription>
-          </CardHeader>
+    <div class="talonario mt-8">
+      <Card class="shadow-papel">
+        <CardHeader class="text-center">
+          <CardTitle>Entrá a tu panel</CardTitle>
+          <CardDescription class="text-body">
+            Usá la misma cuenta de Google que tenés en el celular. No hay que
+            inventar ninguna contraseña.
+          </CardDescription>
+        </CardHeader>
 
-          <CardContent class="flex flex-col gap-6">
-            <Button
-              id="google-signin"
-              variant="outline"
-              size="lg"
-              class="w-full sello-press bg-card font-extrabold sello-foreground"
-            >
-              <span
-                data-estado="listo"
-                class="inline-flex items-center gap-2.5"
-              >
-                <Icon name="logos:google-icon" />
-                Continuar con Google
-              </span>
-              <span
-                data-estado="cargando"
-                class="inline-flex items-center gap-2.5"
-                hidden
-              >
-                <Icon name="lucide:loader-circle" class="animate-spin" />
-                Abriendo Google…
-              </span>
-            </Button>
-
-            <p
-              id="google-error"
-              class="flex items-start gap-2 text-support font-bold text-error"
-              role="alert"
+        <CardContent class="flex flex-col gap-6">
+          <Button
+            id="google-signin"
+            variant="outline"
+            size="lg"
+            class="w-full sello-press bg-card font-extrabold sello-foreground"
+          >
+            <span data-estado="listo" class="inline-flex items-center gap-2.5">
+              <Icon name="logos:google-icon" />
+              Continuar con Google
+            </span>
+            <span
+              data-estado="cargando"
+              class="inline-flex items-center gap-2.5"
               hidden
             >
-              <Icon name="lucide:circle-alert" class="mt-0.5 size-5 shrink-0" />
-              <span>
-                No pudimos abrir Google. Fijate la conexión y probá de nuevo.
-              </span>
-            </p>
+              <Icon name="lucide:loader-circle" class="animate-spin" />
+              Abriendo Google…
+            </span>
+          </Button>
 
-            <hr class="perforado" />
+          <p
+            id="google-error"
+            class="flex items-start gap-2 text-support font-bold text-error"
+            role="alert"
+            hidden
+          >
+            <Icon name="lucide:circle-alert" class="mt-0.5 size-5 shrink-0" />
+            <span>
+              No pudimos abrir Google. Fijate la conexión y probá de nuevo.
+            </span>
+          </p>
 
-            <ul class="flex flex-col gap-3 text-support text-muted-foreground">
-              {
-                garantias.map((texto) => (
-                  <li class="flex gap-2.5">
-                    <Icon
-                      name="lucide:check"
-                      class="mt-0.5 size-5 shrink-0 text-success"
-                    />
-                    {texto}
-                  </li>
-                ))
-              }
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+          <hr class="perforado" />
 
-      <p class="mt-5 text-center text-support text-subtle-foreground">
-        Al entrar aceptás los <a href="/terminos" class="text-primary"
-          >términos</a
-        >. · <a href="/" class="text-primary">Volver al inicio</a>
-      </p>
+          <ul class="flex flex-col gap-3 text-support text-muted-foreground">
+            {
+              garantias.map((texto) => (
+                <li class="flex gap-2.5">
+                  <Icon
+                    name="lucide:check"
+                    class="mt-0.5 size-5 shrink-0 text-success"
+                  />
+                  {texto}
+                </li>
+              ))
+            }
+          </ul>
+        </CardContent>
+      </Card>
     </div>
-  </main>
-</Base>
+
+    <p class="mt-5 text-center text-support text-subtle-foreground">
+      Al entrar aceptás los <a href="/terminos" class="text-primary">términos</a
+      >. · <a href="/" class="text-primary">Volver al inicio</a>
+    </p>
+  </div>
+</Focused>
 
 <script>
   import { createAuthClient } from 'better-auth/client';
