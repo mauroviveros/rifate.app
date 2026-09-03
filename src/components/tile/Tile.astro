@@ -1,0 +1,14 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import type { VariantProps } from 'tailwind-variants';
+
+import { tile } from './variants';
+
+type Props = HTMLAttributes<'span'> & VariantProps<typeof tile>;
+
+const { size, tone, class: className, ...rest } = Astro.props;
+---
+
+<span class={tile({ size, tone, class: className })} {...rest}>
+  <slot />
+</span>
