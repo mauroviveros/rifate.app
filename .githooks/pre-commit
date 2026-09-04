@@ -1,0 +1,8 @@
+#!/bin/sh
+# Formatea sólo lo que está en el índice. Tiene que tardar ~1s: si tarda más,
+# lo vas a terminar salteando con --no-verify y no sirve de nada.
+archivos=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|astro|mjs|json|css|md|ya?ml)$')
+[ -z "$archivos" ] && exit 0
+
+echo "$archivos" | xargs pnpm exec prettier --write --ignore-unknown
+echo "$archivos" | xargs git add
