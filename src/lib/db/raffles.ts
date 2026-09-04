@@ -6,6 +6,7 @@ import type {
   OwnerRaffle,
   PublicRaffle,
   RaffleCard,
+  RaffleListItem,
   RaffleStatus,
   RaffleTier,
   UnlockMethod,
@@ -57,6 +58,17 @@ const toCard = (r: RaffleRow): RaffleCard => ({
   createdAt: r.created_at,
 });
 
+/**
+ * La tarjeta del listado del panel. Los tres campos de más salen de columnas
+ * que `COLUMNAS` ya pedía y `toCard()` descarta — no hay consulta nueva.
+ */
+const toListItem = (r: RaffleRow): RaffleListItem => ({
+  ...toCard(r),
+  prize: r.prize,
+  winnerNumber: r.winner_number,
+  winnerName: r.winner_name,
+});
+
 const toOwner = (r: RaffleRow): OwnerRaffle => ({
   ...toCard(r),
   description: r.description,
@@ -94,7 +106,7 @@ const toPublic = (r: RaffleRow): PublicRaffle => ({
 export const listOwnRaffles = async (
   db: D1Database,
   actor: Actor, // ← sin `?`, sin valor por defecto. Si te lo olvidás, no compila.
-): Promise<RaffleCard[]> => {
+): Promise<RaffleListItem[]> => {
   const userId = userIdOf(actor);
   if (userId === null) throw new AppError('FORBIDDEN');
 
@@ -105,7 +117,7 @@ export const listOwnRaffles = async (
     .bind(userId)
     .all<RaffleRow>();
 
-  return results.map(toCard);
+  return results.map(toListItem);
 };
 
 /** La rifa completa, para el dashboard. Ajena → FORBIDDEN, no un null ambiguo. */
