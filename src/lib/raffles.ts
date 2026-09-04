@@ -7,6 +7,7 @@
  */
 
 import type { NewRaffle } from '@/types/raffle';
+import { AppError } from '@/utils/errors';
 
 import type { Actor } from './auth/actor';
 import { userIdOf } from './auth/actor';
@@ -14,7 +15,6 @@ import { userIdOf } from './auth/actor';
 // parámetro (y también el namespace del DO), así que está del lado de adentro
 // del límite que arma `src/lib/db/index.ts`, no del lado de las páginas.
 import { createRaffle, getOwnRaffle, markPublished } from './db/raffles';
-import { AppError } from './errors';
 
 type RaffleNamespace = Env['RAFFLE'];
 

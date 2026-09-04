@@ -1,8 +1,8 @@
 import type { Actor } from '@/lib/auth/actor';
 import { isAdmin, userIdOf } from '@/lib/auth/actor';
-import { AppError } from '@/lib/errors';
-import { normalizePhone, now } from '@/lib/normalize';
 import type { Profile, Role } from '@/types/profile';
+import { AppError } from '@/utils/errors';
+import { now, phone } from '@/utils/normalize';
 
 /**
  * ⚠️ `role` NO está acá, y no es un olvido: es la única defensa contra la
@@ -76,7 +76,7 @@ export const updateProfile = async (
     .bind(
       input.displayName.trim(),
       input.avatarUrl,
-      normalizePhone(input.contactPhone),
+      phone(input.contactPhone),
       now(),
       userId,
     )

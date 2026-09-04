@@ -1,6 +1,4 @@
 import { type Actor, isAdmin, userIdOf } from '@/lib/auth/actor';
-import { AppError } from '@/lib/errors';
-import { normalizePhone, now, slugUnique } from '@/lib/normalize';
 import type {
   NewRaffle,
   OwnerRaffle,
@@ -11,6 +9,8 @@ import type {
   RaffleTier,
   UnlockMethod,
 } from '@/types/raffle';
+import { AppError } from '@/utils/errors';
+import { genSlug, now, phone } from '@/utils/normalize';
 
 type RaffleRow = {
   id: string;
@@ -185,7 +185,7 @@ export const createRaffle = async (
   if (userId === null) throw new AppError('FORBIDDEN');
 
   const id = crypto.randomUUID();
-  const slug = slugUnique(input.title);
+  const slug = genSlug(input.title);
   const ts = now();
 
   await db
@@ -207,7 +207,7 @@ export const createRaffle = async (
       input.totalNumbers,
       input.numberStart,
       input.drawDate,
-      normalizePhone(input.contactPhone),
+      phone(input.contactPhone),
       ts,
       ts,
     )

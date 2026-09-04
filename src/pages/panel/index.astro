@@ -1,159 +1,28 @@
 ---
-import { Icon } from 'astro-icon/components';
-
-import Raffle from '@/components/panel/Raffle.astro';
+import Empty from '@/components/panel/Empty.astro';
+import Header from '@/components/panel/Header.astro';
+import MobileBar from '@/components/panel/MobileBar.astro';
+import NewRaffle from '@/components/panel/NewRaffle.astro';
+import Raffles from '@/components/panel/Raffles.astro';
 import Stats from '@/components/panel/Stats.astro';
-import { Button } from '@/components/starwind/button';
-import Tile from '@/components/tile';
 import Dashboard from '@/layouts/Dashboard.astro';
 import { listOwnRaffles } from '@/lib/db';
 
-/* El catálogo vive en D1 y esta pantalla no abre ningún Durable Object: el
-   avance de cada rifa sale de `sold_count` / `reserved_count`, que el DO
-   sincroniza cuando vende. Despertar un DO por tarjeta para pintar una lista
-   sería el peor patrón posible acá.
-
-   El `db` no aparece: lo resuelve `src/lib/db/index.ts`, que es el único
-   módulo que toca el binding. Lo que sí aparece es el actor, porque el
-   repositorio lo exige — es lo que reemplaza a las RLS (docs/04). */
 const rifas = await listOwnRaffles(Astro.locals.actor);
-
-const enVenta = rifas.filter((r) => r.status === 'PUBLISHED').length;
-const borradores = rifas.filter((r) => r.status === 'DRAFT').length;
-const sorteadas = rifas.filter((r) => r.status === 'CLOSED').length;
-
-/* «Tenés 2 rifas en venta y 1 ya sorteada.» Las partes en cero no se nombran:
-   «0 ya sorteadas» es ruido, y con `Intl.ListFormat` el «y» de la última cae
-   solo, con la coma en el medio cuando son tres. */
-const partes = [
-  enVenta > 0 && `${enVenta} ${enVenta === 1 ? 'rifa' : 'rifas'} en venta`,
-  borradores > 0 && `${borradores} sin publicar`,
-  sorteadas > 0 &&
-    `${sorteadas} ya ${sorteadas === 1 ? 'sorteada' : 'sorteadas'}`,
-].filter((parte) => typeof parte === 'string');
-
-const lista = new Intl.ListFormat('es-AR', { type: 'conjunction' });
-const bajada =
-  partes.length > 0
-    ? `Tenés ${lista.format(partes)}.`
-    : 'Acá van a estar todas tus rifas.';
 ---
 
 <Dashboard title="Mis rifas · rifate.app">
-  <header
-    class:list={[
-      'flex flex-col gap-6',
-      'sm:flex-row sm:items-end sm:justify-between',
-    ]}
-  >
-    <hgroup>
-      <h1 class="text-[2.25rem] sm:text-display">Mis rifas</h1>
-      <p class="mt-2 text-support text-muted-foreground sm:text-body">
-        {bajada}
-      </p>
-    </hgroup>
-
-    {
-      rifas.length > 0 && (
-        <Button
-          href="/panel/rifa/crear"
-          variant="primary"
-          class="hidden sm:flex"
-        >
-          <Icon name="lucide:plus" class="size-5.5" aria-hidden="true" />
-          Crear una rifa nueva
-        </Button>
-      )
-    }
-  </header>
+  <Header rifas={rifas} />
 
   {
     rifas.length === 0 ? (
-      <div
-        class:list={[
-          'mt-8 rounded-xl border-3 border-dashed border-input sm:mt-9',
-          'flex flex-col items-center gap-5 px-6 py-14 text-center sm:py-20',
-        ]}
-      >
-        <Tile size="xl" tone="warning" aria-hidden="true">
-          <Icon name="lucide:ticket" />
-        </Tile>
-
-        <div class="max-w-120">
-          <h2 class="text-title">Todavía no tenés ninguna rifa</h2>
-          <p class="mt-2 text-pretty text-muted-foreground">
-            Armá la primera, mandá el link por WhatsApp y mirá desde acá qué
-            números se van vendiendo.
-          </p>
-        </div>
-
-        <Button href="/panel/rifa/crear" variant="primary" size="lg">
-          <Icon name="lucide:plus" class="size-6" aria-hidden="true" />
-          Crear mi primera rifa
-        </Button>
-      </div>
+      <Empty />
     ) : (
       <>
-        <Stats class="mt-8 sm:mt-9" rifas={rifas} />
-
-        <ul class="mt-5 grid gap-4 sm:mt-8 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-          {rifas.map((rifa) => (
-            <Raffle rifa={rifa} />
-          ))}
-        </ul>
-      </>
-    )
-  }
-
-  {
-    rifas.length > 0 && (
-      <>
-        <div
-          class:list={[
-            'mt-5 rounded-xl border-3 border-dashed border-input p-6 sm:mt-8 sm:p-8',
-            'flex flex-col items-center gap-5 text-center',
-            'sm:flex-row sm:justify-between sm:text-left',
-          ]}
-        >
-          <div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-4.5">
-            <Tile size="xl" tone="warning" aria-hidden="true">
-              <Icon name="lucide:plus" />
-            </Tile>
-
-            <div>
-              <h2 class="text-[1.3125rem] sm:text-2xl">¿Arrancás otra rifa?</h2>
-              <p class="mt-1 text-support text-muted-foreground">
-                Se carga en dos minutos y te queda el link listo para mandar.
-              </p>
-            </div>
-          </div>
-
-          <Button
-            href="/panel/rifa/crear"
-            size="sm"
-            class="hidden shrink-0 sm:inline-flex"
-          >
-            Crear una rifa nueva
-          </Button>
-        </div>
-
-        {/* El alto de la barra fija, para que la última tarjeta no quede debajo.
-        Con la pantalla vacía no hay barra: el CTA ya está en el medio, y dos
-        acciones principales a la vez rompen la regla 2. */}
-        <div class="h-24 sm:hidden" aria-hidden="true" />
-
-        <div
-          class:list={[
-            'fixed inset-x-0 bottom-0 z-10 sm:hidden',
-            'border-t-2 border-border bg-card px-5 pt-3.5 pb-4.5',
-            'shadow-[0_-12px_28px_-16px_rgba(23,24,28,0.5)]',
-          ]}
-        >
-          <Button href="/panel/rifa/crear" variant="primary" class="w-full">
-            <Icon name="lucide:plus" class="size-5.5" aria-hidden="true" />
-            Crear una rifa nueva
-          </Button>
-        </div>
+        <Stats rifas={rifas} />
+        <Raffles rifas={rifas} />
+        <NewRaffle />
+        <MobileBar />
       </>
     )
   }

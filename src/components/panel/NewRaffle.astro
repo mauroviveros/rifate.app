@@ -1,0 +1,35 @@
+---
+import { Icon } from 'astro-icon/components';
+
+import Tile from '@/components/tile';
+
+import NewRaffleButton from './NewRaffleButton.astro';
+---
+
+<div
+  class:list={[
+    'mt-5 rounded-xl border-3 border-dashed border-input p-6 sm:mt-8 sm:p-8',
+    'flex flex-col items-center gap-5 text-center',
+    'sm:flex-row sm:justify-between sm:text-left',
+  ]}
+>
+  <div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-4.5">
+    <Tile size="xl" tone="warning" aria-hidden="true">
+      <Icon name="lucide:plus" />
+    </Tile>
+
+    <div>
+      <h2 class="text-[1.3125rem] sm:text-2xl">¿Arrancás otra rifa?</h2>
+      <p class="mt-1 text-support text-muted-foreground">
+        Se carga en dos minutos y te queda el link listo para mandar.
+      </p>
+    </div>
+  </div>
+
+  <NewRaffleButton
+    variant="default"
+    size="sm"
+    icono={false}
+    class="hidden shrink-0 sm:inline-flex"
+  />
+</div>

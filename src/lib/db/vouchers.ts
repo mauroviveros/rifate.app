@@ -1,7 +1,7 @@
 import { type Actor, isAdmin, userIdOf } from '@/lib/auth/actor';
-import { AppError } from '@/lib/errors';
-import { normalizeVoucherCode, now } from '@/lib/normalize';
 import type { RaffleTier } from '@/types/raffle';
+import { AppError } from '@/utils/errors';
+import { now, voucherCode } from '@/utils/normalize';
 
 export type NewVoucher = {
   code: string;
@@ -20,7 +20,7 @@ export const issueVoucher = async (
   if (!isAdmin(actor)) throw new AppError('FORBIDDEN');
 
   const id = crypto.randomUUID();
-  const code = normalizeVoucherCode(input.code);
+  const code = voucherCode(input.code);
   const ts = now();
 
   await db
@@ -73,7 +73,7 @@ export const redeemVoucher = async (
   const userId = userIdOf(actor);
   if (userId === null) throw new AppError('FORBIDDEN');
 
-  const code = normalizeVoucherCode(rawCode);
+  const code = voucherCode(rawCode);
   const ts = now();
 
   // La rifa primero: si no es tuya, no llegás siquiera a saber si el código

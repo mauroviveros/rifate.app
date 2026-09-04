@@ -1,0 +1,17 @@
+---
+import type { RaffleListItem } from '@/types/raffle';
+import { inDays } from '@/utils/format';
+
+import Raffle from './Raffle.astro';
+
+interface Props {
+  rifas: RaffleListItem[];
+}
+
+const { rifas } = Astro.props;
+const limite = inDays(7);
+---
+
+<ul class="mt-5 grid gap-4 sm:mt-8 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+  {rifas.map((rifa) => <Raffle rifa={rifa} limite={limite} />)}
+</ul>

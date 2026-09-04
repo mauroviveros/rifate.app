@@ -1,0 +1,44 @@
+---
+/**
+ * El botón que lleva a crear una rifa.
+ *
+ * Aparece cuatro veces en el panel —cabecera, pantalla vacía, bloque de abajo y
+ * barra fija del celular— y las cuatro tienen que apuntar al mismo lado. La
+ * ruta y el copy por defecto viven acá una sola vez; lo que cambia entre una y
+ * otra es sólo el peso visual, que va por props.
+ */
+import { Icon } from 'astro-icon/components';
+
+import { Button } from '@/components/starwind/button';
+
+interface Props {
+  variant?: 'primary' | 'default' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
+  /** El bloque de «¿Arrancás otra rifa?» va sin `+`: el ícono ya lo lleva el
+      Tile de al lado y repetirlo sería decir dos veces lo mismo. */
+  icono?: boolean;
+  class?: string;
+}
+
+const {
+  variant = 'primary',
+  size = 'md',
+  icono = true,
+  class: className,
+} = Astro.props;
+
+/* Un punto por encima de lo que da la escala del botón, que es lo que dibuja
+   el canvas. `lg` coincide con la escala, y se deja explícito igual para que
+   los tres se lean juntos. */
+const ICONO = { sm: 'size-5', md: 'size-5.5', lg: 'size-6' };
+---
+
+<Button
+  href="/panel/rifa/crear"
+  variant={variant}
+  size={size}
+  class={className}
+>
+  {icono && <Icon name="lucide:plus" class={ICONO[size]} aria-hidden="true" />}
+  <slot>Crear una rifa nueva</slot>
+</Button>

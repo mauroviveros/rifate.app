@@ -1,7 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
 
-import { AppError } from '@/lib/errors';
-import { normalizePhone, now } from '@/lib/normalize';
 import type {
   BuyerInput,
   OwnerNumber,
@@ -11,6 +9,8 @@ import type {
   RaffleStats,
   SellResult,
 } from '@/types/raffle';
+import { AppError } from '@/utils/errors';
+import { now, phone } from '@/utils/normalize';
 
 import { getMeta, migrate, seedNumbers, setMeta } from './schema';
 
@@ -156,7 +156,7 @@ export class Raffle extends DurableObject<Env> {
     const nombre = buyer.name.trim();
     if (nombre === '') throw new AppError('INVALID_NUMBERS');
 
-    const telefono = normalizePhone(buyer.phone);
+    const telefono = phone(buyer.phone);
     const ts = now();
     const sql = this.ctx.storage.sql;
 

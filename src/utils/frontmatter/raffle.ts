@@ -1,0 +1,102 @@
+/**
+ * Lo que la tarjeta del panel calcula antes de dibujarse.
+ *
+ * Está acá y no adentro del `.astro` por dos razones: el frontmatter de un
+ * componente no se puede testear, y todo esto son funciones puras sobre una
+ * `RaffleListItem`. La tarjeta queda con el markup y nada más.
+ */
+
+import type { RaffleListItem } from '@/types/raffle';
+import { progress } from '@/utils/format';
+
+/**
+ * El estado que ve el organizador, que NO es `rifa.status`.
+ *
+ * `CANCELLED` y `CLOSED` se dicen igual —la rifa terminó, no hay nada que
+ * hacerle—, y «últimos días» es una capa encima de `PUBLISHED` que depende de
+ * la fecha y no de la columna. Un solo discriminante para las dos tablas de
+ * abajo, así el badge y el botón no pueden contradecirse.
+ */
+export type EstadoTarjeta =
+  'cerrada' | 'borrador' | 'ultimos-dias' | 'en-venta';
+
+/**
+ * `limite` es un día del calendario en ISO (`inDays(7)`), no un `Date`: el ISO
+ * ordena lexicográficamente, así que la comparación es correcta sin construir
+ * nada ni pasar por una zona horaria.
+ */
+export const estadoDe = (
+  rifa: RaffleListItem,
+  limite: string,
+): EstadoTarjeta => {
+  if (rifa.status === 'CLOSED' || rifa.status === 'CANCELLED') return 'cerrada';
+  if (rifa.status === 'DRAFT') return 'borrador';
+
+  return rifa.drawDate <= limite ? 'ultimos-dias' : 'en-venta';
+};
+
+/**
+ * Los tres badges del artboard más el borrador, que el canvas no dibuja pero el
+ * modelo tiene: una rifa en `DRAFT` no está en venta y decirlo «En venta» sería
+ * mentir. Ninguno depende sólo del color — cada uno lo dice (regla 8).
+ *
+ * El `Record<EstadoTarjeta, …>` es el punto de todo esto: si mañana aparece un
+ * estado nuevo, TypeScript obliga a llenarlo acá y en `ACCION`. Con la cadena
+ * de ternarios que había antes, el estado nuevo caía en el `else` y la rifa se
+ * mostraba «En venta» sin que nadie se enterara.
+ */
+// prettier-ignore
+export const BADGE: Record<EstadoTarjeta, { texto: string; clase: string }> = {
+  'cerrada':      { texto: 'Ya sorteada',  clase: 'bg-muted text-subtle-foreground' },
+  'borrador':     { texto: 'Sin publicar', clase: 'bg-warning/35 text-foreground' },
+  'ultimos-dias': { texto: 'Últimos días', clase: 'bg-primary/10 text-primary' },
+  'en-venta':     { texto: 'En venta',     clase: 'bg-success/12 text-success' },
+};
+
+/**
+ * El botón dice lo que se puede hacer, y con un borrador NO es vender: la rifa
+ * todavía no está publicada, así que «Ver y vender» sería una promesa falsa
+ * (regla 4 — se habla como en el barrio, y también se dice la verdad).
+ *
+ * Las cuatro van al mismo detalle; lo que cambia es la expectativa.
+ */
+// prettier-ignore
+export const ACCION: Record<
+  EstadoTarjeta,
+  { texto: string; variante: 'default' | 'outline' }
+> = {
+  'cerrada':      { texto: 'Ver el detalle',      variante: 'outline' },
+  'borrador':     { texto: 'Terminar de armarla', variante: 'default' },
+  'ultimos-dias': { texto: 'Ver y vender',        variante: 'default' },
+  'en-venta':     { texto: 'Ver y vender',        variante: 'default' },
+};
+
+/**
+ * La miniatura de la grilla: 40 puntos, no los 100 números.
+ *
+ * Los vendidos se reparten con `i * 13 % 40` —13 y 40 son coprimos, así que la
+ * vuelta pasa por los 40 lugares sin repetir ninguno— para que se vea salpicado
+ * como en el canvas y no como una segunda barra de progreso. Sin azar: el mismo
+ * avance dibuja siempre los mismos puntos.
+ */
+const PUNTOS = 40;
+
+export const puntosDe = (rifa: RaffleListItem): boolean[] => {
+  const vendidos = Math.round(
+    (PUNTOS * progress(rifa.soldCount, rifa.totalNumbers)) / 100,
+  );
+
+  return Array.from({ length: PUNTOS }, (_, i) => (i * 13) % PUNTOS < vendidos);
+};
+
+/**
+ * La bajada: el premio, o quién ganó cuando la rifa ya se sorteó. Puede volver
+ * `null` — una rifa sin premio cargado no muestra la línea.
+ */
+export const bajadaDe = (
+  rifa: RaffleListItem,
+  cerrada: boolean,
+): string | null =>
+  cerrada && rifa.winnerNumber !== null
+    ? `Ganó el número ${rifa.winnerNumber}${rifa.winnerName ? ` · ${rifa.winnerName}` : ''}`
+    : rifa.prize;
