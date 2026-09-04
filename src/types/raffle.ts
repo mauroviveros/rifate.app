@@ -142,3 +142,18 @@ export type PublicRaffle = {
   winnerNumber: number | null;
   winnerName: string | null;
 };
+
+/**
+ * Lo que dibuja la tarjeta del listado del panel (artboard `Dashboard`).
+ *
+ * Es `RaffleCard` más tres campos que la tarjeta muestra y la card pelada no
+ * tiene: el premio de la bajada («Bici rodado 29 + canasta de asado») y el
+ * ganador de la rifa ya sorteada («Ganó el número 34 · Ana Ríos»).
+ *
+ * Se agregan acá y no en `RaffleCard` a propósito: `RaffleCard` es la base que
+ * también van a usar las superficies públicas, y `prize` / `winnerName` en la
+ * base sería justo el ensanche que docs/04 pide evitar. `listOwnRaffles` los
+ * mapea con su propio `toListItem()`; las columnas ya venían en `COLUMNAS`.
+ */
+export type RaffleListItem = RaffleCard &
+  Pick<OwnerRaffle, 'prize' | 'winnerNumber' | 'winnerName'>;

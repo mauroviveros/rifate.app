@@ -51,6 +51,24 @@ describe('raffles · autorización', () => {
     expect(deAna[0]?.title).toBe('Rifa del Club');
   });
 
+  it('el listado trae el premio y el ganador que dibuja la tarjeta', async () => {
+    // `toCard()` los descarta; el listado del panel usa `toListItem()`. Si
+    // alguien vuelve a mapear con `toCard`, la bajada y el «Ganó el número…»
+    // de la tarjeta se vacían en silencio: esto es lo que lo evita.
+    const { id } = await createRaffle(env.DB, organizador('ana'), RIFA);
+    await env.DB.prepare(
+      `UPDATE raffles SET winner_number = ?, winner_name = ? WHERE id = ?`,
+    )
+      .bind(7, 'Ana Ríos', id)
+      .run();
+
+    const [rifa] = await listOwnRaffles(env.DB, organizador('ana'));
+
+    expect(rifa?.prize).toBe('Una bici');
+    expect(rifa?.winnerNumber).toBe(7);
+    expect(rifa?.winnerName).toBe('Ana Ríos');
+  });
+
   it('un organizador no puede abrir la rifa de otro', async () => {
     const { id } = await createRaffle(env.DB, organizador('ana'), RIFA);
 
