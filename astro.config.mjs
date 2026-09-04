@@ -14,6 +14,7 @@ export default defineConfig({
       include: {
         lucide: [
           'arrow-right',
+          'calendar',
           'check',
           'chevron-down',
           'circle-alert',
@@ -23,6 +24,7 @@ export default defineConfig({
           'log-out',
           'mail',
           'message-circle',
+          'plus',
           'share-2',
           'ticket',
         ],

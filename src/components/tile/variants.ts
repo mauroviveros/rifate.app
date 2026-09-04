@@ -30,6 +30,7 @@ export const tile = tv({
       ink: 'bg-foreground text-background',
       muted: 'bg-muted text-muted-foreground',
       primary: 'bg-primary text-primary-foreground',
+      warning: 'bg-warning text-foreground',
     },
   },
   defaultVariants: { size: 'md', tone: 'ink' },
