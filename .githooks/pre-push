@@ -1,0 +1,11 @@
+#!/bin/sh
+# Sólo gatea lo que va a main. A una rama de trabajo se empuja sin esperar los
+# ~35 segundos que tardan los tres comandos: ahí el que revisa es el workflow.
+gate=""
+while read -r _local _lsha remote _rsha; do
+  case "$remote" in refs/heads/main) gate=1 ;; esac
+done
+[ -z "$gate" ] && exit 0
+
+echo "→ main: lint + check + tests"
+pnpm lint && pnpm check && pnpm test
