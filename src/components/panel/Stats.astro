@@ -1,0 +1,90 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+import { Card } from '@/components/starwind/card';
+import { pesos } from '@/lib/format';
+import type { RaffleListItem } from '@/types/raffle';
+
+interface Props extends HTMLAttributes<'dl'> {
+  rifas: RaffleListItem[];
+}
+
+const { rifas, class: className, ...props } = Astro.props;
+const enVenta = rifas.filter((r) => r.status === 'PUBLISHED');
+const vendidos = enVenta.reduce((t, r) => t + r.soldCount, 0);
+const numeros = enVenta.reduce((t, r) => t + r.totalNumbers, 0);
+const recaudado = enVenta.reduce((t, r) => t + r.soldCount * r.ticketPrice, 0);
+const avance = numeros > 0 ? Math.round((vendidos * 100) / numeros) : 0;
+---
+
+<dl
+  class:list={['grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4', className]}
+  aria-label="Resumen de tus rifas"
+  {...props}
+>
+  <Card size="sm" class:list={['hidden sm:flex', 'gap-0 px-5 sm:px-6']}>
+    <dt class="mb-2 text-label font-bold text-subtle-foreground">
+      Rifas en venta
+    </dt>
+    <dd
+      class="font-display text-[1.75rem] font-extrabold tracking-tight sm:text-[2.625rem]"
+      data-numero
+    >
+      {enVenta.length}
+    </dd>
+  </Card>
+
+  <Card size="sm" class="gap-0 px-5 sm:px-6">
+    <dt class="mb-2 text-label font-bold text-subtle-foreground">
+      <span class="sm:hidden">Vendidos</span>
+      <span class="hidden sm:inline">Números vendidos</span>
+    </dt>
+    <dd
+      class="font-display text-[1.75rem] font-extrabold tracking-tight sm:text-[2.625rem]"
+      data-numero
+    >
+      {vendidos}
+      &nbsp;
+      <span class="text-xl text-subtle-foreground sm:text-2xl">
+        de {numeros}
+      </span>
+    </dd>
+  </Card>
+
+  <Card
+    size="sm"
+    class:list={['bg-foreground ring-foreground', 'gap-0 px-5 sm:px-6']}
+  >
+    <dt class="mb-2 text-label font-bold text-background/60">Recaudado</dt>
+    <dd
+      class:list={[
+        'font-display text-[1.75rem] font-extrabold tracking-tight sm:text-[2.625rem]',
+        'text-warning',
+      ]}
+      data-numero
+    >
+      {pesos(recaudado)}
+    </dd>
+  </Card>
+
+  <Card size="sm" class:list={['hidden sm:flex', 'gap-0 px-5 sm:px-6']}>
+    <dt class="mb-2.5 text-label font-bold text-subtle-foreground">
+      Avance general
+    </dt>
+    <dd class="flex items-center gap-3">
+      <div
+        class="h-3.5 flex-1 overflow-hidden rounded-full bg-border"
+        aria-hidden="true"
+      >
+        <div class="h-full rounded-full bg-success" style={`width: ${avance}%`}>
+        </div>
+      </div>
+      <span
+        class="font-display text-2xl font-extrabold tracking-tight text-success"
+        data-numero
+      >
+        {avance}%
+      </span>
+    </dd>
+  </Card>
+</dl>
