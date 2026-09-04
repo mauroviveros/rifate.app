@@ -1,7 +1,15 @@
+/**
+ * La normalización de lo que se GUARDA. Los nombres son cortos a propósito:
+ * el verbo lo pone el módulo —`normalize.phone()`, `normalize.voucherCode()`—
+ * y repetirlo en cada función sólo alargaba el punto de llamada.
+ *
+ * La punta opuesta del mismo eje es `format.ts`, que deriva lo que se LEE.
+ */
+
 import { AppError } from './errors';
 
 /** Argentina. Es el único mercado en el que se opera. */
-const CODIGO_DE_PAIS = '54';
+const COUNTRY_CODE = '54';
 
 /** La única fuente de `updated_at` / `created_at`. */
 export const now = (): number => Date.now();
@@ -20,9 +28,7 @@ export const now = (): number => Date.now();
  * los fijos en silencio. Si el link de WhatsApp lo necesita, se resuelve en el
  * formulario, pidiéndolo bien.
  */
-export const normalizePhone = (
-  raw: string | null | undefined,
-): string | null => {
+export const phone = (raw: string | null | undefined): string | null => {
   if (raw === null || raw === undefined) return null;
 
   const clean = raw.trim();
@@ -33,7 +39,7 @@ export const normalizePhone = (
 
   if (!isInternational) {
     digits = digits.replace(/^0+/, ''); // quita ceros de discado nacional
-    if (!digits.startsWith(CODIGO_DE_PAIS)) digits = CODIGO_DE_PAIS + digits;
+    if (!digits.startsWith(COUNTRY_CODE)) digits = COUNTRY_CODE + digits;
   }
 
   const e164 = `+${digits}`;
@@ -45,12 +51,11 @@ export const normalizePhone = (
   return e164;
 };
 
-export const normalizeVoucherCode = (raw: string): string =>
-  raw.trim().toUpperCase();
+export const voucherCode = (raw: string): string => raw.trim().toUpperCase();
 
 /** `Rifa del Club 2026` → `rifa-del-club-2026`. Sin acentos ni signos. */
-export const slugify = (texto: string): string =>
-  texto
+export const slugify = (text: string): string =>
+  text
     .toLowerCase() // convierte a minúsculas
     .normalize('NFD') // descompone los caracteres acentuados en dos caracteres: la letra y el acento
     .replace(/[\u0300-\u036f]/g, '') // quita acentos
@@ -58,6 +63,13 @@ export const slugify = (texto: string): string =>
     .replace(/^-+|-+$/g, '') // quita guiones al principio y al final
     .slice(0, 60) || 'rifa';
 
-/** Genera un slug único a partir de un título dado.*/
-export const slugUnique = (titulo: string): string =>
-  `${slugify(titulo)}-${crypto.randomUUID().slice(0, 8)}`;
+/**
+ * El slug con el que se guarda una rifa: `slugify()` más ocho caracteres al
+ * azar, para que dos rifas con el mismo título no choquen.
+ *
+ * Se llama `genSlug` y no `slug` a propósito: al lado de `slugify()` un `slug()`
+ * sería una moneda al aire en el punto de llamada, y el `gen` avisa que el
+ * resultado no es determinista.
+ */
+export const genSlug = (title: string): string =>
+  `${slugify(title)}-${crypto.randomUUID().slice(0, 8)}`;

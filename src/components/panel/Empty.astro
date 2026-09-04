@@ -1,0 +1,28 @@
+---
+import { Icon } from 'astro-icon/components';
+
+import Tile from '@/components/tile';
+
+import NewRaffleButton from './NewRaffleButton.astro';
+---
+
+<div
+  class:list={[
+    'mt-8 rounded-xl border-3 border-dashed border-input sm:mt-9',
+    'flex flex-col items-center gap-5 px-6 py-14 text-center sm:py-20',
+  ]}
+>
+  <Tile size="xl" tone="warning" aria-hidden="true">
+    <Icon name="lucide:ticket" />
+  </Tile>
+
+  <div class="max-w-120">
+    <h2 class="text-title">Todavía no tenés ninguna rifa</h2>
+    <p class="mt-2 text-pretty text-muted-foreground">
+      Armá la primera, mandá el link por WhatsApp y mirá desde acá qué números
+      se van vendiendo.
+    </p>
+  </div>
+
+  <NewRaffleButton size="lg">Crear mi primera rifa</NewRaffleButton>
+</div>

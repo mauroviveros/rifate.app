@@ -2,81 +2,37 @@
 import { Icon } from 'astro-icon/components';
 
 import { Button } from '@/components/starwind/button';
-import { fechaCorta, pesos } from '@/lib/format';
 import type { RaffleListItem } from '@/types/raffle';
+import { pesos, progress, shortDate } from '@/utils/format';
+import {
+  ACCION,
+  BADGE,
+  bajadaDe,
+  estadoDe,
+  puntosDe,
+} from '@/utils/frontmatter/raffle';
 
 export interface Props {
   rifa: RaffleListItem;
+  /** El día del calendario a partir del cual una rifa está en «últimos días».
+      Lo calcula la página una vez por request y baja por prop: si fuera un
+      `const` de módulo se congelaría con el isolate de Workers. */
+  limite: string;
 }
 
-const { rifa } = Astro.props;
+const { rifa, limite } = Astro.props;
 
-/** Un día del calendario se compara como string ISO: sin `Date`, sin zonas. */
-const enISO = (fecha: Date): string => fecha.toISOString().slice(0, 10);
-const EN_UNA_SEMANA = enISO(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+const estadoActual = estadoDe(rifa, limite);
+const cerrada = estadoActual === 'cerrada';
 
-const cerrada = rifa.status === 'CLOSED' || rifa.status === 'CANCELLED';
-const ultimosDias =
-  rifa.status === 'PUBLISHED' && rifa.drawDate <= EN_UNA_SEMANA;
-
-/* Los tres badges del artboard más el borrador, que el canvas no dibuja pero
-   el modelo tiene: una rifa en `DRAFT` no está en venta y decirlo «En venta»
-   sería mentir. Ninguno depende sólo del color — cada uno lo dice (regla 8). */
-const estado = cerrada
-  ? { texto: 'Ya sorteada', clase: 'bg-muted text-subtle-foreground' }
-  : rifa.status === 'DRAFT'
-    ? { texto: 'Sin publicar', clase: 'bg-warning/35 text-foreground' }
-    : ultimosDias
-      ? { texto: 'Últimos días', clase: 'bg-primary/10 text-primary' }
-      : { texto: 'En venta', clase: 'bg-success/12 text-success' };
-
-/* Se multiplica ANTES de dividir: `(113 / 200) * 100` da 56.4999… en punto
-   flotante y la tarjeta mostraría 56% donde el papel dice 57%. */
-const avance =
-  rifa.totalNumbers > 0
-    ? Math.round((rifa.soldCount * 100) / rifa.totalNumbers)
-    : 0;
-
-/* La miniatura de la grilla: 40 puntos, no los 100 números. Los vendidos se
-   reparten con `i * 13 % 40` —13 y 40 son coprimos, así que la vuelta pasa por
-   los 40 lugares sin repetir ninguno— para que se vea salpicado como en el
-   canvas y no como una segunda barra de progreso. Sin azar: el mismo avance
-   dibuja siempre los mismos puntos. */
-const PUNTOS = 40;
-const vendidosEnPuntos = Math.round((PUNTOS * avance) / 100);
-const puntos = Array.from(
-  { length: PUNTOS },
-  (_, i) => (i * 13) % PUNTOS < vendidosEnPuntos,
-);
-
-const bajada =
-  cerrada && rifa.winnerNumber !== null
-    ? `Ganó el número ${rifa.winnerNumber}${rifa.winnerName ? ` · ${rifa.winnerName}` : ''}`
-    : rifa.prize;
-
-/* El botón dice lo que se puede hacer, y con un borrador NO es vender: la
-   rifa todavía no está publicada, así que «Ver y vender» sería una promesa
-   falsa (regla 4 — se habla como en el barrio, y también se dice la verdad).
-   Las tres van al mismo detalle; lo que cambia es la expectativa. */
-const accion = cerrada
-  ? { texto: 'Ver el detalle', variante: 'outline' as const }
-  : rifa.status === 'DRAFT'
-    ? { texto: 'Terminar de armarla', variante: 'default' as const }
-    : { texto: 'Ver y vender', variante: 'default' as const };
-
-/* En `DashboardMobile` la rifa ya sorteada se achica: título, ganador, barra y
-   botón. La cuenta de vendidos y la línea de fecha y precio se van, porque de
-   una rifa terminada no hay nada que decidir con esos dos números. */
+const estado = BADGE[estadoActual];
+const accion = ACCION[estadoActual];
+const puntos = puntosDe(rifa);
+const bajada = bajadaDe(rifa, cerrada);
+const porcentaje = progress(rifa.soldCount, rifa.totalNumbers);
 const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
 ---
 
-{
-  /* A mano y no con `<Card>`: la tarjeta del canvas es un `<article>` dentro de
-    una lista y lleva su propio ritmo fila por fila, mientras que `Card` sólo
-    sabe ser un `div` con un `gap` parejo entre hijos. El contrato visual es el
-    mismo que el de `Card` a propósito —papel claro, `ring-2`, `rounded-xl`—
-    para que las dos superficies del panel se vean iguales. */
-}
 <li class="flex flex-col">
   <article
     class="flex flex-1 flex-col rounded-xl bg-card p-6 ring-2 ring-border"
@@ -100,7 +56,6 @@ const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
       )
     }
 
-    {/* La miniatura no entra en el celular: `DashboardMobile` no la dibuja. */}
     <ul class="mb-4.5 hidden flex-wrap gap-1 sm:flex" aria-hidden="true">
       {
         puntos.map((vendido) => (
@@ -127,22 +82,16 @@ const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
       <span
         class:list={[
           'font-display text-xl font-extrabold tracking-tight',
-          /* El verde es «progreso», así que un 0% en verde promete algo que no
-             pasó — y una rifa cerrada tampoco avanza más. */
-          cerrada || avance === 0 ? 'text-subtle-foreground' : 'text-success',
+          cerrada || porcentaje === 0
+            ? 'text-subtle-foreground'
+            : 'text-success',
         ]}
         data-numero
       >
-        {avance}%
+        {porcentaje}%
       </span>
     </div>
 
-    {
-      /* La barra la dice el número de al lado, así que para un lector de
-        pantalla es decoración: sin `role="progressbar"` no hay nada que
-        nombrar ni ningún `aria-valuenow` que mantener, y la pantalla sigue
-        sin mandar JavaScript. */
-    }
     <div
       class="mb-4.5 h-3 overflow-hidden rounded-full bg-border"
       aria-hidden="true"
@@ -152,7 +101,7 @@ const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
           'h-full rounded-full',
           cerrada ? 'bg-disabled-foreground/55' : 'bg-success',
         ]}
-        style={`width: ${avance}%`}
+        style={`width: ${porcentaje}%`}
       >
       </div>
     </div>
@@ -170,21 +119,14 @@ const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
           class="size-4.5 shrink-0 text-subtle-foreground"
           aria-hidden="true"
         />
-        {
-          /* El texto y el `<time>` van adentro de un solo `<span>`: en un flex,
-            un nodo de texto suelto es un item más y el `gap-2` del ícono se
-            metería también entre «Sortea el» y «20 sep». */
-        }
+
         <span>
           Sortea el <time datetime={rifa.drawDate}
-            >{fechaCorta(rifa.drawDate)}</time
+            >{shortDate(rifa.drawDate)}</time
           >
         </span>
       </span>
-      {
-        /* Mismo caso que el «de» del resumen: el espacio va explícito, si no
-          prettier deja «$2.500c/u». */
-      }
+
       <span class="shrink-0 text-support font-extrabold" data-numero>
         {pesos(rifa.ticketPrice)}<span
           class="text-label font-semibold text-subtle-foreground"
@@ -193,12 +135,6 @@ const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
       </span>
     </div>
 
-    {
-      /* El `.go` del canvas mide 52px, pero la regla 9 pone el piso en 56 y el
-        sistema gana: `size="sm"` es exactamente ese piso. Va en tinta llena
-        (acción secundaria) porque la única principal de la pantalla es «Crear
-        una rifa nueva» (regla 2). */
-    }
     <Button
       href={`/panel/rifa/${rifa.id}`}
       variant={accion.variante}

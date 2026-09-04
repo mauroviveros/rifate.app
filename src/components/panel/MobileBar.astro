@@ -1,0 +1,20 @@
+---
+import NewRaffleButton from './NewRaffleButton.astro';
+---
+
+{
+  /* El alto de la barra fija, para que la última tarjeta no quede debajo. Con
+    la pantalla vacía no hay barra: el CTA ya está en el medio, y dos acciones
+    principales a la vez rompen la regla 2. */
+}
+<div class="h-24 sm:hidden" aria-hidden="true"></div>
+
+<div
+  class:list={[
+    'fixed inset-x-0 bottom-0 z-10 sm:hidden',
+    'border-t-2 border-border bg-card px-5 pt-3.5 pb-4.5',
+    'shadow-[0_-12px_28px_-16px_rgba(23,24,28,0.5)]',
+  ]}
+>
+  <NewRaffleButton class="w-full" />
+</div>

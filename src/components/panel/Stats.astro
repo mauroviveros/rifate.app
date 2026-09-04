@@ -2,8 +2,8 @@
 import type { HTMLAttributes } from 'astro/types';
 
 import { Card } from '@/components/starwind/card';
-import { pesos } from '@/lib/format';
 import type { RaffleListItem } from '@/types/raffle';
+import { pesos, progress } from '@/utils/format';
 
 interface Props extends HTMLAttributes<'dl'> {
   rifas: RaffleListItem[];
@@ -14,11 +14,14 @@ const enVenta = rifas.filter((r) => r.status === 'PUBLISHED');
 const vendidos = enVenta.reduce((t, r) => t + r.soldCount, 0);
 const numeros = enVenta.reduce((t, r) => t + r.totalNumbers, 0);
 const recaudado = enVenta.reduce((t, r) => t + r.soldCount * r.ticketPrice, 0);
-const avance = numeros > 0 ? Math.round((vendidos * 100) / numeros) : 0;
+const avance = progress(vendidos, numeros);
 ---
 
 <dl
-  class:list={['grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4', className]}
+  class:list={[
+    'mt-8 grid grid-cols-2 gap-3 sm:mt-9 sm:gap-5 lg:grid-cols-4',
+    className,
+  ]}
   aria-label="Resumen de tus rifas"
   {...props}
 >
