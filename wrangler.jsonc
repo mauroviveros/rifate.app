@@ -4,6 +4,18 @@
   "compatibility_flags": ["global_fetch_strictly_public", "nodejs_compat"],
   "name": "rifate",
   "main": "./src/worker.ts",
+
+  // El dominio de producción. Estaba enganchado sólo desde el panel de
+  // Cloudflare, así que el repo no lo registraba.
+  "routes": [{ "pattern": "rifate.app", "custom_domain": true }],
+
+  // ⚠️ Los dos van EXPLÍCITOS y no se borran. Si hay un bloque `routes` y no
+  // se declara `workers_dev`, wrangler lo infiere como `false` en el próximo
+  // deploy y el subdominio *.workers.dev se apaga sin avisar. Y desde
+  // wrangler v4.44 los preview URLs siguen por defecto a `workers_dev`, así
+  // que se caerían los dos de una.
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": "./dist/client",
     "binding": "ASSETS",
@@ -36,6 +48,6 @@
     },
   ],
   "vars": {
-    "PUBLIC_APP_URL": "https://rifate.mauroviveros.workers.dev",
+    "PUBLIC_APP_URL": "https://rifate.app",
   },
 }
