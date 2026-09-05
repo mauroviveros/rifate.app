@@ -33,79 +33,79 @@ export type ErrorCode =
   | 'VOUCHER_EXPIRED'
   | 'VOUCHER_EXHAUSTED';
 
-type ErrorDescription = { mensaje: string; status: number };
+type ErrorDescription = { message: string; status: number };
 
-export const ERRORES: Record<ErrorCode, ErrorDescription> = {
+export const ERRORS: Record<ErrorCode, ErrorDescription> = {
   FORBIDDEN: {
-    mensaje: 'No tenés permiso para hacer esto.',
+    message: 'No tenés permiso para hacer esto.',
     status: 403,
   },
   NOT_FOUND: {
-    mensaje: 'No encontrado.',
+    message: 'No encontrado.',
     status: 404,
   },
   NUMBERS_UNAVAILABLE: {
-    mensaje: 'Alguien tomó uno de esos números. Elegí otros.',
+    message: 'Alguien tomó uno de esos números. Elegí otros.',
     status: 409,
   },
   NUMBERS_NOT_RELEASABLE: {
-    mensaje: 'Ese número ya está libre.',
+    message: 'Ese número ya está libre.',
     status: 409,
   },
   INVALID_NUMBERS: {
-    mensaje: 'Esos números no existen en esta rifa.',
+    message: 'Esos números no existen en esta rifa.',
     status: 400,
   },
   TOO_MANY_NUMBERS: {
-    mensaje: 'Podés cargar hasta 50 números por vez.',
+    message: 'Podés cargar hasta 50 números por vez.',
     status: 400,
   },
   INVALID_PHONE: {
-    mensaje: 'Ese teléfono no es válido.',
+    message: 'Ese teléfono no es válido.',
     status: 400,
   },
   RAFFLE_NOT_INITIALIZED: {
-    mensaje: 'Esta rifa todavía no terminó de crearse.',
+    message: 'Esta rifa todavía no terminó de crearse.',
     status: 409,
   },
   RAFFLE_NOT_PUBLISHED: {
-    mensaje: 'Esta rifa todavía no está publicada.',
+    message: 'Esta rifa todavía no está publicada.',
     status: 400,
   },
   RAFFLE_NOT_PUBLISHABLE: {
-    mensaje: 'Cargá un teléfono de contacto antes de publicar.',
+    message: 'Cargá un teléfono de contacto antes de publicar.',
     status: 400,
   },
   RAFFLE_NOT_PRO: {
-    mensaje: 'Esta rifa no acepta pedidos online.',
+    message: 'Esta rifa no acepta pedidos online.',
     status: 400,
   },
   RAFFLE_NOT_RESIZABLE: {
-    mensaje: 'Sólo podés cambiar el rango en borrador.',
+    message: 'Sólo podés cambiar el rango en borrador.',
     status: 409,
   },
   RAFFLE_HAS_SALES: {
-    mensaje: 'Tiene números vendidos: cancelala en lugar de borrarla.',
+    message: 'Tiene números vendidos: cancelala en lugar de borrarla.',
     status: 409,
   },
   RAFFLE_ALREADY_UNLOCKED: {
-    mensaje: 'Esta rifa ya está habilitada.',
+    message: 'Esta rifa ya está habilitada.',
     status: 409,
   },
   ORDER_NOT_PENDING: {
-    mensaje: 'Este pedido ya fue confirmado o cancelado.',
+    message: 'Este pedido ya fue confirmado o cancelado.',
     status: 409,
   },
   VOUCHER_NOT_FOUND: {
-    mensaje: 'Ese código no existe.',
+    message: 'Ese código no existe.',
     status: 404,
   },
   VOUCHER_EXPIRED: {
-    mensaje: 'Este código venció.',
+    message: 'Este código venció.',
     status: 400,
   },
   VOUCHER_EXHAUSTED: {
-    mensaje: 'Este código ya se usó todas las veces.',
+    message: 'Este código ya se usó todas las veces.',
     status: 400,
   },
 };
@@ -125,7 +125,7 @@ export class AppError extends Error {
 export const codeOf = (error: unknown): ErrorCode | null => {
   if (typeof error !== 'object' || error === null) return null;
   const message = (error as { message?: unknown }).message;
-  return typeof message === 'string' && message in ERRORES
+  return typeof message === 'string' && message in ERRORS
     ? (message as ErrorCode)
     : null;
 };
@@ -134,6 +134,6 @@ export const codeOf = (error: unknown): ErrorCode | null => {
 export const describeError = (error: unknown): ErrorDescription => {
   const code = codeOf(error);
   return code
-    ? ERRORES[code]
-    : { mensaje: 'Algo salió mal. Probá de nuevo.', status: 500 };
+    ? ERRORS[code]
+    : { message: 'Algo salió mal. Probá de nuevo.', status: 500 };
 };

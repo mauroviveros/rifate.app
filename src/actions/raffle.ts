@@ -1,0 +1,62 @@
+import { defineAction } from 'astro:actions';
+
+import {
+  createRaffleWithGrid,
+  publishRaffle,
+  releaseNumbers,
+  sellNumbers,
+} from '@/lib/raffles';
+
+import { asActionError } from './errors';
+import {
+  newRaffleSchema,
+  publishRaffleSchema,
+  releaseNumbersSchema,
+  sellNumbersSchema,
+} from './raffle.schema';
+
+/**
+ * El try/catch, una sola vez. Sin esto, cada action repite cinco líneas y
+ * alcanza con que una se olvide del catch para que un `FORBIDDEN` llegue a la
+ * pantalla como «500 Internal Server Error» con el stack adentro.
+ */
+const translatingErrors = async <T>(useCase: () => Promise<T>): Promise<T> => {
+  try {
+    return await useCase();
+  } catch (error) {
+    throw asActionError(error);
+  }
+};
+
+export const create = defineAction({
+  accept: 'form',
+  input: newRaffleSchema,
+  handler: (input, { locals }) =>
+    translatingErrors(() => createRaffleWithGrid(locals.actor, input)),
+});
+
+export const publish = defineAction({
+  accept: 'form',
+  input: publishRaffleSchema,
+  handler: ({ id }, { locals }) =>
+    translatingErrors(async () => {
+      await publishRaffle(locals.actor, id);
+      return { id };
+    }),
+});
+
+export const sell = defineAction({
+  accept: 'form',
+  input: sellNumbersSchema,
+  handler: ({ id, numbers, name, phone, note }, { locals }) =>
+    translatingErrors(() =>
+      sellNumbers(locals.actor, id, numbers, { name, phone, note }),
+    ),
+});
+
+export const release = defineAction({
+  accept: 'form',
+  input: releaseNumbersSchema,
+  handler: ({ id, numbers }, { locals }) =>
+    translatingErrors(() => releaseNumbers(locals.actor, id, numbers)),
+});
