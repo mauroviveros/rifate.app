@@ -518,6 +518,22 @@ fase 6.
 - [ ] **`env.staging` para previews con login** — pendiente, para cuando la
       fase 6 cierre y haya pantallas autenticadas que revisar en un PR.
 
+> ⚠️ **El adapter de Astro inyecta bindings que `wrangler.jsonc` no declara.**
+> En `dist/server/wrangler.json` aparecen `images: { binding: "IMAGES" }` y
+> `kv_namespaces: [{ binding: "SESSION" }]`, ninguno de los dos escrito por
+> nosotros. La diferencia entre ellos importa: el de Images **está completo**
+> —ese binding es de cuenta y no lleva id—, mientras que el de KV llega **sin
+> `id`**, y el id es lo que identifica al namespace. Resultado: el deploy lo
+> tomaba del remoto y wrangler lo listaba como `env.SESSION (inherited)`, o sea
+> configuración que vivía sólo en el panel de Cloudflare. Ya quedó pineado en
+> `wrangler.jsonc`.
+>
+> `Astro.session` **no se usa en ninguna parte del código** —las sesiones de
+> verdad son las de Better Auth y viven en D1—, así que ese KV es peso muerto
+> que el adapter habilita solo. Queda pendiente ver si se puede apagar: el
+> adapter expone `sessionKVBindingName` para renombrar el binding, pero no
+> encontré la opción para deshabilitar las sesiones del todo.
+
 ### Por qué un preview por PR no alcanza
 
 Con `preview_urls: true`, cada versión subida obtiene su
