@@ -95,6 +95,11 @@ export default [
           message:
             'No accedas a env.DB directamente. Usá un repositorio de src/lib/db/.',
         },
+        {
+          selector: "MemberExpression[property.name='RAFFLE']",
+          message:
+            'No accedas a env.RAFFLE directamente. Usá un flujo de src/lib/raffles/.',
+        },
       ],
     },
   },

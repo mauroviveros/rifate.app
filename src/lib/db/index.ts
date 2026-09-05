@@ -10,7 +10,7 @@
  *   src/lib/db/<repo>.ts   los repositorios. Firma `(db, actor, …)`, con el
  *                          `db` explícito para poder testearlos contra la base
  *                          de `@cloudflare/vitest-pool-workers`. Los importan
- *                          los tests y `src/lib/raffles.ts`, que no es una
+ *                          los tests y `src/lib/raffles/`, que no es una
  *                          página: orquesta D1 y el Durable Object y recibe
  *                          los dos por parámetro.
  *
