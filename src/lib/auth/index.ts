@@ -10,7 +10,7 @@ export const createAuth = (env: Env) =>
 
     // Firma las cookies de sesión. Rotarlo cierra todas las sesiones.
     secret: env.BETTER_AUTH_SECRET,
-    baseURL: env.PUBLIC_APP_URL, // https://rifate.app
+    baseURL: env.PUBLIC_APP_URL,
 
     socialProviders: {
       google: {
