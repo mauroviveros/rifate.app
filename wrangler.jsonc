@@ -26,6 +26,21 @@
     // día el volumen sube, esto es lo que se baja para no inflar la factura.
     "head_sampling_rate": 1,
   },
+  // El adapter de Astro inyecta este binding en dist/server/wrangler.json, pero
+  // SIN el `id` — y el id es lo que identifica al namespace. Sin declararlo acá,
+  // el deploy lo tomaba del remoto y wrangler lo listaba como "(inherited)":
+  // configuración que vivía sólo en el panel de Cloudflare.
+  //
+  // El binding de Images, en cambio, no lleva id (es de cuenta), así que el
+  // que inyecta el adapter ya está completo y no hace falta declararlo.
+  //
+  // Hoy no se usa: `Astro.session` no aparece en ningún lado del código y las
+  // sesiones de verdad son las de Better Auth, que viven en D1. Queda pineado
+  // mientras el adapter lo siga inyectando.
+  "kv_namespaces": [
+    { "binding": "SESSION", "id": "6bc25be7efce41d495e9506c9e1d584a" },
+  ],
+
   "d1_databases": [
     {
       "binding": "DB",
