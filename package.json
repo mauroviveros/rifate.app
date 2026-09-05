@@ -17,7 +17,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git config core.hooksPath .githooks",
+    "deploy": "astro build && wrangler deploy"
   },
   "dependencies": {
     "@starwind-ui/astro": "1.2.0",
