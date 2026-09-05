@@ -1,0 +1,10 @@
+# Copiá este archivo a .dev.vars y completá los valores.
+#
+# Los nombres importan más que los valores: `wrangler types` lee las claves de
+# .dev.vars para armar la interfaz Env. Si agregás una variable nueva, sumala
+# también acá o `pnpm check` va a fallar en CI con un "Property does not exist
+# on type 'Env'".
+BETTER_AUTH_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+PUBLIC_APP_URL=http://localhost:4321
