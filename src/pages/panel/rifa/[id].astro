@@ -2,8 +2,10 @@
 import { actions, isInputError } from 'astro:actions';
 import { Icon } from 'astro-icon/components';
 
+import BackLink from '@/components/panel/BackLink.astro';
 import Buyers from '@/components/panel/detail/Buyers.astro';
 import Grid from '@/components/panel/detail/Grid.astro';
+import Header from '@/components/panel/detail/Header.astro';
 import Sale from '@/components/panel/detail/Sale.astro';
 import Stats from '@/components/panel/detail/Stats.astro';
 import Dashboard from '@/layouts/Dashboard.astro';
@@ -58,6 +60,11 @@ const loaded = await ownerGrid(Astro.locals.actor, id).catch(
 if (!loaded) return Astro.rewrite('/404');
 const { raffle, numbers } = loaded;
 
+const publicUrl = new URL(
+  `/r/${raffle.slug}`,
+  Astro.site ?? 'https://rifate.app',
+).href;
+
 /** Lo que se tipeó / eligió, para no perderlo tras un error de validación. */
 let formData: FormData | null = null;
 if (Astro.request.method === 'POST') {
@@ -75,25 +82,13 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
 ---
 
 <Dashboard title={`${raffle.title} · rifate.app`}>
-  <a
-    slot="nav"
-    href="/panel"
-    aria-label="Volver a mis rifas"
-    class:list={[
-      'flex shrink-0 items-center gap-2 text-support font-bold text-background/75',
-      'transition-colors hover:text-background',
-    ]}
-  >
-    <Icon name="lucide:arrow-left" class="size-4.5" aria-hidden="true" />
-    <span class="hidden sm:inline">Volver a mis rifas</span>
-  </a>
+  <BackLink slot="nav" />
 
-  <hgroup>
-    <h1 class="text-[2.25rem] sm:text-display">{raffle.title}</h1>
-    <p class="mt-2 text-support text-muted-foreground sm:text-body">
-      Mirá cómo va, cargá ventas y publicá cuando estés listo.
-    </p>
-  </hgroup>
+  <Header
+    raffle={raffle}
+    publishAction={actions.raffle.publish}
+    publicUrl={publicUrl}
+  />
 
   {
     okMessage && (
@@ -119,16 +114,6 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
   }
 
   <Stats class="mt-7" numbers={numbers} ticketPrice={raffle.ticketPrice} />
-
-  {/* Provisional hasta el paso 7 (Header): estado y teléfono de contacto. */}
-  <p class="mt-4 text-label text-subtle-foreground">
-    Estado: <strong class="font-bold text-foreground">{raffle.status}</strong>
-    {
-      raffle.contactPhone === null
-        ? ' · sin teléfono de contacto'
-        : ` · ${raffle.contactPhone}`
-    }
-  </p>
 
   <div
     class:list={[
