@@ -3,6 +3,7 @@ import { actions, isInputError } from 'astro:actions';
 import { Icon } from 'astro-icon/components';
 
 import Grid from '@/components/panel/detail/Grid.astro';
+import Sale from '@/components/panel/detail/Sale.astro';
 import Stats from '@/components/panel/detail/Stats.astro';
 import Dashboard from '@/layouts/Dashboard.astro';
 import { ownerGrid } from '@/lib/raffles';
@@ -16,25 +17,35 @@ const publishResult = Astro.getActionResult(actions.raffle.publish);
 const sellResult = Astro.getActionResult(actions.raffle.sell);
 const releaseResult = Astro.getActionResult(actions.raffle.release);
 
-if (publishResult && !publishResult?.error) {
+if (publishResult && !publishResult.error) {
   return Astro.redirect(`/panel/rifa/${id}?ok=published`, 303);
 }
-if (sellResult && !sellResult?.error) {
+if (sellResult && !sellResult.error) {
   return Astro.redirect(
-    `/panel/rifa/${id}?ok=sold-${sellResult?.data.sold.length}`,
+    `/panel/rifa/${id}?ok=sold-${sellResult.data.sold.length}`,
     303,
   );
 }
-if (releaseResult && !releaseResult?.error) {
+if (releaseResult && !releaseResult.error) {
   return Astro.redirect(
-    `/panel/rifa/${id}?ok=freed-${releaseResult?.data.length}`,
+    `/panel/rifa/${id}?ok=freed-${releaseResult.data.length}`,
     303,
   );
 }
 
-const failed = [publishResult, sellResult, releaseResult].find((r) => r?.error);
-const actionError =
-  failed?.error && !isInputError(failed.error) ? failed.error.message : null;
+/** publish → paso 7 (Header). sell/release → el panel `Sale`. */
+const publishError =
+  publishResult?.error && !isInputError(publishResult.error)
+    ? publishResult.error.message
+    : null;
+
+const saleResult = sellResult ?? releaseResult;
+let saleErrors: Record<string, string[] | undefined> = {};
+let saleError: string | null = null;
+if (saleResult?.error) {
+  if (isInputError(saleResult.error)) saleErrors = saleResult.error.fields;
+  else saleError = saleResult.error.message;
+}
 
 const loaded = await ownerGrid(Astro.locals.actor, id).catch(
   (error: unknown) => {
@@ -43,9 +54,22 @@ const loaded = await ownerGrid(Astro.locals.actor, id).catch(
     throw error;
   },
 );
-
 if (!loaded) return Astro.rewrite('/404');
 const { raffle, numbers } = loaded;
+
+/** Lo que se tipeó / eligió, para no perderlo tras un error de validación. */
+let formData: FormData | null = null;
+if (Astro.request.method === 'POST') {
+  try {
+    formData = await Astro.request.clone().formData();
+  } catch {
+    formData = null;
+  }
+}
+const selectedNumbers = (formData?.getAll('numbers') ?? [])
+  .map((entry) => Number(entry))
+  .filter((n) => Number.isInteger(n));
+
 const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
 ---
 
@@ -82,29 +106,21 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
   }
 
   {
-    actionError && (
+    publishError && (
       <p
         class="mt-6 flex items-start gap-2.5 rounded-lg bg-error/8 p-4 text-support font-bold text-error"
         role="alert"
       >
         <Icon name="lucide:circle-alert" class="mt-0.5 size-5.5 shrink-0" />
-        <span>{actionError}</span>
+        <span>{publishError}</span>
       </p>
     )
   }
 
   <Stats class="mt-7" numbers={numbers} ticketPrice={raffle.ticketPrice} />
 
-  <Grid
-    class="mt-7"
-    numbers={numbers}
-    numberStart={raffle.numberStart}
-    totalNumbers={raffle.totalNumbers}
-    form="sale"
-  />
-
   {/* Provisional hasta el paso 7 (Header): estado y teléfono de contacto. */}
-  <p>
+  <p class="mt-4 text-label text-subtle-foreground">
     Estado: <strong class="font-bold text-foreground">{raffle.status}</strong>
     {
       raffle.contactPhone === null
@@ -112,4 +128,29 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
         : ` · ${raffle.contactPhone}`
     }
   </p>
+
+  <div
+    class:list={[
+      'mt-7 grid items-start gap-7',
+      'lg:grid-cols-[1fr_380px] lg:gap-7.5',
+    ]}
+  >
+    <Grid
+      numbers={numbers}
+      numberStart={raffle.numberStart}
+      totalNumbers={raffle.totalNumbers}
+      selected={selectedNumbers}
+      form="sale"
+    />
+    <Sale
+      id="sale"
+      raffleId={raffle.id}
+      ticketPrice={raffle.ticketPrice}
+      sellAction={actions.raffle.sell}
+      releaseAction={actions.raffle.release}
+      formData={formData}
+      errors={saleErrors}
+      error={saleError}
+    />
+  </div>
 </Dashboard>

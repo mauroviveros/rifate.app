@@ -6,23 +6,27 @@ import type { OwnerNumber } from '@/types/raffle';
 import { numberWidth } from '@/utils/frontmatter/detail';
 
 interface Props extends HTMLAttributes<'section'> {
-  numbers: OwnerNumber[];
-  numberStart: number;
-  totalNumbers: number;
   /** El `id` del <form> del panel de venta. */
   form: string;
+  numbers: OwnerNumber[];
+  numberStart: number;
+  /** Números tildados desde el server (repoblado tras un error). */
+  selected?: number[];
+  totalNumbers: number;
 }
 
 const {
+  class: className,
+  form,
   numbers,
   numberStart,
+  selected = [],
   totalNumbers,
-  form,
-  class: className,
   ...rest
 } = Astro.props;
 
 const width = numberWidth(numberStart, totalNumbers);
+const picked = new Set(selected);
 ---
 
 <section
@@ -43,7 +47,13 @@ const width = numberWidth(numberStart, totalNumbers);
   >
     {
       numbers.map(({ number, status }) => (
-        <Cell value={number} status={status} width={width} form={form} />
+        <Cell
+          value={number}
+          status={status}
+          width={width}
+          form={form}
+          checked={picked.has(number)}
+        />
       ))
     }
   </div>
