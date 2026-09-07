@@ -2,6 +2,7 @@
 import { actions, isInputError } from 'astro:actions';
 import { Icon } from 'astro-icon/components';
 
+import Stats from '@/components/panel/detail/Stats.astro';
 import Dashboard from '@/layouts/Dashboard.astro';
 import { ownerGrid } from '@/lib/raffles';
 import { codeOf } from '@/utils/errors';
@@ -45,7 +46,6 @@ const loaded = await ownerGrid(Astro.locals.actor, id).catch(
 if (!loaded) return Astro.rewrite('/404');
 const { raffle, numbers } = loaded;
 const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
-const soldOnGrid = numbers.filter((n) => n.status === 'SOLD').length;
 ---
 
 <Dashboard title={`${raffle.title} · rifate.app`}>
@@ -92,33 +92,15 @@ const soldOnGrid = numbers.filter((n) => n.status === 'SOLD').length;
     )
   }
 
-  <!-- TODO Provisional -->
-  <dl
-    class="mt-7 grid gap-2 rounded-xl bg-card p-6 text-support ring-2 ring-border"
-  >
-    <div class="flex justify-between gap-4">
-      <dt class="text-subtle-foreground">Estado</dt>
-      <dd class="font-bold">{raffle.status}</dd>
-    </div>
-    <div class="flex justify-between gap-4">
-      <dt class="text-subtle-foreground">Rango</dt>
-      <dd class="font-bold" data-numero>
-        {raffle.numberStart}–{raffle.numberStart + raffle.totalNumbers - 1}
-      </dd>
-    </div>
-    <div class="flex justify-between gap-4">
-      <dt class="text-subtle-foreground">Vendidos · D1</dt>
-      <dd class="font-bold" data-numero>
-        {raffle.soldCount} / {raffle.totalNumbers}
-      </dd>
-    </div>
-    <div class="flex justify-between gap-4">
-      <dt class="text-subtle-foreground">Vendidos · grilla del DO</dt>
-      <dd class="font-bold" data-numero>{soldOnGrid} / {numbers.length}</dd>
-    </div>
-    <div class="flex justify-between gap-4">
-      <dt class="text-subtle-foreground">Teléfono de contacto</dt>
-      <dd class="font-bold">{raffle.contactPhone ?? '—'}</dd>
-    </div>
-  </dl>
+  <Stats class="mt-7" numbers={numbers} ticketPrice={raffle.ticketPrice} />
+
+  {/* Provisional hasta el paso 7 (Header): estado y teléfono de contacto. */}
+  <p>
+    Estado: <strong class="font-bold text-foreground">{raffle.status}</strong>
+    {
+      raffle.contactPhone === null
+        ? ' · sin teléfono de contacto'
+        : ` · ${raffle.contactPhone}`
+    }
+  </p>
 </Dashboard>

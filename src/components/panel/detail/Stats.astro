@@ -1,0 +1,39 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+import Meter from '@/components/panel/Meter.astro';
+import Stat from '@/components/panel/Stat.astro';
+import type { OwnerNumber } from '@/types/raffle';
+import { pesos } from '@/utils/format';
+import { tally } from '@/utils/frontmatter/detail';
+
+interface Props extends HTMLAttributes<'dl'> {
+  numbers: OwnerNumber[];
+  /** Precio del número, en centavos. */
+  ticketPrice: number;
+}
+
+const { numbers, ticketPrice, class: className, ...rest } = Astro.props;
+const { sold, available, raisedCents, progress, total } = tally(
+  numbers,
+  ticketPrice,
+);
+---
+
+<dl
+  class:list={['grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4', className]}
+  aria-label="Resumen de la rifa"
+  {...rest}
+>
+  <Stat label="Vendidos">
+    {sold}
+    &nbsp;
+    <span class="text-xl text-subtle-foreground sm:text-2xl">de {total}</span>
+  </Stat>
+
+  <Stat label="Libres">{available}</Stat>
+
+  <Stat label="Recaudado" tone="ink">{pesos(raisedCents)}</Stat>
+
+  <Meter label="Avance" value={progress} />
+</dl>

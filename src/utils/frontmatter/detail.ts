@@ -152,6 +152,17 @@ export const previewNumbers = (
   hidden: Math.max(0, values.length - max),
 });
 
+/* ── Publicar ────────────────────────────────────────────────────────────── */
+
+/**
+ * Por qué NO se puede publicar todavía, o `null` si se puede. El botón usa el
+ * texto como etiqueta cuando está apagado (regla 7).
+ *
+ * Sólo mira el teléfono: es lo único que `publishRaffle` exige además del
+ * estado, y el CHECK de la tabla lo pide igual. El botón se muestra sólo en
+ * `DRAFT`, así que «ya publicada» no llega acá.
+ */
+
 export const publishHint = (raffle: OwnerRaffle): string | null =>
   raffle.contactPhone === null ? 'Cargá un teléfono para publicar' : null;
 
@@ -160,6 +171,8 @@ const FLASH: Record<string, (count: number) => string> = {
   sold: (count) => `Vendiste ${count} número${count === 1 ? '' : 's'}.`,
   freed: (count) => `Liberaste ${count} número${count === 1 ? '' : 's'}.`,
 };
+
+/* ── Mensajes de flash del panel de venta ───────────────────────────────────── */
 
 export const flashMessage = (ok: string | null): string | null => {
   if (!ok) return null;
