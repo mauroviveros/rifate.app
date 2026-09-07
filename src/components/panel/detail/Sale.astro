@@ -1,0 +1,187 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import { Icon } from 'astro-icon/components';
+
+import Field from '@/components/form/Field.astro';
+import { button } from '@/components/starwind/button/variants';
+import { formValue } from '@/utils/forms';
+
+interface Props extends HTMLAttributes<'form'> {
+  error: string | null;
+  errors: Record<string, string[] | undefined>;
+  formData: FormData | null;
+  raffleId: string;
+  releaseAction: string;
+  sellAction: string;
+  /** Precio del número, en centavos: para el total en vivo. */
+  ticketPrice: number;
+}
+
+const {
+  class: className,
+  error,
+  errors,
+  formData,
+  id,
+  raffleId,
+  releaseAction,
+  sellAction,
+  ticketPrice,
+  ...rest
+} = Astro.props;
+
+const value = (name: string) => formValue(formData, name);
+---
+
+<form
+  id={id}
+  method="POST"
+  novalidate
+  data-sale
+  data-price={ticketPrice}
+  class:list={[
+    'rounded-xl bg-card p-6 ring-2 ring-border lg:sticky lg:top-24',
+    className,
+  ]}
+  {...rest}
+>
+  <input type="hidden" name="id" value={raffleId} />
+  <h2 class="text-[1.25rem]">Cargar una venta</h2>
+  <p class="mt-0.5 text-label font-bold text-subtle-foreground" data-numero>
+    <span data-sale-count>Ningún número elegido</span>
+    <span data-sale-total></span>
+  </p>
+  <hr class="my-5 perforado" />
+
+  {
+    error && (
+      <p
+        class="mb-5 flex items-start gap-2.5 rounded-lg bg-error/8 p-4 text-support font-bold text-error"
+        role="alert"
+      >
+        <Icon name="lucide:circle-alert" class="mt-0.5 size-5.5 shrink-0" />
+        <span>{error}</span>
+      </p>
+    )
+  }
+
+  <Field
+    name="name"
+    label="¿A nombre de quién?"
+    placeholder="Samira Viveros"
+    value={value('name')}
+    errors={errors.name}
+  />
+
+  <Field
+    class="mt-5"
+    name="phone"
+    label="Teléfono"
+    hint="Para avisarle si gana, y para juntarlo si vuelve a comprar."
+    type="tel"
+    inputmode="tel"
+    placeholder="11 2345-6789"
+    value={value('phone')}
+    errors={errors.phone}
+    optional
+  />
+
+  <Field
+    class="mt-5"
+    name="note"
+    label="Nota"
+    hint="Para vos. Por ejemplo: «pagó por transferencia»."
+    type="textarea"
+    value={value('note')}
+    errors={errors.note}
+    optional
+  />
+
+  <div class="mt-6 grid gap-2.5">
+    <button
+      type="submit"
+      formaction={sellAction}
+      class={button({ variant: 'primary', size: 'md' })}
+      data-sale-sell
+    >
+      Vender
+    </button>
+    <button
+      type="submit"
+      formaction={releaseAction}
+      class={button({ variant: 'outline', size: 'md' })}
+      data-sale-release
+    >
+      Liberar
+    </button>
+  </div>
+
+  <p
+    class="mt-3 text-center text-label text-subtle-foreground"
+    data-sale-hint
+    role="status"
+  >
+    Elegí números de la grilla para vender o liberar.
+  </p>
+</form>
+
+<script>
+  import { pesos } from '@/utils/format';
+  import type { SelectionKind } from '@/utils/frontmatter/detail';
+  import { selectionKind } from '@/utils/frontmatter/detail';
+
+  const form = document.querySelector<HTMLFormElement>('[data-sale]');
+  if (form) {
+    const priceCents = Number(form.dataset.price ?? '0');
+    const boxes = [
+      ...document.querySelectorAll<HTMLInputElement>('input[name="numbers"]'),
+    ];
+
+    const $count = form.querySelector<HTMLElement>('[data-sale-count]')!;
+    const $total = form.querySelector<HTMLElement>('[data-sale-total]')!;
+    const $hint = form.querySelector<HTMLElement>('[data-sale-hint]')!;
+    const $sell = form.querySelector<HTMLButtonElement>('[data-sale-sell]')!;
+    const $release = form.querySelector<HTMLButtonElement>(
+      '[data-sale-release]',
+    )!;
+
+    const HINT: Record<SelectionKind, string> = {
+      empty: 'Elegí números de la grilla para vender o liberar.',
+      sell: '',
+      release: '',
+      mixed: 'Elegiste números libres y vendidos juntos. Va uno o el otro.',
+    };
+
+    const s = (n: number) => (n === 1 ? '' : 's');
+
+    const paint = () => {
+      const picked = boxes.filter((b) => b.checked);
+      const count = picked.length;
+      const kind = selectionKind(
+        picked.map((b) => b.dataset.taken !== undefined),
+      );
+
+      $count.textContent =
+        count === 0
+          ? 'Ningún número elegido'
+          : `${count} número${s(count)} elegido${s(count)}`;
+      $total.textContent =
+        kind === 'sell' && priceCents > 0
+          ? ` · ${pesos(count * priceCents)}`
+          : '';
+
+      $sell.disabled = kind !== 'sell';
+      $release.disabled = kind !== 'release';
+      $sell.textContent =
+        kind === 'sell' ? `Vender ${count} número${s(count)}` : 'Vender';
+      $release.textContent =
+        kind === 'release' ? `Liberar ${count} número${s(count)}` : 'Liberar';
+
+      $hint.textContent = HINT[kind];
+      $hint.hidden = HINT[kind] === '';
+    };
+
+    for (const box of boxes) box.addEventListener('change', paint);
+    paint();
+  }
+</script>

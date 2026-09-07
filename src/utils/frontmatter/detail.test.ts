@@ -107,27 +107,17 @@ describe('tally', () => {
 });
 
 describe('selectionKind', () => {
-  const grid = [
-    cell({ number: 1, status: 'AVAILABLE' }),
-    cell({ number: 2, status: 'AVAILABLE' }),
-    cell({ number: 3, status: 'SOLD', buyerId: 'b1' }),
-    cell({ number: 4, status: 'RESERVED' }),
-  ];
-
   it('sin selección', () => {
-    expect(selectionKind(grid, [])).toBe('empty');
+    expect(selectionKind([])).toBe('empty');
   });
   it('todos libres → vender', () => {
-    expect(selectionKind(grid, [1, 2])).toBe('sell');
+    expect(selectionKind([false, false])).toBe('sell');
   });
-  it('vendidos y reservados → liberar', () => {
-    expect(selectionKind(grid, [3, 4])).toBe('release');
+  it('todos ocupados → liberar', () => {
+    expect(selectionKind([true, true])).toBe('release');
   });
   it('mezcla → ni una ni la otra', () => {
-    expect(selectionKind(grid, [1, 3])).toBe('mixed');
-  });
-  it('acepta un Set igual que un array', () => {
-    expect(selectionKind(grid, new Set([1, 2]))).toBe('sell');
+    expect(selectionKind([false, true])).toBe('mixed');
   });
 });
 

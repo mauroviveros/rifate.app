@@ -62,31 +62,14 @@ export type SelectionKind = 'empty' | 'sell' | 'release' | 'mixed';
  * `release` si son todos ocupados (vendido o reservado), `mixed` si hay de los
  * dos —y ahí el panel apaga los dos botones y lo dice (regla 7)—.
  *
- * `RESERVED` cuenta como ocupado: liberar es también la salida de una reserva
- * trabada, y `release()` del DO ya la acepta. Lo comparte el `<script>` del
- * panel, que lo vuelve a llamar en vivo a cada cambio de checkbox.
+ * Recibe un booleano por número elegido —`true` = ocupado— y no la grilla: así
+ * lo llama igual el `<script>` del panel, que lo lee del DOM en vivo.
  */
-export const selectionKind = (
-  numbers: OwnerNumber[],
-  picked: Iterable<number>,
-): SelectionKind => {
-  const chosen = new Set(picked);
-  if (chosen.size === 0) return 'empty';
-
-  const statusOf = new Map(numbers.map((n) => [n.number, n.status]));
-
-  let free = 0;
-  let taken = 0;
-  for (const value of chosen) {
-    const status = statusOf.get(value);
-    if (status === 'AVAILABLE') free++;
-    else if (status !== undefined) taken++; // SOLD | RESERVED | BLOCKED
-  }
-
-  if (free > 0 && taken > 0) return 'mixed';
-  if (free > 0) return 'sell';
-  if (taken > 0) return 'release';
-  return 'mixed';
+export const selectionKind = (taken: readonly boolean[]): SelectionKind => {
+  if (taken.length === 0) return 'empty';
+  const anyFree = taken.some((t) => !t);
+  const anyTaken = taken.some((t) => t);
+  return anyFree && anyTaken ? 'mixed' : anyFree ? 'sell' : 'release';
 };
 
 /* ── Compradores ─────────────────────────────────────────────────────────── */
