@@ -7,6 +7,9 @@ import { button } from '@/components/starwind/button/variants';
 import { formValue } from '@/utils/forms';
 
 interface Props extends HTMLAttributes<'form'> {
+  /** En `DRAFT` la acción principal de la pantalla es Publicar, así que
+      «Vender» va tinta (regla 2: un solo vermellón por pantalla). */
+  emphasis?: 'primary' | 'secondary';
   error: string | null;
   errors: Record<string, string[] | undefined>;
   formData: FormData | null;
@@ -19,6 +22,7 @@ interface Props extends HTMLAttributes<'form'> {
 
 const {
   class: className,
+  emphasis = 'primary',
   error,
   errors,
   formData,
@@ -31,6 +35,7 @@ const {
 } = Astro.props;
 
 const value = (name: string) => formValue(formData, name);
+const sellVariant = emphasis === 'secondary' ? 'default' : 'primary';
 ---
 
 <form
@@ -39,10 +44,7 @@ const value = (name: string) => formValue(formData, name);
   novalidate
   data-sale
   data-price={ticketPrice}
-  class:list={[
-    'rounded-xl bg-card p-6 ring-2 ring-border lg:sticky lg:top-24',
-    className,
-  ]}
+  class:list={['rounded-xl bg-card p-6 ring-2 ring-border', className]}
   {...rest}
 >
   <input type="hidden" name="id" value={raffleId} />
@@ -101,7 +103,7 @@ const value = (name: string) => formValue(formData, name);
     <button
       type="submit"
       formaction={sellAction}
-      class={button({ variant: 'primary', size: 'md' })}
+      class={button({ variant: sellVariant, size: 'md' })}
       data-sale-sell
     >
       Vender
