@@ -1,7 +1,8 @@
 ---
 import type { HTMLAttributes } from 'astro/types';
 
-import { Card } from '@/components/starwind/card';
+import Meter from '@/components/panel/Meter.astro';
+import Stat from '@/components/panel/Stat.astro';
 import type { RaffleListItem } from '@/types/raffle';
 import { pesos, progress } from '@/utils/format';
 
@@ -9,7 +10,7 @@ interface Props extends HTMLAttributes<'dl'> {
   rifas: RaffleListItem[];
 }
 
-const { rifas, class: className, ...props } = Astro.props;
+const { rifas, class: className, ...rest } = Astro.props;
 const enVenta = rifas.filter((r) => r.status === 'PUBLISHED');
 const vendidos = enVenta.reduce((t, r) => t + r.soldCount, 0);
 const numeros = enVenta.reduce((t, r) => t + r.totalNumbers, 0);
@@ -23,71 +24,17 @@ const avance = progress(vendidos, numeros);
     className,
   ]}
   aria-label="Resumen de tus rifas"
-  {...props}
+  {...rest}
 >
-  <Card size="sm" class:list={['hidden sm:flex', 'gap-0 px-5 sm:px-6']}>
-    <dt class="mb-2 text-label font-bold text-subtle-foreground">
-      Rifas en venta
-    </dt>
-    <dd
-      class="font-display text-[1.75rem] font-extrabold tracking-tight sm:text-[2.625rem]"
-      data-numero
-    >
-      {enVenta.length}
-    </dd>
-  </Card>
+  <Stat label="Rifas en venta" class="hidden sm:flex">{enVenta.length}</Stat>
 
-  <Card size="sm" class="gap-0 px-5 sm:px-6">
-    <dt class="mb-2 text-label font-bold text-subtle-foreground">
-      <span class="sm:hidden">Vendidos</span>
-      <span class="hidden sm:inline">Números vendidos</span>
-    </dt>
-    <dd
-      class="font-display text-[1.75rem] font-extrabold tracking-tight sm:text-[2.625rem]"
-      data-numero
-    >
-      {vendidos}
-      &nbsp;
-      <span class="text-xl text-subtle-foreground sm:text-2xl">
-        de {numeros}
-      </span>
-    </dd>
-  </Card>
+  <Stat label="Números vendidos" shortLabel="Vendidos">
+    {vendidos}
+    &nbsp;
+    <span class="text-xl text-subtle-foreground sm:text-2xl">de {numeros}</span>
+  </Stat>
 
-  <Card
-    size="sm"
-    class:list={['bg-foreground ring-foreground', 'gap-0 px-5 sm:px-6']}
-  >
-    <dt class="mb-2 text-label font-bold text-background/60">Recaudado</dt>
-    <dd
-      class:list={[
-        'font-display text-[1.75rem] font-extrabold tracking-tight sm:text-[2.625rem]',
-        'text-warning',
-      ]}
-      data-numero
-    >
-      {pesos(recaudado)}
-    </dd>
-  </Card>
+  <Stat label="Recaudado" tone="ink">{pesos(recaudado)}</Stat>
 
-  <Card size="sm" class:list={['hidden sm:flex', 'gap-0 px-5 sm:px-6']}>
-    <dt class="mb-2.5 text-label font-bold text-subtle-foreground">
-      Avance general
-    </dt>
-    <dd class="flex items-center gap-3">
-      <div
-        class="h-3.5 flex-1 overflow-hidden rounded-full bg-border"
-        aria-hidden="true"
-      >
-        <div class="h-full rounded-full bg-success" style={`width: ${avance}%`}>
-        </div>
-      </div>
-      <span
-        class="font-display text-2xl font-extrabold tracking-tight text-success"
-        data-numero
-      >
-        {avance}%
-      </span>
-    </dd>
-  </Card>
+  <Meter label="Avance general" value={avance} class="hidden sm:flex" />
 </dl>

@@ -1,0 +1,34 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+import { Card } from '@/components/starwind/card';
+
+interface Props extends HTMLAttributes<'div'> {
+  label: string;
+  /** 0-100, entero. */
+  value: number;
+}
+
+const { label, value, class: className, ...rest } = Astro.props;
+---
+
+<Card size="sm" class:list={['gap-0 px-5 sm:px-6', className]} {...rest}>
+  <dt class="mb-2.5 text-label font-bold text-subtle-foreground">
+    {label}
+  </dt>
+  <dd class="flex items-center gap-3">
+    <div
+      class="h-3.5 flex-1 overflow-hidden rounded-full bg-border"
+      aria-hidden="true"
+    >
+      <div class="h-full rounded-full bg-success" style={`width: ${value}%`}>
+      </div>
+    </div>
+    <span
+      class="font-display text-2xl font-extrabold tracking-tight text-success"
+      data-numero
+    >
+      {value}%
+    </span>
+  </dd>
+</Card>

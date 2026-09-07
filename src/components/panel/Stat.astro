@@ -1,0 +1,55 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import type { VariantProps } from 'tailwind-variants';
+
+import { Card } from '@/components/starwind/card';
+import { tv } from '@/lib/tv';
+
+const stat = tv({
+  slots: {
+    card: 'gap-0 px-5 sm:px-6',
+    term: 'mb-2 text-label font-bold',
+    value:
+      'font-display text-[1.75rem] font-extrabold tracking-tight sm:text-[2.625rem]',
+  },
+  variants: {
+    tone: {
+      paper: { term: 'text-subtle-foreground' },
+      ink: {
+        card: 'bg-foreground ring-foreground',
+        term: 'text-background/60',
+        value: 'text-warning',
+      },
+    },
+  },
+  defaultVariants: { tone: 'paper' },
+});
+
+interface Props extends HTMLAttributes<'div'>, VariantProps<typeof stat> {
+  /** Rótulo de la tarjeta. */
+  label: string;
+  /** Rótulo corto para celular, cuando `label` no entra. */
+  shortLabel?: string;
+}
+
+const { label, shortLabel, tone, class: className, ...rest } = Astro.props;
+const { card, term, value } = stat({ tone });
+---
+
+<Card size="sm" class={card({ class: className })} {...rest}>
+  <dt class={term()}>
+    {
+      shortLabel ? (
+        <>
+          <span class="sm:hidden">{shortLabel}</span>
+          <span class="hidden sm:inline">{label}</span>
+        </>
+      ) : (
+        label
+      )
+    }
+  </dt>
+  <dd class={value()} data-numero>
+    <slot />
+  </dd>
+</Card>
