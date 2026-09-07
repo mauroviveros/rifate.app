@@ -1,0 +1,139 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import { Icon } from 'astro-icon/components';
+
+interface Props extends Omit<HTMLAttributes<'div'>, 'class'> {
+  /** El `name` del control. Es también la raíz de sus ids. */
+  name: string;
+  label: string;
+  hint?: string;
+  optional?: boolean;
+  /** El `fields[name]` de un `ActionInputError`. Se muestra sólo el primero. */
+  errors?: string[];
+  value?: string;
+  /** `textarea` dibuja el campo alto del artboard (108px). */
+  type?: 'text' | 'number' | 'date' | 'tel' | 'textarea';
+  inputmode?: 'numeric' | 'decimal' | 'tel';
+  placeholder?: string;
+  /** Número para `type="number"`, fecha ISO (`YYYY-MM-DD`) para `type="date"`. */
+  min?: number | string;
+  /** Número para `type="number"`, fecha ISO (`YYYY-MM-DD`) para `type="date"`. */
+  max?: number | string;
+  /** Número para `type="number"`. */
+  step?: number;
+  /** Prefijo pegado adentro del campo, como el `$` del precio. */
+  prefix?: string;
+  controlHidden?: boolean;
+  class?: string;
+}
+
+const {
+  name,
+  label,
+  hint,
+  optional = false,
+  errors,
+  value = '',
+  type = 'text',
+  inputmode,
+  placeholder,
+  min,
+  max,
+  step,
+  prefix,
+  controlHidden = false,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const error = errors?.[0];
+const required = !optional;
+const describedBy =
+  [hint && `${name}-hint`, error && `${name}-error`]
+    .filter(Boolean)
+    .join(' ') || undefined;
+
+const FIELD_CLASSES = [
+  'w-full rounded-[0.9375rem] border-2 border-input bg-white px-4.5',
+  'text-[1.1875rem] font-semibold text-foreground',
+  'placeholder:font-normal placeholder:text-disabled-foreground',
+  'aria-invalid:border-error',
+];
+---
+
+<div data-field={name} class:list={className} {...rest}>
+  <label for={name} class="block text-[1.1875rem] font-extrabold">
+    {label}{
+      optional && (
+        <span class="ml-1.5 text-support font-medium text-subtle-foreground">
+          (opcional)
+        </span>
+      )
+    }
+  </label>
+
+  {
+    hint && (
+      <p id={`${name}-hint`} class="mt-0.5 text-support text-subtle-foreground">
+        {hint}
+      </p>
+    )
+  }
+
+  <div class="relative mt-2.5" data-field-control hidden={controlHidden}>
+    {
+      type === 'textarea' ? (
+        <textarea
+          id={name}
+          name={name}
+          rows={3}
+          required={required}
+          class:list={[...FIELD_CLASSES, 'h-27 py-4 leading-normal']}
+          placeholder={placeholder}
+          aria-describedby={describedBy}
+          aria-invalid={error ? 'true' : undefined}
+          set:text={value}
+        />
+      ) : (
+        <>
+          {prefix && (
+            <span
+              class="pointer-events-none absolute inset-y-0 left-4.5 flex items-center text-[1.1875rem] font-semibold text-subtle-foreground"
+              aria-hidden="true"
+            >
+              {prefix}
+            </span>
+          )}
+          <input
+            id={name}
+            name={name}
+            type={type}
+            value={value}
+            required={required}
+            class:list={[...FIELD_CLASSES, 'h-field', prefix && 'pl-9.5']}
+            inputmode={inputmode}
+            placeholder={placeholder}
+            min={min}
+            max={max}
+            step={step}
+            aria-describedby={describedBy}
+            aria-invalid={error ? 'true' : undefined}
+          />
+        </>
+      )
+    }
+  </div>
+
+  {
+    error && (
+      <p
+        id={`${name}-error`}
+        class="mt-2 flex items-start gap-2 text-support font-bold text-error"
+        role="alert"
+      >
+        <Icon name="lucide:circle-alert" class="mt-0.5 size-5 shrink-0" />
+        <span>{error}</span>
+      </p>
+    )
+  }
+</div>

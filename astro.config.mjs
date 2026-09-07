@@ -13,7 +13,9 @@ export default defineConfig({
     icon({
       include: {
         lucide: [
+          'arrow-left',
           'arrow-right',
+          'circle-alert',
           'calendar',
           'check',
           'chevron-down',

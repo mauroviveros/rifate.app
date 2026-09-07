@@ -1,0 +1,93 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'fieldset'> {
+  totalNumbersField: string;
+  totalNumbers: number;
+  value: '0' | '1';
+}
+
+const {
+  totalNumbersField,
+  totalNumbers,
+  value,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const RANGOS = [
+  { value: '0', from: 0 },
+  { value: '1', from: 1 },
+];
+---
+
+<fieldset
+  class:list={[className]}
+  aria-describedby="numberstart-hint"
+  data-number-start={totalNumbersField}
+  {...rest}
+>
+  <legend class="text-[1.1875rem] font-extrabold">
+    ¿Desde qué número arranca?
+  </legend>
+  <p id="numberstart-hint" class="mt-1.5 text-support text-subtle-foreground">
+    Es cómo van a estar numerados los talones. No se puede cambiar después.
+  </p>
+
+  <div class="mt-2.5 flex flex-wrap gap-2.5">
+    {
+      RANGOS.map(({ value: v, from }) => (
+        <label
+          class:list={[
+            'flex h-13 flex-1 cursor-pointer items-center justify-center gap-2.5',
+            'rounded-[0.8125rem] border-2 border-input px-4',
+            'text-[1.0625rem] font-bold text-muted-foreground',
+            'transition-colors hover:bg-foreground/5',
+            'has-checked:border-foreground has-checked:bg-foreground has-checked:font-extrabold has-checked:text-background',
+            'has-focus-visible:ring-3 has-focus-visible:ring-outline/50',
+          ]}
+        >
+          <input
+            type="radio"
+            name="numberStart"
+            value={v}
+            checked={value === v}
+            class="sr-only"
+          />
+          <span data-range-label={v} data-numero>
+            {from} a {from + totalNumbers - 1}
+          </span>
+        </label>
+      ))
+    }
+  </div>
+</fieldset>
+
+<script>
+  for (const fieldset of document.querySelectorAll<HTMLElement>(
+    '[data-number-start]',
+  )) {
+    const fieldName = fieldset.dataset.numberStart;
+    const totalField = document.querySelector<HTMLInputElement>(
+      `[name="${fieldName}"]`,
+    );
+
+    if (!totalField) continue;
+
+    const labels = [
+      ...fieldset.querySelectorAll<HTMLSpanElement>('[data-range-label]'),
+    ];
+
+    const draw = () => {
+      const quantity = Number(totalField.value) || 100;
+
+      for (const label of labels) {
+        const from = Number(label.dataset.rangeLabel);
+        label.textContent = `${from} a ${from + quantity - 1}`;
+      }
+    };
+
+    totalField.addEventListener('input', draw);
+    draw();
+  }
+</script>

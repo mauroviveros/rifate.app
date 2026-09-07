@@ -1,0 +1,180 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import { Icon } from 'astro-icon/components';
+
+import Chips from '@/components/form/Chips.astro';
+import Field from '@/components/form/Field.astro';
+import NumberStartField from '@/components/form/NumberStartField.astro';
+import { Button } from '@/components/starwind/button';
+import { today } from '@/utils/format';
+import { formNumber, formValue } from '@/utils/forms';
+
+import { RAFFLE_PLACEHOLDER } from './placeholder';
+
+interface Props extends HTMLAttributes<'form'> {
+  formData: FormData | null;
+  errors: Record<string, string[] | undefined>;
+  error: string | null;
+  action: string;
+}
+
+const {
+  formData,
+  errors,
+  error,
+  action,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const value = (name: string) => formValue(formData, name);
+
+const totalNumbers = formData ? value('totalNumbers') : '100';
+const numberStart = value('numberStart') === '1' ? '1' : '0';
+const cantidad = formNumber(formData, 'totalNumbers', 100);
+const ALLOW_CUSTOM_TOTAL_NUMBERS = false;
+const QUICK_TOTAL_NUMBERS = [100, 200, 500];
+const totalNumbersRaw = Number(totalNumbers);
+const totalNumbersMatchesQuickPick =
+  QUICK_TOTAL_NUMBERS.includes(totalNumbersRaw);
+---
+
+<form
+  id="form-rifa"
+  method="POST"
+  action={action}
+  class:list={['rounded-xl bg-card p-6 ring-2 ring-border sm:p-8', className]}
+  novalidate
+  {...rest}
+>
+  {
+    error && (
+      <p
+        class="mb-6 flex items-start gap-2.5 rounded-lg bg-error/8 p-4 text-support font-bold text-error"
+        role="alert"
+      >
+        <Icon name="lucide:circle-alert" class="mt-0.5 size-5.5 shrink-0" />
+        <span>{error}</span>
+      </p>
+    )
+  }
+
+  <Field
+    name="title"
+    label="¿Cómo se llama la rifa?"
+    hint="Ponelo como lo dirías en voz alta. Es lo primero que ve la gente."
+    placeholder={RAFFLE_PLACEHOLDER.title}
+    value={value('title')}
+    errors={errors.title}
+  />
+
+  <Field
+    class="mt-6"
+    name="description"
+    label="Contá un poco más"
+    hint="El premio, para qué es lo recaudado, dónde se sortea."
+    type="textarea"
+    placeholder={RAFFLE_PLACEHOLDER.description}
+    value={value('description')}
+    errors={errors.description}
+    optional
+  />
+
+  <hr class="my-6 perforado" />
+
+  <div class="grid gap-6 sm:grid-cols-2 sm:gap-5.5">
+    <Field
+      name="ticketPrice"
+      label="¿Cuánto sale cada número?"
+      hint="En pesos, sin puntos."
+      type="number"
+      inputmode="numeric"
+      placeholder="2500"
+      prefix="$"
+      min={1}
+      step={1}
+      value={value('ticketPrice')}
+      errors={errors.ticketPrice}
+    />
+
+    <div>
+      <Field
+        name="totalNumbers"
+        label="¿Cuántos números?"
+        hint="100 es lo más común."
+        type="number"
+        inputmode="numeric"
+        placeholder="100"
+        min={1}
+        max={1000}
+        step={1}
+        value={totalNumbers}
+        errors={errors.totalNumbers}
+        controlHidden={totalNumbersMatchesQuickPick}
+      />
+
+      <Chips
+        class="mt-3"
+        target="totalNumbers"
+        values={QUICK_TOTAL_NUMBERS}
+        value={totalNumbersRaw}
+        allowCustom={ALLOW_CUSTOM_TOTAL_NUMBERS}
+      />
+    </div>
+  </div>
+
+  <NumberStartField
+    class="mt-6"
+    totalNumbersField="totalNumbers"
+    totalNumbers={cantidad}
+    value={numberStart}
+  />
+
+  <Field
+    class="mt-6"
+    name="drawDate"
+    label="¿Qué día se sortea?"
+    hint="Podés cambiarla después si se corre la fecha."
+    type="date"
+    min={today()}
+    value={value('drawDate')}
+    errors={errors.drawDate}
+  />
+
+  <Field
+    class="mt-6"
+    name="contactPhone"
+    label="¿A qué WhatsApp te escriben?"
+    hint="Este número le aparece a los compradores para contactarte. Hace falta para publicar, pero podés cargarlo después."
+    type="tel"
+    inputmode="tel"
+    placeholder="11 2345-6789"
+    value={value('contactPhone')}
+    errors={errors.contactPhone}
+    optional
+  />
+
+  <Button type="submit" variant="primary" size="lg" class="mt-7 w-full">
+    Crear la rifa y obtener el link
+    <Icon name="lucide:arrow-right" aria-hidden="true" />
+  </Button>
+
+  <p class="mt-3 text-center text-support text-subtle-foreground">
+    Todo se puede editar después. Nada se publica hasta que compartís el link.
+  </p>
+</form>
+
+<script>
+  const selector = '[aria-invalid="true"]';
+  const firstError = document.querySelector<HTMLElement>(selector);
+
+  if (firstError) {
+    const scrollToError = () => {
+      firstError.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      firstError.focus({ preventScroll: true });
+    };
+
+    if (document.fonts) document.fonts.ready.then(scrollToError);
+    else scrollToError();
+  }
+</script>
