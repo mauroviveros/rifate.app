@@ -1,0 +1,159 @@
+---
+/**
+ * Los atajos de cantidad del artboard `Create`: valores frecuentes más
+ * «Otro», que revela el campo numérico que controlan.
+ *
+ * Son botones y no radios a propósito: sin JavaScript no hacen nada —ni
+ * rompen nada—, y el campo que controlan sigue ahí, editable a mano. Es la
+ * misma historia sin-JS que el resto del panel: degradan a "no sirven",
+ * nunca a "el formulario no se puede enviar".
+ *
+ * El comportamiento vive en el `<script>` de acá abajo y no en la página que
+ * lo usa: Astro dedupea el script de un componente una sola vez aunque
+ * aparezca más de una vez en la pantalla, así que un segundo `<Chips>` en
+ * otro formulario no suma una segunda copia. El componente encuentra su
+ * campo por `name` con `document.querySelector`, no por una ref que la
+ * página tendría que pasarle.
+ */
+interface Props {
+  /** El `name` del campo numérico al que apuntan. */
+  target: string;
+  values: number[];
+  /**
+   * El valor actual del campo, para marcar el chip correcto (y esconder el
+   * control) desde el primer render. Sin esto los `aria-pressed="false"`
+   * quedarían fijos hasta que el `<script>` de acá abajo corriera, y el chip
+   * que va a terminar marcado se ve un frame sin marcar — el mismo flash que
+   * `controlHidden` de `Field` evita del lado del input.
+   */
+  value: number;
+  /**
+   * Si además de los valores fijos se puede cargar cualquier otro.
+   *
+   * En `false` no aparece «Otro» y el campo libre no se llega a ver nunca —el
+   * organizador elige entre los valores de `values`, y punto. No hay ningún
+   * límite técnico atrás: el esquema sigue aceptando cualquier cantidad
+   * dentro del rango de siempre, así que volver a permitirlo es dar vuelta
+   * este `boolean` en el punto de llamada, nada más.
+   */
+  allowCustom?: boolean;
+  otherLabel?: string;
+  class?: string;
+}
+
+const {
+  target,
+  values,
+  value,
+  allowCustom = true,
+  otherLabel = 'Otro',
+  class: className,
+} = Astro.props;
+
+/* Ninguno de `values` calza → el que manda es el campo libre (o «Otro» ganó
+   la última interacción). Mismo criterio que el `pintar()` del script. */
+const matchesPreset = values.includes(value);
+
+const CHIP = [
+  'h-13 min-w-20 flex-1 rounded-[0.8125rem] border-2 px-4',
+  'text-[1.0625rem] font-bold transition-colors',
+  'border-input text-muted-foreground hover:bg-foreground/5',
+  'aria-pressed:border-foreground aria-pressed:bg-foreground',
+  'aria-pressed:font-extrabold aria-pressed:text-background',
+];
+---
+
+<div
+  class:list={['flex flex-wrap gap-2.5', className]}
+  data-chips={target}
+  role="group"
+  aria-label="Cantidades frecuentes"
+>
+  {
+    values.map((n) => (
+      <button
+        type="button"
+        class:list={CHIP}
+        data-chip-value={n}
+        aria-pressed={n === value ? 'true' : 'false'}
+        data-numero
+      >
+        {n}
+      </button>
+    ))
+  }
+  {
+    allowCustom && (
+      <button
+        type="button"
+        class:list={CHIP}
+        data-chip-other
+        aria-pressed={matchesPreset ? 'false' : 'true'}
+      >
+        {otherLabel}
+      </button>
+    )
+  }
+</div>
+
+<script>
+  /**
+   * Un grupo por cada `[data-chips]` que haya en la página. `target` viaja en
+   * el propio atributo (el nombre del campo), así que el script no necesita
+   * que nadie se lo pase: lee el DOM que el componente ya escribió.
+   */
+  for (const group of document.querySelectorAll<HTMLElement>('[data-chips]')) {
+    const fieldName = group.dataset.chips;
+    const field = document.querySelector<HTMLInputElement>(
+      `[name="${fieldName}"]`,
+    );
+    // Sólo el CONTROL, no el `Field` entero: esconder el campo completo se
+    // llevaba puesta la etiqueta «¿Cuántos números?» y su ayuda, y con un
+    // chip activo la pregunta desaparecía y dejaba a los botones flotando sin
+    // ningún texto que dijera qué son.
+    const wrapper = document.querySelector<HTMLElement>(
+      `[data-field="${fieldName}"] [data-field-control]`,
+    );
+    if (!field) continue;
+
+    const buttons = [...group.querySelectorAll<HTMLButtonElement>('button')];
+    const otherButton =
+      group.querySelector<HTMLButtonElement>('[data-chip-other]');
+
+    const pintar = () => {
+      const actual = Number(field.value);
+      const boton = buttons.find(
+        (b) => b !== otherButton && Number(b.dataset.chipValue) === actual,
+      );
+
+      for (const b of buttons)
+        b.setAttribute('aria-pressed', String(b === boton));
+      otherButton?.setAttribute('aria-pressed', String(!boton));
+      // El campo sólo hace falta verlo cuando ninguno de los atajos calza.
+      if (wrapper) wrapper.hidden = Boolean(boton);
+    };
+
+    for (const b of buttons) {
+      if (b === otherButton) continue;
+      b.addEventListener('click', () => {
+        field.value = b.dataset.chipValue ?? '';
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        pintar();
+      });
+    }
+
+    otherButton?.addEventListener('click', () => {
+      field.value = '';
+      // Sin este evento, NumberStartField y Summary —que escuchan `input` en
+      // este mismo campo— se quedan mostrando el valor del chip anterior: el
+      // campo ya está vacío pero el rango y el total todavía dicen "200".
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      if (wrapper) wrapper.hidden = false;
+      field.focus();
+      pintar();
+    });
+
+    field.addEventListener('input', pintar);
+    pintar();
+  }
+</script>

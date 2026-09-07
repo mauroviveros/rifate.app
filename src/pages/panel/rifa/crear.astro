@@ -1,0 +1,76 @@
+---
+import { actions, isInputError } from 'astro:actions';
+import { Icon } from 'astro-icon/components';
+
+import Form from '@/components/panel/create/Form.astro';
+import Summary from '@/components/panel/create/Summary.astro';
+import Dashboard from '@/layouts/Dashboard.astro';
+
+const result = Astro.getActionResult(actions.raffle.create);
+
+/**
+ * Si el resultado de la acción es exitoso, redirigir al usuario a la página de la rifa recién creada.
+ * Esto evita que el usuario vea un mensaje de éxito en la misma página y le permite acceder directamente a la rifa.
+ */
+if (result && !result.error) {
+  return Astro.redirect(`/panel/rifa/${result.data.id}`, 303);
+}
+
+let errors: Record<string, string[] | undefined> = {};
+let error: string | null = null;
+
+if (result?.error) {
+  if (isInputError(result.error)) errors = result.error.fields;
+  else error = result.error.message;
+}
+
+/**
+ * Lo que se tipeó, para no devolver el formulario vacío.
+ */
+let formData: FormData | null = null;
+if (Astro.request.method === 'POST') {
+  try {
+    formData = await Astro.request.clone().formData();
+  } catch {
+    formData = null;
+  }
+}
+---
+
+<Dashboard title="Crear una rifa · rifate.app">
+  <a
+    slot="nav"
+    href="/panel"
+    aria-label="Volver a mis rifas"
+    class:list={[
+      'flex shrink-0 items-center gap-2 text-support font-bold text-background/75',
+      'transition-colors hover:text-background',
+    ]}
+  >
+    <Icon name="lucide:arrow-left" class="size-4.5" aria-hidden="true" />
+    <span class="hidden sm:inline">Volver a mis rifas</span>
+  </a>
+
+  <hgroup>
+    <h1 class="text-[2.25rem] sm:text-display">Armemos tu rifa</h1>
+    <p class="mt-2 text-support text-muted-foreground sm:text-body">
+      Son cinco datos. Abajo vas viendo cómo les va a quedar a tus compradores.
+    </p>
+  </hgroup>
+
+  <div
+    class:list={[
+      'mt-7 grid items-start gap-7 sm:mt-9',
+      'lg:grid-cols-[1fr_380px] lg:gap-7.5',
+    ]}
+  >
+    <Form
+      action={actions.raffle.create}
+      formData={formData}
+      errors={errors}
+      error={error}
+      class="w-full"
+    />
+    <Summary formData={formData} />
+  </div>
+</Dashboard>

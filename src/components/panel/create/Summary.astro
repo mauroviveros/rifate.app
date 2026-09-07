@@ -1,0 +1,195 @@
+---
+import { pesos } from '@/utils/format';
+import { formNumber, formValue } from '@/utils/forms';
+
+import { RAFFLE_PLACEHOLDER } from './placeholder';
+
+interface Props {
+  formData: FormData | null;
+}
+
+const { formData } = Astro.props;
+const value = (name: string) => formValue(formData, name);
+const totalNumbers = formNumber(formData, 'totalNumbers', 100);
+const ticketPrice = formNumber(formData, 'ticketPrice', 2500);
+const numberStart = value('numberStart') === '1' ? 1 : 0;
+
+const title = value('title') || RAFFLE_PLACEHOLDER.title;
+const description = value('description') || RAFFLE_PLACEHOLDER.description;
+const total = pesos(totalNumbers * ticketPrice * 100);
+const width = String(numberStart + totalNumbers - 2).length;
+
+const PREVIEW = 30;
+const numbers = Array.from(
+  { length: Math.min(PREVIEW, totalNumbers) },
+  (_, i) => String(numberStart + i).padStart(width, '0'),
+);
+---
+
+<aside class="flex flex-col gap-5">
+  <div
+    class="rounded-xl bg-warning p-6 ring-2 ring-warning/70"
+    data-summary-total
+  >
+    <h2
+      class="text-support font-extrabold tracking-[0.04em] text-warning-foreground/70"
+    >
+      SI VENDÉS TODO
+    </h2>
+
+    <p class="mt-1 font-display text-display font-extrabold" data-numero>
+      <output data-total>{total}</output>
+    </p>
+
+    <div
+      class="my-4 perforado opacity-40"
+      style="--input:var(--color-warning-foreground);"
+      aria-hidden="true"
+    >
+    </div>
+
+    <p
+      class="flex justify-between text-[1.0625rem] font-bold text-warning-foreground/85"
+      data-numero
+    >
+      <span><output data-cantidad>{totalNumbers}</output> números</span>
+      <span aria-hidden="true">×</span>
+      <span><output data-precio>{pesos(ticketPrice * 100)}</output></span>
+    </p>
+  </div>
+
+  <div class="rounded-xl bg-card p-6 ring-2 ring-border">
+    <h2 class="text-[1.25rem]">Así lo van a ver</h2>
+    <p class="text-label text-subtle-foreground">Vista previa de tu link.</p>
+
+    <div class="mt-4 rounded-lg bg-foreground p-4.5 text-background">
+      <p class="font-display text-[1.3125rem] font-extrabold tracking-tight">
+        <span data-preview-title>{title}</span>
+      </p>
+      <p class="text-label text-background/75">
+        <span data-preview-description>{description}</span>
+      </p>
+    </div>
+
+    <ul
+      class="mt-3.5 grid grid-cols-10 gap-1"
+      aria-hidden="true"
+      data-preview-grid
+    >
+      {
+        numbers.map((number) => (
+          <li
+            class:list={[
+              'flex aspect-square items-center justify-center',
+              'rounded-xs border-2 border-input bg-card text-[0.75rem] font-extrabold',
+            ]}
+            data-numero
+          >
+            {number}
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+
+  <div class="rounded-xl border-3 border-dashed border-input p-5.5">
+    <h2 class="text-[1.1875rem]">Un consejo</h2>
+    <p class="mt-1 text-support text-muted-foreground">
+      Cuantos menos números tenga la rifa, más rápido se vende. Si es tu primera
+      vez, arrancá con 100.
+    </p>
+  </div>
+</aside>
+
+<script>
+  import { pesos } from '@/utils/format';
+  import { numberOr } from '@/utils/forms';
+
+  import { RAFFLE_PLACEHOLDER } from './placeholder';
+
+  const $totalCard = document.querySelector<HTMLElement>(
+    '[data-summary-total]',
+  );
+  const $previewTitle = document.querySelector<HTMLElement>(
+    '[data-preview-title]',
+  );
+
+  if ($totalCard && $previewTitle) {
+    const $field = {
+      price: document.querySelector<HTMLInputElement>('[name="ticketPrice"]'),
+      totalNumbers: document.querySelector<HTMLInputElement>(
+        '[name="totalNumbers"]',
+      ),
+      title: document.querySelector<HTMLInputElement>('[name="title"]'),
+      description: document.querySelector<HTMLTextAreaElement>(
+        '[name="description"]',
+      ),
+    };
+
+    const read = () => {
+      const $numberStart = document.querySelector<HTMLInputElement>(
+        '[name="numberStart"]:checked',
+      );
+
+      return {
+        price: numberOr($field.price?.value ?? '', 2500),
+        totalNumbers: numberOr($field.totalNumbers?.value ?? '', 100),
+        numberStart: $numberStart?.value === '0' ? 0 : 1,
+      };
+    };
+
+    const drawTotal = () => {
+      const { price, totalNumbers: quantity } = read();
+
+      $totalCard.querySelector<HTMLOutputElement>('[data-total]')!.textContent =
+        pesos(price * quantity * 100);
+      $totalCard.querySelector<HTMLOutputElement>(
+        '[data-cantidad]',
+      )!.textContent = String(quantity);
+      $totalCard.querySelector<HTMLOutputElement>(
+        '[data-precio]',
+      )!.textContent = pesos(price * 100);
+    };
+
+    const drawPreview = () => {
+      const { totalNumbers: quantity, numberStart: start } = read();
+
+      $previewTitle.textContent =
+        $field.title?.value.trim() || RAFFLE_PLACEHOLDER.title;
+      document.querySelector('[data-preview-description]')!.textContent =
+        $field.description?.value.trim() || RAFFLE_PLACEHOLDER.description;
+
+      const width = String(start + quantity - 2).length;
+      const $grid = document.querySelector('[data-preview-grid]')!;
+
+      $grid.replaceChildren(
+        ...Array.from({ length: Math.min(30, quantity) }, (_, i) => {
+          const li = document.createElement('li');
+          li.className =
+            'flex aspect-square items-center justify-center rounded-xs border-2 border-input bg-card text-[0.75rem] font-extrabold';
+          li.dataset.numero = '';
+          li.textContent = String(start + i).padStart(width, '0');
+          return li;
+        }),
+      );
+    };
+
+    const draw = () => {
+      drawTotal();
+      drawPreview();
+    };
+
+    for (const field of [
+      $field.price,
+      $field.totalNumbers,
+      $field.title,
+      $field.description,
+    ]) {
+      field?.addEventListener('input', draw);
+    }
+
+    document
+      .querySelectorAll<HTMLInputElement>('[name="numberStart"]')
+      .forEach((radio) => radio.addEventListener('change', draw));
+  }
+</script>
