@@ -36,7 +36,7 @@ if (releaseResult && !releaseResult.error) {
   );
 }
 
-/** publish → paso 7 (Header). sell/release → el panel `Sale`. */
+/** publish → el `Header`. sell/release → el panel `Sale`. */
 const publishError =
   publishResult?.error && !isInputError(publishResult.error)
     ? publishResult.error.message
@@ -79,6 +79,7 @@ const selectedNumbers = (formData?.getAll('numbers') ?? [])
   .filter((n) => Number.isInteger(n));
 
 const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
+const draft = raffle.status === 'DRAFT';
 ---
 
 <Dashboard title={`${raffle.title} · rifate.app`}>
@@ -117,8 +118,8 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
 
   <div
     class:list={[
-      'mt-7 grid items-start gap-7',
-      'lg:grid-cols-[1fr_380px] lg:gap-7.5',
+      'mt-7 grid gap-7',
+      'lg:grid-cols-[1fr_380px] lg:items-start lg:gap-7.5',
     ]}
   >
     <Grid
@@ -128,22 +129,24 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
       selected={selectedNumbers}
       form="sale"
     />
+
     <Sale
       id="sale"
+      class="lg:sticky lg:top-24 lg:row-span-2"
       raffleId={raffle.id}
       ticketPrice={raffle.ticketPrice}
+      emphasis={draft ? 'secondary' : 'primary'}
       sellAction={actions.raffle.sell}
       releaseAction={actions.raffle.release}
       formData={formData}
       errors={saleErrors}
       error={saleError}
     />
-  </div>
 
-  <Buyers
-    class="mt-7"
-    numbers={numbers}
-    numberStart={raffle.numberStart}
-    totalNumbers={raffle.totalNumbers}
-  />
+    <Buyers
+      numbers={numbers}
+      numberStart={raffle.numberStart}
+      totalNumbers={raffle.totalNumbers}
+    />
+  </div>
 </Dashboard>
