@@ -1,0 +1,47 @@
+---
+import type { NumberStatus } from '@/types/raffle';
+import { numberLabel } from '@/utils/frontmatter/detail';
+
+interface Props {
+  value: number;
+  status: NumberStatus;
+  /** Ancho de padding de la etiqueta (de `numberWidth`). */
+  width: number;
+  /** El `id` del <form> del panel al que se ata el checkbox. */
+  form: string;
+}
+
+const { value, status, width, form } = Astro.props;
+const label = numberLabel(value, width);
+/** Vendido o reservado: se puede tildar igual, para liberarlo sin otra pantalla. */
+const taken = status === 'SOLD' || status === 'RESERVED';
+
+const BASE = [
+  'flex aspect-square items-center justify-center',
+  'rounded-md border-2 text-support font-extrabold transition-all select-none',
+  'has-focus-visible:ring-3 has-focus-visible:ring-outline/50',
+];
+
+const FREE = [
+  'cursor-pointer border-input bg-card text-foreground hover:-translate-y-0.5',
+  'has-checked:border-foreground has-checked:bg-foreground',
+  'has-checked:text-background has-checked:sello-primary',
+];
+
+const TAKEN = [
+  'tachado cursor-not-allowed border-border bg-muted text-disabled-foreground',
+  'has-checked:border-primary has-checked:text-foreground has-checked:sello-primary',
+];
+---
+
+<label class:list={[BASE, taken ? TAKEN : FREE]}>
+  <input
+    type="checkbox"
+    name="numbers"
+    value={value}
+    form={form}
+    class="sr-only"
+  />
+  <span data-numero>{label}</span>
+  {taken && <span class="sr-only"> · vendido</span>}
+</label>

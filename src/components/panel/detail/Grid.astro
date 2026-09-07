@@ -1,0 +1,50 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+import Cell from '@/components/panel/detail/Cell.astro';
+import type { OwnerNumber } from '@/types/raffle';
+import { numberWidth } from '@/utils/frontmatter/detail';
+
+interface Props extends HTMLAttributes<'section'> {
+  numbers: OwnerNumber[];
+  numberStart: number;
+  totalNumbers: number;
+  /** El `id` del <form> del panel de venta. */
+  form: string;
+}
+
+const {
+  numbers,
+  numberStart,
+  totalNumbers,
+  form,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const width = numberWidth(numberStart, totalNumbers);
+---
+
+<section
+  class:list={['rounded-xl bg-card p-4 ring-2 ring-border sm:p-6', className]}
+  aria-labelledby="grid-title"
+  {...rest}
+>
+  <h2 id="grid-title" class="text-[1.25rem]">Los números</h2>
+  <p class="mt-0.5 text-label text-subtle-foreground">
+    Tocá los que quieras vender. Los tachados ya están vendidos: tocalos para
+    liberarlos.
+  </p>
+
+  <div
+    class="mt-4 grid grid-cols-5 gap-1.5 sm:grid-cols-10 sm:gap-1"
+    role="group"
+    aria-label="Números de la rifa"
+  >
+    {
+      numbers.map(({ number, status }) => (
+        <Cell value={number} status={status} width={width} form={form} />
+      ))
+    }
+  </div>
+</section>

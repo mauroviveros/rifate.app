@@ -2,6 +2,7 @@
 import { actions, isInputError } from 'astro:actions';
 import { Icon } from 'astro-icon/components';
 
+import Grid from '@/components/panel/detail/Grid.astro';
 import Stats from '@/components/panel/detail/Stats.astro';
 import Dashboard from '@/layouts/Dashboard.astro';
 import { ownerGrid } from '@/lib/raffles';
@@ -93,6 +94,14 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
   }
 
   <Stats class="mt-7" numbers={numbers} ticketPrice={raffle.ticketPrice} />
+
+  <Grid
+    class="mt-7"
+    numbers={numbers}
+    numberStart={raffle.numberStart}
+    totalNumbers={raffle.totalNumbers}
+    form="sale"
+  />
 
   {/* Provisional hasta el paso 7 (Header): estado y teléfono de contacto. */}
   <p>
