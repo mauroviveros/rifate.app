@@ -1,0 +1,124 @@
+---
+import { actions, isInputError } from 'astro:actions';
+import { Icon } from 'astro-icon/components';
+
+import Dashboard from '@/layouts/Dashboard.astro';
+import { ownerGrid } from '@/lib/raffles';
+import { codeOf } from '@/utils/errors';
+import { flashMessage } from '@/utils/frontmatter/detail';
+
+const { id } = Astro.params;
+if (!id) return Astro.rewrite('/404');
+
+const publishResult = Astro.getActionResult(actions.raffle.publish);
+const sellResult = Astro.getActionResult(actions.raffle.sell);
+const releaseResult = Astro.getActionResult(actions.raffle.release);
+
+if (publishResult && !publishResult?.error) {
+  return Astro.redirect(`/panel/rifa/${id}?ok=published`, 303);
+}
+if (sellResult && !sellResult?.error) {
+  return Astro.redirect(
+    `/panel/rifa/${id}?ok=sold-${sellResult?.data.sold.length}`,
+    303,
+  );
+}
+if (releaseResult && !releaseResult?.error) {
+  return Astro.redirect(
+    `/panel/rifa/${id}?ok=freed-${releaseResult?.data.length}`,
+    303,
+  );
+}
+
+const failed = [publishResult, sellResult, releaseResult].find((r) => r?.error);
+const actionError =
+  failed?.error && !isInputError(failed.error) ? failed.error.message : null;
+
+const loaded = await ownerGrid(Astro.locals.actor, id).catch(
+  (error: unknown) => {
+    const code = codeOf(error);
+    if (code === 'NOT_FOUND' || code === 'FORBIDDEN') return null;
+    throw error;
+  },
+);
+
+if (!loaded) return Astro.rewrite('/404');
+const { raffle, numbers } = loaded;
+const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
+const soldOnGrid = numbers.filter((n) => n.status === 'SOLD').length;
+---
+
+<Dashboard title={`${raffle.title} · rifate.app`}>
+  <a
+    slot="nav"
+    href="/panel"
+    aria-label="Volver a mis rifas"
+    class:list={[
+      'flex shrink-0 items-center gap-2 text-support font-bold text-background/75',
+      'transition-colors hover:text-background',
+    ]}
+  >
+    <Icon name="lucide:arrow-left" class="size-4.5" aria-hidden="true" />
+    <span class="hidden sm:inline">Volver a mis rifas</span>
+  </a>
+
+  <hgroup>
+    <h1 class="text-[2.25rem] sm:text-display">{raffle.title}</h1>
+    <p class="mt-2 text-support text-muted-foreground sm:text-body">
+      Mirá cómo va, cargá ventas y publicá cuando estés listo.
+    </p>
+  </hgroup>
+
+  {
+    okMessage && (
+      <p
+        class="mt-6 rounded-lg bg-success/10 p-4 text-support font-bold text-success"
+        role="status"
+      >
+        {okMessage}
+      </p>
+    )
+  }
+
+  {
+    actionError && (
+      <p
+        class="mt-6 flex items-start gap-2.5 rounded-lg bg-error/8 p-4 text-support font-bold text-error"
+        role="alert"
+      >
+        <Icon name="lucide:circle-alert" class="mt-0.5 size-5.5 shrink-0" />
+        <span>{actionError}</span>
+      </p>
+    )
+  }
+
+  <!-- TODO Provisional -->
+  <dl
+    class="mt-7 grid gap-2 rounded-xl bg-card p-6 text-support ring-2 ring-border"
+  >
+    <div class="flex justify-between gap-4">
+      <dt class="text-subtle-foreground">Estado</dt>
+      <dd class="font-bold">{raffle.status}</dd>
+    </div>
+    <div class="flex justify-between gap-4">
+      <dt class="text-subtle-foreground">Rango</dt>
+      <dd class="font-bold" data-numero>
+        {raffle.numberStart}–{raffle.numberStart + raffle.totalNumbers - 1}
+      </dd>
+    </div>
+    <div class="flex justify-between gap-4">
+      <dt class="text-subtle-foreground">Vendidos · D1</dt>
+      <dd class="font-bold" data-numero>
+        {raffle.soldCount} / {raffle.totalNumbers}
+      </dd>
+    </div>
+    <div class="flex justify-between gap-4">
+      <dt class="text-subtle-foreground">Vendidos · grilla del DO</dt>
+      <dd class="font-bold" data-numero>{soldOnGrid} / {numbers.length}</dd>
+    </div>
+    <div class="flex justify-between gap-4">
+      <dt class="text-subtle-foreground">Teléfono de contacto</dt>
+      <dd class="font-bold">{raffle.contactPhone ?? '—'}</dd>
+    </div>
+  </dl>
+</Dashboard>
