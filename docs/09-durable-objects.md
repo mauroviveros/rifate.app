@@ -548,6 +548,16 @@ generación de la imagen OG**: ~15 de los 25 segundos de CPU por rifa. Es el 60 
 > servir con `max-age=31536000, immutable` y **se genera una sola vez en la vida**.
 > Sin eso, esa fila de la tabla se multiplica.
 
+> ⚠️ **Corrección 2026-09-08 — el punto 3 quedó viejo.** La
+> [fase 7 del roadmap](./06-roadmap.md) sacó la generación del OG del Worker:
+> `satori` descartado. El OG pasa a ser un PNG fijo, o una imagen que el
+> organizador sube a **R2** desde el navegador; el Worker sólo hace passthrough
+> (~1–3 ms). La «imagen del estado para compartir» también se arma
+> cliente-side. **Los ~15 s de CPU por rifa del OG se van casi enteros**, y con
+> ellos el 60 %: el consumo de Worker por rifa baja a ~10 s y la app **entra
+> cómoda en Free** bastante más allá de las 3.000 rifas/mes. Las tablas de
+> arriba sobreestiman la CPU de Workers de acá en más.
+
 **4 · Si esto llegara a 50.000 rifas/mes, cobrando aunque sea $2 por rifa, son
 $100.000 de ingresos contra $73 de infraestructura.** El costo de plataforma
 nunca es el problema de este negocio.
@@ -557,7 +567,7 @@ nunca es el problema de este negocio.
 | Métrica | Umbral | Qué significa si sube raro |
 |---|---|---|
 | **DO duration (GB-s)** | 400.000/mes | Algún objeto no está hibernando → revisar `acceptWebSocket` |
-| **Workers CPU (ms)** | 30 M/mes | El OG se está regenerando de más → revisar cache headers |
+| **Workers CPU (ms)** | 30 M/mes | Subió sin que suban las rifas → un render server-side nuevo sin cache |
 | **D1 rows written** | 50 M/mes | Escrituras al índice más frecuentes de lo previsto |
 
 Dashboard de Cloudflare → **Workers & Pages → rifate-app → Metrics**.
