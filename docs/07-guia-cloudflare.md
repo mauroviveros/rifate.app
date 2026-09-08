@@ -286,7 +286,23 @@ npx wrangler deploy
 
 ---
 
-## Etapa C · Imagen OG con satori + resvg-wasm
+## Etapa C · Imagen OG
+
+> **Corrección 2026-09-08 — `satori` + `resvg-wasm` quedan descartados.**
+> Decidido en la [fase 7 del roadmap](./06-roadmap.md): el OG **no se renderiza
+> en el Worker**. Lo pide el crawler de WhatsApp (sin JS), así que necesita
+> bytes PNG en una URL estable — pero eso no obliga a un render de ~300 ms:
+>
+> - **OG fijo**: un PNG de marca versionado en el repo. Cero CPU.
+> - **OG en vivo sin Paid**: el navegador del organizador arma un `<svg>` de la
+>   grilla → `canvas` → PNG y lo sube a **R2** con clave
+>   `og/{id}/{vendidos}.png`; el route de `og:image` lo lee de R2 y cae al fijo
+>   si falta.
+>
+> El resto de esta etapa —la plantilla de satori, las fuentes en base64, el
+> `CompiledWasm` en `wrangler.jsonc`— **ya no aplica**; queda como referencia de
+> cómo se pensaba el problema. La mecánica del `<svg>` de la grilla se comparte
+> con la «imagen del estado para compartir» de la misma fase.
 
 > **Corrección respecto de la primera versión de esta guía.** Acá decía usar
 > Browser Run. Los límites reales lo desaconsejan para el OG:

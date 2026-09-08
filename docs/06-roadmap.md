@@ -443,36 +443,111 @@ pnpm add -D prettier-plugin-tailwindcss
 >
 > | Qué | Dónde se resuelve |
 > |---|---|
-> | No hay cómo **editar** una rifa: una `DRAFT` creada sin `contact_phone` no se puede publicar *ni* arreglar | action `raffle.update` + pantalla/campo — conviene antes de la fase 7 |
-> | El panel `Sale` sigue interactivo en `CLOSED` / `CANCELLED` (`sell()` del DO no chequea estado) | gate en `[id].astro` cuando la fase 9 cierre el ciclo |
+> | No hay cómo **editar** una rifa: una `DRAFT` creada sin `contact_phone` no se puede publicar *ni* arreglar | **diseñado** — ver «Antes de la fase 7» abajo |
+> | El panel `Sale` sigue interactivo en `CLOSED` / `CANCELLED` (`sell()` del DO no chequea estado); además `estadoDe()` muestra `CANCELLED` como «Ya sorteada» | **diseñado** — fase 9 |
 > | Teléfono del comprador en E.164 (`+54…`), no `11 4455-2211` como el canvas | `src/lib/whatsapp/` en la fase 7 |
 > | La celda `RESERVED` se rotula «· vendido» en el `sr-only` | fase 8 (ahí aparecen las reservas) |
 > | `buyers.note` quedó vestigial (la nota se lee de `numbers.note`); `upsertBuyer` tampoco la actualiza en un comprador que repite | limpiar si estorba |
 > | La Nota del formulario de venta siempre visible (el canvas no la tiene) | cosmético: plegarla en `<details>` si el form se siente largo |
 > | La bajada del detalle concatena descripción + fecha con `line-clamp-2`: una descripción muy larga puede recortar el «· se sortea el…» | separar la fecha a su renglón si aparece el caso |
 
-> **Con qué seguir: la fase 7** (`/r/[slug]` público + OG + compartir), que pide
-> **Workers Paid**. El botón «Compartir por WhatsApp» del detalle ya apunta a
-> `/r/{slug}` — hoy 404. El primer ítem de la deuda de arriba (editar una rifa)
-> conviene meterlo al principio de esa fase, o antes.
+> **Con qué seguir: primero el bloque «Antes de la fase 7» de acá abajo**
+> (editar una rifa + los estados del detalle), después la fase 7 (`/r/[slug]`
+> público + imagen para compartir + OG fijo). El botón «Compartir por WhatsApp»
+> del detalle ya apunta a `/r/{slug}` — hoy 404. Ninguna de las dos pide
+> **Workers Paid**: el OG dejó de renderizarse en el Worker (ver la fase 7).
+
+---
+
+## Antes de la fase 7 — Editar la rifa y los estados del detalle
+
+> Diseñado el 2026-09-08 contra la **página 5 del canvas** («Detalle · todos los
+> estados»): 17 artboards, escritorio y celular. El detalle sólo existía en
+> `PUBLISHED` con ventas; faltaban los otros tres estados y las acciones que
+> salen de esa pantalla. Esta media fase cierra lo que traba *publicar y
+> arreglar* una rifa; sortear y anular van en la fase 9.
+
+- [ ] **`raffle.update`** — action + esquema para título, premio, descripción,
+      fecha de sorteo y teléfono. Con la rifa `PUBLISHED` **y con ventas**,
+      `total_numbers` y `ticket_price` quedan **bloqueados**: cambiarlos le
+      cambia el trato a quien ya pagó y desincroniza D1 con el DO. En `DRAFT`
+      los dos se editan. No toca el DO salvo que cambie el rango, que en `DRAFT`
+      es un `destroy()` + `init()`.
+- [ ] **`/panel/rifa/[id]/editar`** contra `DetailEdit` / `DetailEditMobile` —
+      reusa `Form` y `Summary` del alta, no un layout nuevo. Cinco campos con
+      ayuda arriba de cada uno: es una **página**, no un diálogo (igual que
+      «crear»; en el celular un modal con cinco campos es peor). Entra por un
+      renglón discreto bajo la bajada del encabezado, no por un tercer botón.
+- [ ] **Cargar el teléfono desde el detalle** contra `DetailDraftPhone` /
+      `DetailDraftPhoneMobile` — el renglón «Un teléfono de contacto» de la
+      lista «Antes de publicar» **se vuelve el input**, ahí mismo. Es un campo,
+      no una pantalla ni un diálogo. El botón hace las dos cosas: «Guardar y
+      publicar la rifa», con «Guardar sin publicar todavía» abajo.
+- [ ] **Estado `DRAFT` del detalle** contra `DetailDraft` / `DetailDraftMobile`
+      — sin panel de venta (no hay nada que vender); en su lugar la lista
+      «Antes de publicar» y el CTA de publicar apagado con el motivo (regla 7).
+- [ ] **Grilla vacía** contra `DetailEmpty` / `DetailEmptyMobile` — la fila
+      quedó en D1 y el `init()` del DO no llegó a correr. `ownerGrid()` vuelve
+      `numbers: []`; la pantalla ofrece rearmar el talonario (`init()` es
+      idempotente). Es el único estado que no depende de `raffle.update`.
+- [ ] Gate en `[id].astro`: con la rifa fuera de `DRAFT`/`PUBLISHED` el panel
+      `Sale` no se renderiza (hoy sigue interactivo).
+- [ ] **✅ Checkpoint: crear una `DRAFT` sin teléfono, cargárselo desde el
+      detalle, publicar, y después editar el premio con ventas ya cargadas sin
+      que se toque `ticket_price`**
 
 ---
 
 ## Fase 7 — Página pública y compartir
 
-> A partir de acá conviene **Workers Paid ($5)**: la generación del OG necesita
-> ~300 ms de CPU y el plan Free da 10 ms.
+> ~~A partir de acá hace falta **Workers Paid**: la generación del OG con satori
+> mide ~150–400 ms de CPU y Free corta en 10 ms por invocación.~~
+> → **El OG deja de renderizarse en el Worker** (recuadro abajo), así que la
+> fase 7 **sigue en Free**. Y lo que más se usa no es el OG: es la imagen del
+> estado que el organizador baja y manda al grupo — en WhatsApp una imagen se
+> mira y un link se ignora.
 
 - [ ] `/r/[slug]` con `Cache-Control: s-maxage=30, stale-while-revalidate=300`
-- [ ] Grilla pública (solo número y estado)
-- [ ] `src/lib/og/` — plantilla satori + `resvg-wasm` + fuentes en base64
-- [ ] `/og/raffle/[id]/[v].png.ts` con **URL versionada** e `immutable`
-- [ ] `SocialMeta.astro` apuntando a la URL versionada
+- [ ] Grilla pública (sólo número y estado)
+- [ ] El `<svg>` de la grilla (título · barra de progreso · celdas por estado)
+      en un módulo compartido — alimenta las dos salidas de abajo
+- [ ] **Imagen del estado para compartir** — botón en `/panel/rifa/[id]`: arma
+      el SVG → `canvas.drawImage()` → `toBlob()` → descarga el PNG, **todo en el
+      navegador del organizador**. Cero CPU de Worker. Es el artefacto que más
+      se usa. → artboard pendiente de sumar al canvas
+- [ ] **OG fijo** — un PNG de marca versionado en el repo; `SocialMeta.astro` lo
+      referencia igual para toda rifa. El `og:title` y la bajada sí son los
+      reales de cada una
+- [ ] `/og/raffle/[id]/[v].png` — route que lee R2 (`og/{id}/{vendidos}.png`) y
+      **cae al PNG fijo si no existe**. Se cablea aunque nadie suba nada
+      todavía: es el gancho para el OG en vivo sin pasar a Paid (recuadro)
+- [ ] `src/lib/whatsapp/` — teléfono a formato local (`11 4455-2211`) y el `9`
+      de celular para el link `wa.me`. Deuda de la fase 6
 - [ ] Botón de contacto por WhatsApp
-- [ ] **✅ Checkpoint: pegás el link en un chat y el preview muestra el estado real**
+- [ ] **✅ Checkpoint: el link se ve bien en WhatsApp y el organizador baja una
+      imagen del estado para mandar al grupo**
 
-> La URL versionada no es cosmética: hace que la imagen se genere **una sola vez
-> en la vida**, y el OG es el 60 % del consumo de CPU de la app.
+> **Por qué el OG no puede ser cliente-side como la imagen para compartir.** Al
+> OG lo pide el crawler de WhatsApp: baja el HTML, lee `og:image` y hace un
+> `GET` esperando bytes PNG. **No ejecuta JavaScript** — no hay `canvas` ni DOM
+> del otro lado. `og:image` tiene que apuntar a una URL que ya devuelva el PNG
+> hecho. Sin el render de satori quedan dos caminos:
+>
+> 1. **Fijo** (el del MVP): un PNG de marca. Cero CPU; se pierde la grilla en
+>    vivo en el preview.
+> 2. **El organizador sube el OG a R2**: su navegador arma el mismo SVG→PNG y lo
+>    `PUT`ea a un endpoint del panel, que lo guarda en R2 con clave
+>    `og/{id}/{vendidos}.png`. El route de `og:image` lo lee de R2 (~1–3 ms) y
+>    si no está sirve el fijo. R2 tiene free tier propio (10 GB · 1 M escrituras
+>    · 10 M lecturas/mes) y el Worker sólo hace passthrough → **sigue en Free**.
+>    Cobertura casi total en el flujo BASIC manual (el organizador carga cada
+>    venta y re-sube después de cada una); degrada manso en pedidos PRO
+>    (fase 8): muestra el estado anterior, nunca 404.
+>
+> `satori` + `resvg-wasm` quedan **descartados** para el OG, y con ellos la
+> deuda de «CSS completo con Browser Run» de la fase 10: el `<svg>` de la grilla
+> a mano se controla al pixel y no arrastra un Chromium. Corrección en
+> [07 · Etapa C](./07-guia-cloudflare.md).
 
 ---
 
@@ -491,10 +566,24 @@ pnpm add -D prettier-plugin-tailwindcss
 ## Fase 9 — Sorteo, vouchers y admin
 
 - [ ] `drawWinner()` — sortea entre los **vendidos**, o número manual
+- [ ] **Diálogo de sorteo** contra `DetailDraw` / `DetailDrawMobile` — las dos
+      opciones (al azar entre los vendidos, o número a mano) y la confirmación
+      de que cierra la rifa. Es un modal → Starwind `Dialog` (pasa la puerta 1
+      de [11](./11-sistema-visual.md#la-regla-de-las-tres-puertas)), nunca
+      `dialog.showModal()` a mano ni `:target`
+- [ ] **Estado `CLOSED` del detalle** contra `DetailClosed` /
+      `DetailClosedMobile` — grilla congelada, tarjeta del ganador en la
+      columna derecha
 - [ ] Anuncio del ganador + OG con el ganador destacado
 - [ ] `redeemVoucher()` con `UPDATE ... WHERE used_count < max_uses` + guarda
 - [ ] `/admin/vouchers` — emisión, sólo `ADMIN`
-- [ ] Cancelar rifa (no borrar, si tiene ventas)
+- [ ] Cancelar rifa (no borrar, si tiene ventas) — **`raffle.cancel`** con
+      guarda de tipeo, contra `DetailCancelConfirm` / `DetailCancelConfirmMobile`
+      (modal → Starwind `Dialog`; el botón arranca apagado diciendo por qué)
+- [ ] **Estado `CANCELLED` del detalle** contra `DetailCancelled` /
+      `DetailCancelledMobile` — badge en tinta llena (arreglar `estadoDe()`,
+      que hoy lo muestra como «Ya sorteada»), el texto habla de a quién
+      devolverle la plata, no del sorteo
 - [ ] Borrado seguro: **`destroy()` del DO primero, D1 después**
 
 ---
@@ -502,7 +591,9 @@ pnpm add -D prettier-plugin-tailwindcss
 ## Fase 10 — Deuda y futuro
 
 - [ ] Tests de la lógica de dominio pura
-- [ ] Imagen descargable de la grilla — acá sí con **Browser Run**
+- [ ] ~~Imagen descargable de la grilla — con **Browser Run**~~
+      → **se adelantó a la fase 7**, cliente-side canvas. Browser Run no se usa
+      en ningún lado: sacar el binding de `wrangler.jsonc`
 - [ ] Mercado Pago (`unlock_method = 'PAYMENT'`)
 - [ ] Dominio propio en Cloudflare
 - [ ] Revisar métricas: DO duration, Workers CPU, D1 writes → [09](./09-durable-objects.md)
@@ -664,7 +755,7 @@ Conventional Commits + gitmoji, en inglés.
 | 4 | `feat: :database: add D1 schema and Raffle durable object` |
 | 5 | `feat: :safety_vest: add typed authorization layer with denial tests` |
 | 6 | `feat: :sparkles: add raffle dashboard with manual sales` |
-| 7 | `feat: :sparkles: add public raffle page with versioned OG images` |
+| 7 | `feat: :sparkles: add public raffle page with a client-side share image` |
 | 8 | `feat: :sparkles: add PRO orders with reservations and live grid` |
 | 9 | `feat: :sparkles: add winner draw, vouchers and admin panel` |
 

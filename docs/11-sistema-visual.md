@@ -315,6 +315,21 @@ Un componente **se escribe a mano** salvo que pase las tres:
 > isla. No se previene eligiendo una librería, se previene **no creando islas
 > de más**.
 
+> **Los diálogos del detalle pasan por esta regla, y del lado correcto.**
+> «Sortear» y «anular» (fase 9) son modales de verdad: foco atrapado,
+> `aria-modal`, `Escape`, foco de vuelta al cerrar. Eso es la puerta 1 → se
+> instalan con `npx starwind@latest add dialog`, no se escriben a mano ni se
+> fingen con `:target`. «Editar» **no** es un modal: son cinco campos con
+> ayuda, así que es una página (`/panel/rifa/[id]/editar`), igual que «crear».
+>
+> Que el panel cargue este JS **no contradice** el «sin JavaScript» de la
+> fase 6: esa decisión es sólo sobre **la grilla del detalle** —un muro de
+> `<input type=checkbox>` atados al panel por `form=`, que la fase 8 va a
+> actualizar por `[data-n]` desde el WebSocket—. El panel ya trae un script
+> mínimo (contadores y etiquetas). Lo que sí se mantiene lo más estático
+> posible es `/r/[slug]`: es la que se comparte, vive detrás del cache de CDN
+> y cada visita no cacheada despierta el DO.
+
 #### Cómo se porta
 
 - Lo del CLI **no se reformatea** ni se le corrigen cosas de estilo al voleo.
