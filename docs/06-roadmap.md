@@ -15,7 +15,7 @@
 | 3 | **Better Auth + D1** | ✅ login con Google anda | **Alto** |
 | 4 | Esquema D1 + DO | ✅ se crea una rifa con su grilla | Medio |
 | 5 | Capa de datos y autorización | ✅ los tests de denegación pasan | **Alto** |
-| 6 | Dashboard | 🔄 listado hecho; falta alta, detalle y venta | Bajo |
+| 6 | Dashboard | ✅ crear, publicar, vender y liberar desde la pantalla | Bajo |
 | 7 | Página pública + compartir | El link se ve bien en WhatsApp | Medio |
 | 8 | Plan PRO: pedidos y vivo | Dos navegadores ven la grilla actualizarse | Medio |
 | 9 | Sorteo, vouchers, admin | Cierre del ciclo completo | Bajo |
@@ -322,32 +322,38 @@ pnpm add -D prettier-plugin-tailwindcss
       repetido en cuatro lugares. El frontmatter de la tarjeta —estado, badge,
       acción, puntos, bajada— vive en `src/utils/frontmatter/raffle.ts` con 14
       tests propios: el frontmatter de un `.astro` no se puede testear
-- [ ] **Astro Actions + Zod** — no hay `src/actions/`, y es la pieza que las
-      cuatro pantallas de abajo comparten, así que va primero: `src/actions/`
-      más un traductor de errores de dominio con `describeError()`.
-      **Zod no se instala**: viene con Astro (`zod@^4.3.6`) y se importa de
-      `astro/zod` — así se usa la misma instancia que valida las actions, y dos
-      copias de zod rompen las comprobaciones internas. Ojo que
-      `astro:schema` **está deprecado en Astro 7** y se va en la 8
-- [ ] **Envolturas con binding para `src/lib/raffles.ts`** — `createRaffleWithGrid`
-      y `publishRaffle` reciben `db` **y** el namespace del DO por parámetro, y
-      `src/actions/**` está adentro de la regla `no-restricted-syntax` que
-      prohíbe `env.DB`. Sin una envoltura tipo `conDB` que ate los dos bindings,
-      la action no los puede llamar sin romper la regla
-- [ ] **Extender esa regla de eslint a `RAFFLE`** — hoy el selector es
-      `MemberExpression[property.name='DB']` y sólo cubre D1. En cuanto una
-      pantalla necesite la grilla, `env.RAFFLE` se puede escribir en un `.astro`
-      sin que nada lo frene, que es justo el atajo que la regla existe para
-      cerrar
-- [ ] `/panel/rifa/crear` — alta con Zod → `createRaffleWithGrid` (ya escrito en
-      `src/lib/raffles.ts`); falta el schema Zod de `NewRaffle` y la pantalla
-- [ ] `/panel/rifa/[id]` — detalle con la grilla del DO (`getOwnRaffle` +
-      `ownerGrid(userId)`)
-- [ ] Vender números / liberar → `sell()` / `release()` del DO, con una action
-      que traduzca el error con `describeError()` (acá se cierra la deuda de la
-      fase 5: verificar que el código del error sobrevive el RPC)
-- [ ] Publicar (`DRAFT → PUBLISHED`) → `publishRaffle` (ya escrito); exige
-      `contact_phone` cargado
+- [x] **Astro Actions + Zod** — `src/actions/` con `index.ts` (el barril que
+      Astro busca), `raffle.ts` (las cuatro actions), `raffle.schema.ts` (los
+      esquemas, aparte para poder testearse: `raffle.ts` importa `astro:actions`,
+      que es virtual) y `errors.ts` con `asActionError()`. **Zod no se instaló**:
+      viene con Astro y se importa de `astro/zod`
+- [x] **Envolturas con binding** — `src/lib/raffles.ts` pasó a
+      `src/lib/raffles/`, espejando `src/lib/db/`: `flows.ts` (los flujos, con
+      los bindings por parámetro, testeables), `bound.ts` (los resuelve) e
+      `index.ts` (el barril). Son **dos** combinadores, `withDbAndRaffles` y
+      `withRaffles`: `sellNumbers` / `releaseNumbers` no tocan D1
+- [x] **Regla de eslint extendida a `RAFFLE`** — dos entradas en
+      `no-restricted-syntax`, no una regex en el selector
+- [x] `/panel/rifa/crear` contra el artboard `Create` — alta con Zod →
+      `createRaffleWithGrid`
+- [x] `/panel/rifa/[id]` contra el artboard `Detail`: `Header` (badge de estado
+      + bajada premio/fecha + `Actions`) · `Stats` · `Grid`/`Cell` · `Sale` ·
+      `SaleBar` (barra fija hasta `lg`) · `Buyers`/`BuyerRow` en
+      `src/components/panel/detail/`, con la lógica pura en
+      `src/utils/frontmatter/detail.ts` y sus tests. `Dashboard` ganó `heading`
+      / `description` como props, slots `eyebrow` / `actions` y un `wideActions`
+      para el modo «título a su propia fila»; `panel/Header.astro` se plegó
+      adentro y su frase-resumen fue a `frontmatter/panel.ts`
+- [x] Vender / liberar → `sell()` / `release()` del DO desde un solo `<form>`
+      con dos `formaction`. **La deuda de la fase 5 quedó cerrada**: el código
+      del error sobrevive el RPC — `sell()` de un número ya vendido llega como
+      «Alguien tomó uno de esos números. Elegí otros.». El botón de vender va
+      **verde** (confirmación, docs/11), no vermellón: el único vermellón del
+      detalle es «Compartir por WhatsApp». `sell()` además copia la nota de la
+      venta en `numbers.note` de cada fila (no lo hacía, así que `Buyers` nunca
+      la mostraba)
+- [x] Publicar (`DRAFT → PUBLISHED`) → `publishRaffle`. Sin `contact_phone` el
+      botón se deshabilita y lo dice
 - [x] ~~Decidir **starwind vs shadcn** y portar sólo la elegida~~
       → **la pregunta estaba mal planteada.** No era qué librería: los
       componentes de las dos están escritos contra `bg-primary` /
@@ -355,7 +361,8 @@ pnpm add -D prettier-plugin-tailwindcss
       si algún día se puede portar algo**. Se escribió con ese contrato más
       alias de marca encima. Cuándo usar cada una: la regla de las tres puertas
       en [11](./11-sistema-visual.md).
-- [ ] **✅ Checkpoint: crear, publicar, vender y liberar sin tocar la base a mano**
+- [x] **✅ Checkpoint: crear, publicar, vender y liberar sin tocar la base a
+      mano** — corrido de punta a punta sobre una rifa de 100 números
 
 > ⚠️ **Un día del calendario no se compara con `toISOString()`.** La tarjeta
 > marcaba «Últimos días» comparando `draw_date` contra
@@ -431,6 +438,23 @@ pnpm add -D prettier-plugin-tailwindcss
 >    fase 8; con el tope de 1000 de BASIC no hace falta. Ojo que `ownerGrid()`
 >    devuelve todos los números en un solo RPC: si se pagina, se pagina también
 >    ahí.
+
+> **Deuda del detalle, anotada para cuando toque:**
+>
+> | Qué | Dónde se resuelve |
+> |---|---|
+> | No hay cómo **editar** una rifa: una `DRAFT` creada sin `contact_phone` no se puede publicar *ni* arreglar | action `raffle.update` + pantalla/campo — conviene antes de la fase 7 |
+> | El panel `Sale` sigue interactivo en `CLOSED` / `CANCELLED` (`sell()` del DO no chequea estado) | gate en `[id].astro` cuando la fase 9 cierre el ciclo |
+> | Teléfono del comprador en E.164 (`+54…`), no `11 4455-2211` como el canvas | `src/lib/whatsapp/` en la fase 7 |
+> | La celda `RESERVED` se rotula «· vendido» en el `sr-only` | fase 8 (ahí aparecen las reservas) |
+> | `buyers.note` quedó vestigial (la nota se lee de `numbers.note`); `upsertBuyer` tampoco la actualiza en un comprador que repite | limpiar si estorba |
+> | La Nota del formulario de venta siempre visible (el canvas no la tiene) | cosmético: plegarla en `<details>` si el form se siente largo |
+> | La bajada del detalle concatena descripción + fecha con `line-clamp-2`: una descripción muy larga puede recortar el «· se sortea el…» | separar la fecha a su renglón si aparece el caso |
+
+> **Con qué seguir: la fase 7** (`/r/[slug]` público + OG + compartir), que pide
+> **Workers Paid**. El botón «Compartir por WhatsApp» del detalle ya apunta a
+> `/r/{slug}` — hoy 404. El primer ítem de la deuda de arriba (editar una rifa)
+> conviene meterlo al principio de esa fase, o antes.
 
 ---
 
