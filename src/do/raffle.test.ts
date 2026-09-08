@@ -195,6 +195,23 @@ describe('Raffle · venta', () => {
     expect(stats.sold).toBe(3);
     expect(stats.available).toBe(97);
   });
+
+  it('la nota de la venta vuelve en la grilla del organizador', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [1, 2], {
+      ...CARLA,
+      note: 'pagó por transferencia',
+    });
+
+    const grilla = await rifa.ownerGrid('ana');
+
+    expect(grilla.find((n) => n.number === 1)?.note).toBe(
+      'pagó por transferencia',
+    );
+    expect(grilla.find((n) => n.number === 2)?.note).toBe(
+      'pagó por transferencia',
+    );
+  });
 });
 
 describe('Raffle · liberar', () => {
@@ -213,7 +230,7 @@ describe('Raffle · liberar', () => {
 
   it('liberar deja el número como nuevo, sin rastro del comprador', async () => {
     const rifa = await rifaDeAna();
-    await rifa.sell('ana', [7], CARLA);
+    await rifa.sell('ana', [7], { ...CARLA, note: 'seña, debe el resto' });
 
     await rifa.release('ana', [7]);
 
@@ -223,6 +240,7 @@ describe('Raffle · liberar', () => {
     expect(fila?.buyerId).toBeNull();
     expect(fila?.buyerName).toBeNull();
     expect(fila?.buyerPhone).toBeNull();
+    expect(fila?.note).toBeNull();
   });
 
   it('liberar un número que ya estaba libre no pasa', async () => {

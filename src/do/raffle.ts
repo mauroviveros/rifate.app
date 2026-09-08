@@ -157,16 +157,15 @@ export class Raffle extends DurableObject<Env> {
     if (nombre === '') throw new AppError('INVALID_NUMBERS');
 
     const telefono = phone(buyer.phone);
+    // La nota es de la venta, no de cada número: se copia igual en cada fila de
+    // `numbers` para que `ownerGrid()` la devuelva (lee `n.note`). `release()`
+    // la limpia. En `buyers.note` queda sólo la de la primera compra.
+    const nota = buyer.note ?? null;
     const ts = now();
     const sql = this.ctx.storage.sql;
 
     const resultado = this.ctx.storage.transactionSync<SellResult>(() => {
-      const buyerId = this.upsertBuyer(
-        nombre,
-        telefono,
-        buyer.note ?? null,
-        ts,
-      );
+      const buyerId = this.upsertBuyer(nombre, telefono, nota, ts);
 
       for (const n of unicos) {
         // Se lee y después se escribe, número por número. Dentro de un DO es
@@ -187,9 +186,10 @@ export class Raffle extends DurableObject<Env> {
         sql.exec(
           `UPDATE numbers
               SET status = 'SOLD', buyer_id = ?, order_id = NULL,
-                  reserved_until = NULL, sold_at = ?, updated_at = ?
+                  reserved_until = NULL, note = ?, sold_at = ?, updated_at = ?
             WHERE number = ?`,
           buyerId,
+          nota,
           ts,
           ts,
           n,
