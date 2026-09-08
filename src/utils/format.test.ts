@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { inDays, initials, pesos, progress, shortDate, today } from './format';
+import {
+  inDays,
+  initials,
+  longDate,
+  pesos,
+  progress,
+  shortDate,
+  today,
+} from './format';
 
 /**
  * El avatar de la barra es lo primero que se ve del panel, y estos casos son
@@ -53,6 +61,18 @@ describe('shortDate', () => {
     ['2026-09-20T00:00', '2026-09-20T00:00'], // con hora tampoco: el día no es un número
   ])('%s → %s', (iso, esperado) => {
     expect(shortDate(iso)).toBe(esperado);
+  });
+});
+
+describe('longDate', () => {
+  it.each([
+    ['2026-09-20', '20 de septiembre'],
+    ['2026-01-01', '1 de enero'],
+    ['2026-12-31', '31 de diciembre'],
+    ['20/09/2026', '20/09/2026'], // no tiene la forma esperada: se devuelve igual
+    ['2026-13-01', '2026-13-01'], // mes fuera de rango: no inventa uno
+  ])('%s → %s', (iso, esperado) => {
+    expect(longDate(iso)).toBe(esperado);
   });
 });
 

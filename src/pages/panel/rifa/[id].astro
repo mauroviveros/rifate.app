@@ -3,19 +3,25 @@ import { actions, isInputError } from 'astro:actions';
 import { Icon } from 'astro-icon/components';
 
 import BackLink from '@/components/panel/BackLink.astro';
+import Actions from '@/components/panel/detail/Actions.astro';
 import Buyers from '@/components/panel/detail/Buyers.astro';
 import Grid from '@/components/panel/detail/Grid.astro';
-import Header from '@/components/panel/detail/Header.astro';
 import Sale from '@/components/panel/detail/Sale.astro';
 import Stats from '@/components/panel/detail/Stats.astro';
+import StatusBadge from '@/components/panel/StatusBadge.astro';
 import Dashboard from '@/layouts/Dashboard.astro';
 import { ownerGrid } from '@/lib/raffles';
 import { codeOf } from '@/utils/errors';
+import { longDate } from '@/utils/format';
 import { flashMessage } from '@/utils/frontmatter/detail';
 
 const { id } = Astro.params;
 if (!id) return Astro.rewrite('/404');
 
+/**
+ * PRG: las tres acciones del detalle redirigen con 303 en el éxito, así un F5
+ * no reenvía el formulario. Mismo patrón que el alta.
+ */
 const publishResult = Astro.getActionResult(actions.raffle.publish);
 const sellResult = Astro.getActionResult(actions.raffle.sell);
 const releaseResult = Astro.getActionResult(actions.raffle.release);
@@ -36,7 +42,7 @@ if (releaseResult && !releaseResult.error) {
   );
 }
 
-/** publish → el `Header`. sell/release → el panel `Sale`. */
+/** publish → el `actions` del encabezado. sell/release → el panel `Sale`. */
 const publishError =
   publishResult?.error && !isInputError(publishResult.error)
     ? publishResult.error.message
@@ -50,6 +56,10 @@ if (saleResult?.error) {
   else saleError = saleResult.error.message;
 }
 
+/**
+ * Una rifa ajena y una inexistente se ven igual: un 404. Que exista o no es
+ * justo el dato que no hay que filtrar — misma idea que `getOwnRaffle`.
+ */
 const loaded = await ownerGrid(Astro.locals.actor, id).catch(
   (error: unknown) => {
     const code = codeOf(error);
@@ -65,6 +75,15 @@ const publicUrl = new URL(
   Astro.site ?? 'https://rifate.app',
 ).href;
 
+const draft = raffle.status === 'DRAFT';
+
+/** La bajada del canvas: la descripción y la fecha del sorteo en una línea. */
+const drawVerb = raffle.status === 'CLOSED' ? 'sorteó' : 'sortea';
+const drawLine = `se ${drawVerb} el ${longDate(raffle.drawDate)}`;
+const subtitle = raffle.description
+  ? `${raffle.description} · ${drawLine}`
+  : drawLine.charAt(0).toUpperCase() + drawLine.slice(1);
+
 /** Lo que se tipeó / eligió, para no perderlo tras un error de validación. */
 let formData: FormData | null = null;
 if (Astro.request.method === 'POST') {
@@ -79,13 +98,19 @@ const selectedNumbers = (formData?.getAll('numbers') ?? [])
   .filter((n) => Number.isInteger(n));
 
 const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
-const draft = raffle.status === 'DRAFT';
 ---
 
-<Dashboard title={`${raffle.title} · rifate.app`}>
+<Dashboard
+  title={`${raffle.title} · rifate.app`}
+  heading={raffle.title}
+  description={subtitle}
+  wideActions
+>
   <BackLink slot="nav" />
+  <StatusBadge slot="eyebrow" raffle={raffle} />
 
-  <Header
+  <Actions
+    slot="actions"
     raffle={raffle}
     publishAction={actions.raffle.publish}
     publicUrl={publicUrl}
