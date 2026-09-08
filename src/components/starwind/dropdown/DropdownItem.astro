@@ -6,13 +6,20 @@ import { dropdownItem } from "./variants";
 type Props = HTMLAttributes<"div"> & {
   inset?: boolean;
   disabled?: boolean;
+  variant?: "default" | "destructive";
 };
 
-const { class: className, inset = false, disabled = false, ...rest } = Astro.props;
+const {
+  class: className,
+  inset = false,
+  disabled = false,
+  variant = "default",
+  ...rest
+} = Astro.props;
 ---
 
 <MenuPrimitive.Item
-  class={dropdownItem({ inset, disabled, class: className })}
+  class={dropdownItem({ inset, disabled, variant, class: className })}
   disabled={disabled}
   {...rest}
   data-slot="dropdown-item"

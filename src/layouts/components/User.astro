@@ -80,6 +80,7 @@ if (!user) return null;
 
     <DropdownItem
       id="cerrar-sesion"
+      variant="destructive"
       class="h-11 gap-2.5 rounded-sm px-2.5 text-support font-bold [&>svg]:size-5"
     >
       <Icon name="lucide:log-out" />
@@ -104,7 +105,7 @@ if (!user) return null;
     try {
       await signOut();
     } finally {
-      window.location.href = '/ingresar';
+      window.location.href = '/';
     }
   });
 </script>
