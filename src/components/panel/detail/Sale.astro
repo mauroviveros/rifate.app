@@ -7,22 +7,18 @@ import { button } from '@/components/starwind/button/variants';
 import { formValue } from '@/utils/forms';
 
 interface Props extends HTMLAttributes<'form'> {
-  /** En `DRAFT` la acción principal de la pantalla es Publicar, así que
-      «Vender» va tinta (regla 2: un solo vermellón por pantalla). */
-  emphasis?: 'primary' | 'secondary';
   error: string | null;
   errors: Record<string, string[] | undefined>;
   formData: FormData | null;
   raffleId: string;
   releaseAction: string;
   sellAction: string;
-  /** Precio del número, en centavos: para el total en vivo. */
+  /** Precio del número, en centavos: para el «Cobrás» en vivo. */
   ticketPrice: number;
 }
 
 const {
   class: className,
-  emphasis = 'primary',
   error,
   errors,
   formData,
@@ -35,7 +31,6 @@ const {
 } = Astro.props;
 
 const value = (name: string) => formValue(formData, name);
-const sellVariant = emphasis === 'secondary' ? 'default' : 'primary';
 ---
 
 <form
@@ -48,11 +43,24 @@ const sellVariant = emphasis === 'secondary' ? 'default' : 'primary';
   {...rest}
 >
   <input type="hidden" name="id" value={raffleId} />
-  <h2 class="text-[1.25rem]">Cargar una venta</h2>
-  <p class="mt-0.5 text-label font-bold text-subtle-foreground" data-numero>
-    <span data-sale-count>Ningún número elegido</span>
-    <span data-sale-total></span>
+
+  <h2 class="text-[1.25rem]">Venta en curso</h2>
+  <p
+    class="mt-0.5 text-support font-bold text-subtle-foreground"
+    data-sale-sentence
+    data-numero
+  >
+    Elegí números de la grilla para vender o liberar.
   </p>
+  <p
+    class="mt-1 hidden text-support font-bold text-success"
+    data-sale-total
+    data-numero
+  >
+  </p>
+
+  <div class="mt-3 flex flex-wrap gap-1.5" data-sale-chips data-numero></div>
+
   <hr class="my-5 perforado" />
 
   {
@@ -69,7 +77,7 @@ const sellVariant = emphasis === 'secondary' ? 'default' : 'primary';
 
   <Field
     name="name"
-    label="¿A nombre de quién?"
+    label="¿Quién los compró?"
     placeholder="Samira Viveros"
     value={value('name')}
     errors={errors.name}
@@ -103,10 +111,11 @@ const sellVariant = emphasis === 'secondary' ? 'default' : 'primary';
     <button
       type="submit"
       formaction={sellAction}
-      class={button({ variant: sellVariant, size: 'md' })}
+      class={button({ variant: 'success', size: 'md' })}
       data-sale-sell
     >
-      Vender
+      <Icon name="lucide:check" aria-hidden="true" />
+      <span data-sale-sell-label>Marcar como vendidos</span>
     </button>
     <button
       type="submit"
@@ -138,23 +147,63 @@ const sellVariant = emphasis === 'secondary' ? 'default' : 'primary';
     const boxes = [
       ...document.querySelectorAll<HTMLInputElement>('input[name="numbers"]'),
     ];
+    const byValue = new Map(boxes.map((b) => [b.value, b]));
 
-    const $count = form.querySelector<HTMLElement>('[data-sale-count]')!;
+    const $sentence = form.querySelector<HTMLElement>('[data-sale-sentence]')!;
     const $total = form.querySelector<HTMLElement>('[data-sale-total]')!;
+    const $chips = form.querySelector<HTMLElement>('[data-sale-chips]')!;
     const $hint = form.querySelector<HTMLElement>('[data-sale-hint]')!;
     const $sell = form.querySelector<HTMLButtonElement>('[data-sale-sell]')!;
+    const $sellLabel = form.querySelector<HTMLElement>(
+      '[data-sale-sell-label]',
+    )!;
     const $release = form.querySelector<HTMLButtonElement>(
       '[data-sale-release]',
     )!;
+    const $name = form.querySelector<HTMLInputElement>('[name="name"]');
 
-    const HINT: Record<SelectionKind, string> = {
-      empty: 'Elegí números de la grilla para vender o liberar.',
-      sell: '',
-      release: '',
-      mixed: 'Elegiste números libres y vendidos juntos. Va uno o el otro.',
-    };
+    // La barra fija de celular, si está montada.
+    const $bar = document.querySelector<HTMLElement>('[data-salebar]');
+    const $barText = document.querySelector<HTMLElement>('[data-salebar-text]');
+    const $barButton =
+      document.querySelector<HTMLButtonElement>('[data-salebar-go]');
 
     const s = (n: number) => (n === 1 ? '' : 's');
+
+    const SENTENCE: Record<SelectionKind, (n: number) => string> = {
+      empty: () => 'Elegí números de la grilla para vender o liberar.',
+      sell: (n) => `Vas a marcar ${n} número${s(n)} como vendido${s(n)}.`,
+      release: (n) => `Vas a liberar ${n} número${s(n)}.`,
+      mixed: () =>
+        'Elegiste números libres y vendidos juntos. Va uno o el otro.',
+    };
+    const HINT: Record<SelectionKind, string> = {
+      empty: 'Elegí números de la grilla.',
+      sell: '',
+      release: '',
+      mixed: 'No se puede vender y liberar a la vez.',
+    };
+
+    const drawChips = (picked: HTMLInputElement[]) => {
+      $chips.replaceChildren(
+        ...picked.map((b) => {
+          const n = Number(b.value);
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.dataset.chip = b.value;
+          chip.setAttribute('aria-label', `Quitar el ${n}`);
+          chip.className =
+            'inline-flex items-center gap-1 rounded-md bg-foreground px-2 py-1 text-label font-extrabold text-background';
+          const x = document.createElement('span');
+          x.textContent = '×';
+          x.className = 'text-background/60';
+          x.setAttribute('aria-hidden', 'true');
+          chip.textContent = String(n);
+          chip.appendChild(x);
+          return chip;
+        }),
+      );
+    };
 
     const paint = () => {
       const picked = boxes.filter((b) => b.checked);
@@ -163,25 +212,55 @@ const sellVariant = emphasis === 'secondary' ? 'default' : 'primary';
         picked.map((b) => b.dataset.taken !== undefined),
       );
 
-      $count.textContent =
-        count === 0
-          ? 'Ningún número elegido'
-          : `${count} número${s(count)} elegido${s(count)}`;
-      $total.textContent =
-        kind === 'sell' && priceCents > 0
-          ? ` · ${pesos(count * priceCents)}`
-          : '';
+      $sentence.textContent = SENTENCE[kind](count);
+      drawChips(picked);
+
+      const total = pesos(count * priceCents);
+      const showTotal = kind === 'sell' && priceCents > 0;
+      $total.hidden = !showTotal;
+      $total.textContent = showTotal ? `Cobrás ${total}` : '';
 
       $sell.disabled = kind !== 'sell';
       $release.disabled = kind !== 'release';
-      $sell.textContent =
-        kind === 'sell' ? `Vender ${count} número${s(count)}` : 'Vender';
+      $sellLabel.textContent =
+        kind === 'sell'
+          ? `Marcar ${count} número${s(count)} como vendido${s(count)}`
+          : 'Marcar como vendidos';
       $release.textContent =
         kind === 'release' ? `Liberar ${count} número${s(count)}` : 'Liberar';
 
       $hint.textContent = HINT[kind];
       $hint.hidden = HINT[kind] === '';
+
+      if ($bar && $barText && $barButton) {
+        $bar.hidden = count === 0;
+        $barText.textContent =
+          kind === 'sell'
+            ? `${count} número${s(count)} · ${total}`
+            : kind === 'release'
+              ? `${count} número${s(count)} a liberar`
+              : 'Libres o vendidos, no los dos';
+        $barButton.disabled = kind === 'mixed';
+        $barButton.textContent =
+          kind === 'release' ? 'Ir a liberar' : 'Cargar la venta';
+      }
     };
+
+    $chips.addEventListener('click', (e) => {
+      const chip = (e.target as HTMLElement).closest<HTMLElement>(
+        '[data-chip]',
+      );
+      const box = chip && byValue.get(chip.dataset.chip ?? '');
+      if (box) {
+        box.checked = false;
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
+    $barButton?.addEventListener('click', () => {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      $name?.focus({ preventScroll: true });
+    });
 
     for (const box of boxes) box.addEventListener('change', paint);
     paint();

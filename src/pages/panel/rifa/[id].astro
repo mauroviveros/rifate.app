@@ -7,6 +7,7 @@ import Actions from '@/components/panel/detail/Actions.astro';
 import Buyers from '@/components/panel/detail/Buyers.astro';
 import Grid from '@/components/panel/detail/Grid.astro';
 import Sale from '@/components/panel/detail/Sale.astro';
+import SaleBar from '@/components/panel/detail/SaleBar.astro';
 import Stats from '@/components/panel/detail/Stats.astro';
 import StatusBadge from '@/components/panel/StatusBadge.astro';
 import Dashboard from '@/layouts/Dashboard.astro';
@@ -74,8 +75,6 @@ const publicUrl = new URL(
   `/r/${raffle.slug}`,
   Astro.site ?? 'https://rifate.app',
 ).href;
-
-const draft = raffle.status === 'DRAFT';
 
 /** La bajada del canvas: la descripción y la fecha del sorteo en una línea. */
 const drawVerb = raffle.status === 'CLOSED' ? 'sorteó' : 'sortea';
@@ -160,7 +159,6 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
       class="lg:sticky lg:top-24 lg:row-span-2"
       raffleId={raffle.id}
       ticketPrice={raffle.ticketPrice}
-      emphasis={draft ? 'secondary' : 'primary'}
       sellAction={actions.raffle.sell}
       releaseAction={actions.raffle.release}
       formData={formData}
@@ -174,4 +172,14 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
       totalNumbers={raffle.totalNumbers}
     />
   </div>
+
+  <SaleBar formId="sale" />
 </Dashboard>
+
+<script>
+  /* El cartel de éxito viaja en `?ok=…` (PRG). Es de un solo uso: sacamos el
+     parámetro para que un F5 no lo vuelva a mostrar. */
+  if (location.search.includes('ok=')) {
+    history.replaceState(null, '', location.pathname);
+  }
+</script>
