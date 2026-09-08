@@ -1,4 +1,7 @@
-import { tv } from "tailwind-variants";
+// De `@/lib/tv` (createTV con la escala de Talonario) y no de `tailwind-variants`
+// pelado: sin eso, `text-support` de una llamada cae en el grupo de COLOR de
+// tailwind-merge y se come al `text-error` de la variante `destructive`.
+import { tv } from "@/lib/tv";
 
 export const dropdown = tv({
   base: "relative",
@@ -56,10 +59,20 @@ export const dropdownItem = tv({
     disabled: {
       true: "pointer-events-none opacity-50",
     },
+    variant: {
+      default: "",
+      // Talonario tiene un solo rojo: el mismo vermellón (docs/11).
+      destructive: [
+        "text-error",
+        "data-highlighted:bg-error/10 data-highlighted:text-error",
+        "hover:bg-error/10 hover:text-error focus:bg-error/10 focus:text-error",
+      ],
+    },
   },
   defaultVariants: {
     inset: false,
     disabled: false,
+    variant: "default",
   },
 });
 
