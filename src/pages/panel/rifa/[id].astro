@@ -1,6 +1,5 @@
 ---
 import { actions, isInputError } from 'astro:actions';
-import { Icon } from 'astro-icon/components';
 
 import BackLink from '@/components/panel/BackLink.astro';
 import Actions from '@/components/panel/detail/Actions.astro';
@@ -113,6 +112,7 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
     raffle={raffle}
     publishAction={actions.raffle.publish}
     publicUrl={publicUrl}
+    publishError={publishError}
   />
 
   {
@@ -122,18 +122,6 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
         role="status"
       >
         {okMessage}
-      </p>
-    )
-  }
-
-  {
-    publishError && (
-      <p
-        class="mt-6 flex items-start gap-2.5 rounded-lg bg-error/8 p-4 text-support font-bold text-error"
-        role="alert"
-      >
-        <Icon name="lucide:circle-alert" class="mt-0.5 size-5.5 shrink-0" />
-        <span>{publishError}</span>
       </p>
     )
   }
@@ -173,7 +161,7 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
     />
   </div>
 
-  <SaleBar formId="sale" />
+  <SaleBar />
 </Dashboard>
 
 <script>

@@ -31,9 +31,9 @@ const { sold, available, raisedCents, progress, total } = tally(
     <span class="text-xl text-subtle-foreground sm:text-2xl">de {total}</span>
   </Stat>
 
-  <Stat label="Libres">{available}</Stat>
+  <Stat label="Libres" class="hidden sm:flex">{available}</Stat>
 
   <Stat label="Recaudado" tone="ink">{pesos(raisedCents)}</Stat>
 
-  <Meter label="Avance" value={progress} />
+  <Meter label="Avance" value={progress} class="hidden sm:flex" />
 </dl>

@@ -39,7 +39,11 @@ const value = (name: string) => formValue(formData, name);
   novalidate
   data-sale
   data-price={ticketPrice}
-  class:list={['rounded-xl bg-card p-6 ring-2 ring-border', className]}
+  class:list={[
+    'rounded-xl bg-card p-6 ring-2 ring-border transition-shadow',
+    'data-[kind=release]:ring-foreground data-[kind=sell]:ring-success',
+    className,
+  ]}
   {...rest}
 >
   <input type="hidden" name="id" value={raffleId} />
@@ -52,13 +56,6 @@ const value = (name: string) => formValue(formData, name);
   >
     Elegí números de la grilla para vender o liberar.
   </p>
-  <p
-    class="mt-1 hidden text-support font-bold text-success"
-    data-sale-total
-    data-numero
-  >
-  </p>
-
   <div class="mt-3 flex flex-wrap gap-1.5" data-sale-chips data-numero></div>
 
   <hr class="my-5 perforado" />
@@ -107,6 +104,16 @@ const value = (name: string) => formValue(formData, name);
     optional
   />
 
+  <div class="mt-6 hidden items-baseline justify-between" data-sale-cobras>
+    <span class="text-support font-bold text-subtle-foreground">Cobrás</span>
+    <span
+      class="font-display text-2xl font-extrabold tracking-tight text-success"
+      data-sale-total
+      data-numero
+    >
+    </span>
+  </div>
+
   <div class="mt-6 grid gap-2.5">
     <button
       type="submit"
@@ -150,6 +157,7 @@ const value = (name: string) => formValue(formData, name);
     const byValue = new Map(boxes.map((b) => [b.value, b]));
 
     const $sentence = form.querySelector<HTMLElement>('[data-sale-sentence]')!;
+    const $cobras = form.querySelector<HTMLElement>('[data-sale-cobras]')!;
     const $total = form.querySelector<HTMLElement>('[data-sale-total]')!;
     const $chips = form.querySelector<HTMLElement>('[data-sale-chips]')!;
     const $hint = form.querySelector<HTMLElement>('[data-sale-hint]')!;
@@ -212,13 +220,17 @@ const value = (name: string) => formValue(formData, name);
         picked.map((b) => b.dataset.taken !== undefined),
       );
 
+      form.dataset.kind = count === 0 ? '' : kind;
       $sentence.textContent = SENTENCE[kind](count);
       drawChips(picked);
 
       const total = pesos(count * priceCents);
       const showTotal = kind === 'sell' && priceCents > 0;
-      $total.hidden = !showTotal;
-      $total.textContent = showTotal ? `Cobrás ${total}` : '';
+      // Toggle de CLASES, no del atributo: `el.hidden = false` no le gana a la
+      // clase `hidden` de Tailwind, y la fila necesita `flex` para el layout.
+      $cobras.classList.toggle('hidden', !showTotal);
+      $cobras.classList.toggle('flex', showTotal);
+      $total.textContent = showTotal ? total : '';
 
       $sell.disabled = kind !== 'sell';
       $release.disabled = kind !== 'release';
@@ -233,7 +245,8 @@ const value = (name: string) => formValue(formData, name);
       $hint.hidden = HINT[kind] === '';
 
       if ($bar && $barText && $barButton) {
-        $bar.hidden = count === 0;
+        $bar.classList.toggle('hidden', count === 0);
+        $bar.classList.toggle('flex', count > 0);
         $barText.textContent =
           kind === 'sell'
             ? `${count} número${s(count)} · ${total}`
