@@ -4,10 +4,14 @@ import { Brand } from '@/components/brand';
 import Base, { type Props as BaseProps } from './Base.astro';
 import User from './components/User.astro';
 
-type Props = BaseProps;
+interface Props extends BaseProps {
+  heading?: string;
+}
+
+const { title, heading, description } = Astro.props;
 ---
 
-<Base {...Astro.props}>
+<Base title={title}>
   <div class="min-h-dvh trama">
     <header
       class="sticky top-0 z-20 h-16 bg-foreground text-background sm:h-19.5"
@@ -33,6 +37,27 @@ type Props = BaseProps;
     </header>
 
     <main class="mx-auto max-w-wrap px-5 py-9 sm:px-8 sm:py-10">
+      {
+        heading && (
+          <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <hgroup>
+              <h1 class="text-[2.25rem] sm:text-display">{heading}</h1>
+              {description && (
+                <p class="mt-2 text-support text-muted-foreground sm:text-body">
+                  {description}
+                </p>
+              )}
+            </hgroup>
+
+            {Astro.slots.has('actions') && (
+              <div class="shrink-0">
+                <slot name="actions" />
+              </div>
+            )}
+          </div>
+        )
+      }
+
       <slot />
     </main>
   </div>
