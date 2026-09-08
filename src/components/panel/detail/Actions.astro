@@ -11,9 +11,11 @@ interface Props {
   publishAction: string;
   /** El link público completo (`https://rifate.app/r/slug`). */
   publicUrl: string;
+  /** Un error de dominio de `publish` (no de campo), para mostrar junto al botón. */
+  publishError?: string | null;
 }
 
-const { raffle, publishAction, publicUrl } = Astro.props;
+const { raffle, publishAction, publicUrl, publishError = null } = Astro.props;
 
 /* En borrador la acción del encabezado es publicar; una vez publicada, es
    compartir. Nunca las dos: mantiene un solo vermellón por pantalla (regla 2). */
@@ -24,9 +26,9 @@ const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
 )}`;
 ---
 
-<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-  {
-    draft ? (
+{
+  draft ? (
+    <div class="flex w-full flex-col gap-2 sm:w-auto sm:items-start">
       <form method="POST" action={publishAction} class="w-full sm:w-auto">
         <input type="hidden" name="id" value={raffle.id} />
         <Button
@@ -39,25 +41,35 @@ const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
           {publishBlocked ?? 'Publicar la rifa'}
         </Button>
       </form>
-    ) : (
-      <>
-        <CopyLink
-          class="w-full sm:w-auto"
-          value={publicUrl}
-          label={publicUrl.replace(/^https?:\/\//, '')}
-        />
-        <Button
-          href={whatsappUrl}
-          variant="primary"
-          size="md"
-          target="_blank"
-          rel="noopener"
-          class="w-full sm:w-auto"
+
+      {publishError && (
+        <p
+          class="flex items-start gap-2 text-label font-bold text-error"
+          role="alert"
         >
-          <Icon name="lucide:share-2" aria-hidden="true" />
-          Compartir por WhatsApp
-        </Button>
-      </>
-    )
-  }
-</div>
+          <Icon name="lucide:circle-alert" class="mt-0.5 size-4.5 shrink-0" />
+          <span>{publishError}</span>
+        </p>
+      )}
+    </div>
+  ) : (
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <CopyLink
+        class="w-full sm:w-auto"
+        value={publicUrl}
+        label={publicUrl.replace(/^https?:\/\//, '')}
+      />
+      <Button
+        href={whatsappUrl}
+        variant="primary"
+        size="md"
+        target="_blank"
+        rel="noopener"
+        class="w-full sm:w-auto"
+      >
+        <Icon name="lucide:share-2" aria-hidden="true" />
+        Compartir por WhatsApp
+      </Button>
+    </div>
+  )
+}
