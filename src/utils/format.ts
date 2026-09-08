@@ -70,6 +70,16 @@ const MONTH = new Intl.DateTimeFormat('es-AR', {
 });
 
 /**
+ * El mes entero, del mismo catálogo del runtime y con el mismo `timeZone: 'UTC'`
+ * que `MONTH`: la fecha se arma con `Date.UTC()`, así que sin fijar la zona el
+ * formateo local podría caer en el mes anterior el día 1.
+ */
+const LONG_MONTH = new Intl.DateTimeFormat('es-AR', {
+  month: 'long',
+  timeZone: 'UTC',
+});
+
+/**
  * La fecha del sorteo como la escribe el canvas: `2026-09-20` → `20 sept`.
  *
  * El string se parte a mano y NO se construye un `Date` con él a propósito.
@@ -97,6 +107,30 @@ export const shortDate = (iso: string): string => {
   if (!valid) return iso;
 
   return `${day} ${MONTH.format(Date.UTC(2000, month - 1, 1))}`;
+};
+
+/**
+ * La fecha del sorteo con el mes entero, para la bajada del detalle:
+ * `2026-09-20` → `20 de septiembre`. Mismo criterio de parseo que `shortDate()`
+ * —el string se parte a mano, no se construye un `Date` con él— y misma salida
+ * cruda si no tiene la forma esperada.
+ */
+export const longDate = (iso: string): string => {
+  const [, rawMonth = '', rawDay = ''] = iso.split('-');
+  const month = Number(rawMonth);
+  const day = Number(rawDay);
+
+  const valid =
+    Number.isInteger(month) &&
+    month >= 1 &&
+    month <= 12 &&
+    Number.isInteger(day) &&
+    day >= 1 &&
+    day <= 31;
+
+  if (!valid) return iso;
+
+  return `${day} de ${LONG_MONTH.format(Date.UTC(2000, month - 1, 1))}`;
 };
 
 /**

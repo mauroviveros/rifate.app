@@ -1,0 +1,63 @@
+---
+import { Icon } from 'astro-icon/components';
+
+import CopyLink from '@/components/panel/CopyLink.astro';
+import { Button } from '@/components/starwind/button';
+import type { OwnerRaffle } from '@/types/raffle';
+import { publishHint } from '@/utils/frontmatter/detail';
+
+interface Props {
+  raffle: OwnerRaffle;
+  publishAction: string;
+  /** El link público completo (`https://rifate.app/r/slug`). */
+  publicUrl: string;
+}
+
+const { raffle, publishAction, publicUrl } = Astro.props;
+
+/* En borrador la acción del encabezado es publicar; una vez publicada, es
+   compartir. Nunca las dos: mantiene un solo vermellón por pantalla (regla 2). */
+const draft = raffle.status === 'DRAFT';
+const publishBlocked = publishHint(raffle);
+const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
+  `${raffle.title} 👉 ${publicUrl}`,
+)}`;
+---
+
+<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+  {
+    draft ? (
+      <form method="POST" action={publishAction} class="w-full sm:w-auto">
+        <input type="hidden" name="id" value={raffle.id} />
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          disabled={publishBlocked !== null}
+          class="w-full sm:w-auto"
+        >
+          {publishBlocked ?? 'Publicar la rifa'}
+        </Button>
+      </form>
+    ) : (
+      <>
+        <CopyLink
+          class="w-full sm:w-auto"
+          value={publicUrl}
+          label={publicUrl.replace(/^https?:\/\//, '')}
+        />
+        <Button
+          href={whatsappUrl}
+          variant="primary"
+          size="md"
+          target="_blank"
+          rel="noopener"
+          class="w-full sm:w-auto"
+        >
+          <Icon name="lucide:share-2" aria-hidden="true" />
+          Compartir por WhatsApp
+        </Button>
+      </>
+    )
+  }
+</div>
