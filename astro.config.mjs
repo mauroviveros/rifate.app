@@ -29,6 +29,7 @@ export default defineConfig({
           'message-circle',
           'plus',
           'rotate-ccw',
+          'pencil',
           'share-2',
           'ticket',
         ],

@@ -149,8 +149,28 @@ export const previewNumbers = (
 export const publishHint = (raffle: OwnerRaffle): string | null =>
   raffle.contactPhone === null ? 'Cargá un teléfono para publicar' : null;
 
+/* ── Editar ──────────────────────────────────────────────────────────────── */
+
+/**
+ * La fila de la rifa a los strings que `Form` y `Summary` del alta esperan. En
+ * el primer GET de `/panel/rifa/[id]/editar` no hay `FormData` y el formulario
+ * saldría vacío: los valores salen de acá. El precio va en PESOS — el mismo
+ * formato que tipea el organizador —, que el esquema reconvierte a centavos.
+ */
+export const toEditInitial = (raffle: OwnerRaffle): Record<string, string> => ({
+  title: raffle.title,
+  description: raffle.description ?? '',
+  prize: raffle.prize ?? '',
+  ticketPrice: String(raffle.ticketPrice / 100),
+  totalNumbers: String(raffle.totalNumbers),
+  numberStart: String(raffle.numberStart),
+  drawDate: raffle.drawDate,
+  contactPhone: raffle.contactPhone ?? '',
+});
+
 const FLASH: Record<string, (count: number) => string> = {
   published: () => 'Listo: tu rifa quedó publicada.',
+  updated: () => 'Listo: guardamos los cambios.',
   sold: (count) => `Vendiste ${count} número${count === 1 ? '' : 's'}.`,
   freed: (count) => `Liberaste ${count} número${count === 1 ? '' : 's'}.`,
 };

@@ -6,8 +6,8 @@ import Chips from '@/components/form/Chips.astro';
 import Field from '@/components/form/Field.astro';
 import NumberStartField from '@/components/form/NumberStartField.astro';
 import { Button } from '@/components/starwind/button';
-import { today } from '@/utils/format';
-import { formNumber, formValue } from '@/utils/forms';
+import { pesos, today } from '@/utils/format';
+import { formValue, numberOr } from '@/utils/forms';
 
 import { RAFFLE_PLACEHOLDER } from './placeholder';
 
@@ -16,6 +16,20 @@ interface Props extends HTMLAttributes<'form'> {
   errors: Record<string, string[] | undefined>;
   error: string | null;
   action: string;
+  /** `create` (alta) o `edit` (`/panel/rifa/[id]/editar`). Cambia copy e id. */
+  mode?: 'create' | 'edit';
+  /** El id de la rifa que se edita. Va como campo oculto en `mode="edit"`. */
+  raffleId?: string;
+  /**
+   * Los valores actuales, para el primer GET de la edición: ahí no hay
+   * `FormData` y el form saldría vacío. `FormData` (re-render tras error) gana.
+   */
+  initial?: Record<string, string>;
+  /**
+   * Precio, cantidad y arranque de sólo lectura: se muestran y se envían, pero
+   * no se editan. Es el candado de una rifa que ya no está en DRAFT.
+   */
+  lockRange?: boolean;
 }
 
 const {
@@ -23,15 +37,21 @@ const {
   errors,
   error,
   action,
+  mode = 'create',
+  raffleId,
+  initial,
+  lockRange = false,
   class: className,
   ...rest
 } = Astro.props;
 
-const value = (name: string) => formValue(formData, name);
+/** `FormData` primero; si no vino, el valor actual de la rifa; si no, el fallback. */
+const seed = (name: string, fallback = ''): string =>
+  formValue(formData, name) || initial?.[name] || fallback;
 
-const totalNumbers = formData ? value('totalNumbers') : '100';
-const numberStart = value('numberStart') === '1' ? '1' : '0';
-const cantidad = formNumber(formData, 'totalNumbers', 100);
+const totalNumbers = seed('totalNumbers', '100');
+const numberStart = seed('numberStart') === '1' ? '1' : '0';
+const cantidad = numberOr(totalNumbers, 100);
 const ALLOW_CUSTOM_TOTAL_NUMBERS = false;
 const QUICK_TOTAL_NUMBERS = [100, 200, 500];
 const totalNumbersRaw = Number(totalNumbers);
@@ -47,6 +67,12 @@ const totalNumbersMatchesQuickPick =
   novalidate
   {...rest}
 >
+  {
+    mode === 'edit' && raffleId && (
+      <input type="hidden" name="id" value={raffleId} />
+    )
+  }
+
   {
     error && (
       <p
@@ -64,7 +90,7 @@ const totalNumbersMatchesQuickPick =
     label="¿Cómo se llama la rifa?"
     hint="Ponelo como lo dirías en voz alta. Es lo primero que ve la gente."
     placeholder={RAFFLE_PLACEHOLDER.title}
-    value={value('title')}
+    value={seed('title')}
     errors={errors.title}
   />
 
@@ -75,60 +101,89 @@ const totalNumbersMatchesQuickPick =
     hint="El premio, para qué es lo recaudado, dónde se sortea."
     type="textarea"
     placeholder={RAFFLE_PLACEHOLDER.description}
-    value={value('description')}
+    value={seed('description')}
     errors={errors.description}
     optional
   />
 
   <hr class="my-6 perforado" />
 
-  <div class="grid gap-6 sm:grid-cols-2 sm:gap-5.5">
-    <Field
-      name="ticketPrice"
-      label="¿Cuánto sale cada número?"
-      hint="En pesos, sin puntos."
-      type="number"
-      inputmode="numeric"
-      placeholder="2500"
-      prefix="$"
-      min={1}
-      step={1}
-      value={value('ticketPrice')}
-      errors={errors.ticketPrice}
-    />
+  {
+    lockRange ? (
+      <div class="grid gap-6 sm:grid-cols-2 sm:gap-5.5">
+        <input type="hidden" name="ticketPrice" value={seed('ticketPrice')} />
+        <input type="hidden" name="totalNumbers" value={totalNumbers} />
+        <input type="hidden" name="numberStart" value={numberStart} />
 
-    <div>
-      <Field
-        name="totalNumbers"
-        label="¿Cuántos números?"
-        hint="100 es lo más común."
-        type="number"
-        inputmode="numeric"
-        placeholder="100"
-        min={1}
-        max={1000}
-        step={1}
-        value={totalNumbers}
-        errors={errors.totalNumbers}
-        controlHidden={totalNumbersMatchesQuickPick}
-      />
+        <Field
+          name="ticketPriceLocked"
+          label="¿Cuánto sale cada número?"
+          type="text"
+          value={pesos(numberOr(seed('ticketPrice'), 0) * 100)}
+          disabled
+          note="No se cambia con la rifa publicada."
+        />
+        <Field
+          name="totalNumbersLocked"
+          label="¿Cuántos números?"
+          type="text"
+          value={`${totalNumbers} · arranca en ${numberStart}`}
+          disabled
+          note="Cambiarlo le movería el trato a quien ya compró."
+        />
+      </div>
+    ) : (
+      <>
+        <div class="grid gap-6 sm:grid-cols-2 sm:gap-5.5">
+          <Field
+            name="ticketPrice"
+            label="¿Cuánto sale cada número?"
+            hint="En pesos, sin puntos."
+            type="number"
+            inputmode="numeric"
+            placeholder="2500"
+            prefix="$"
+            min={1}
+            step={1}
+            value={seed('ticketPrice')}
+            errors={errors.ticketPrice}
+          />
 
-      <Chips
-        class="mt-3"
-        target="totalNumbers"
-        values={QUICK_TOTAL_NUMBERS}
-        value={totalNumbersRaw}
-        allowCustom={ALLOW_CUSTOM_TOTAL_NUMBERS}
-      />
-    </div>
-  </div>
+          <div>
+            <Field
+              name="totalNumbers"
+              label="¿Cuántos números?"
+              hint="100 es lo más común."
+              type="number"
+              inputmode="numeric"
+              placeholder="100"
+              min={1}
+              max={1000}
+              step={1}
+              value={totalNumbers}
+              errors={errors.totalNumbers}
+              controlHidden={totalNumbersMatchesQuickPick}
+            />
 
-  <NumberStartField
-    class="mt-6"
-    totalNumbersField="totalNumbers"
-    totalNumbers={cantidad}
-    value={numberStart}
-  />
+            <Chips
+              class="mt-3"
+              target="totalNumbers"
+              values={QUICK_TOTAL_NUMBERS}
+              value={totalNumbersRaw}
+              allowCustom={ALLOW_CUSTOM_TOTAL_NUMBERS}
+            />
+          </div>
+        </div>
+
+        <NumberStartField
+          class="mt-6"
+          totalNumbersField="totalNumbers"
+          totalNumbers={cantidad}
+          value={numberStart}
+        />
+      </>
+    )
+  }
 
   <Field
     class="mt-6"
@@ -137,7 +192,7 @@ const totalNumbersMatchesQuickPick =
     hint="Podés cambiarla después si se corre la fecha."
     type="date"
     min={today()}
-    value={value('drawDate')}
+    value={seed('drawDate')}
     errors={errors.drawDate}
   />
 
@@ -149,18 +204,26 @@ const totalNumbersMatchesQuickPick =
     type="tel"
     inputmode="tel"
     placeholder="11 2345-6789"
-    value={value('contactPhone')}
+    value={seed('contactPhone')}
     errors={errors.contactPhone}
     optional
   />
 
   <Button type="submit" variant="primary" size="lg" class="mt-7 w-full">
-    Crear la rifa y obtener el link
+    {
+      mode === 'edit'
+        ? 'Guardar los cambios'
+        : 'Crear la rifa y obtener el link'
+    }
     <Icon name="lucide:arrow-right" aria-hidden="true" />
   </Button>
 
   <p class="mt-3 text-center text-support text-subtle-foreground">
-    Todo se puede editar después. Nada se publica hasta que compartís el link.
+    {
+      mode === 'edit'
+        ? 'Los cambios se ven al instante en tu link.'
+        : 'Todo se puede editar después. Nada se publica hasta que compartís el link.'
+    }
   </p>
 </form>
 
