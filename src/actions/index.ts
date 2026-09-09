@@ -1,4 +1,4 @@
-import { create, publish, release, sell } from './raffle';
+import { create, publish, release, sell, update } from './raffle';
 
 export const server = {
   raffle: {
@@ -6,5 +6,6 @@ export const server = {
     publish,
     sell,
     release,
+    update,
   },
 };

@@ -14,16 +14,23 @@ import type {
   NewRaffle,
   OwnerNumber,
   OwnerRaffle,
+  RaffleUpdate,
   SellResult,
 } from '@/types/raffle';
 import { AppError } from '@/utils/errors';
 
 import type { Actor } from '../auth/actor';
 import { userIdOf } from '../auth/actor';
+import type { RaffleDetailsInput, RaffleRangeInput } from '../db/raffles';
 // Del repositorio y no del barril de `../db`: este módulo recibe el `db` por
 // parámetro (y también el namespace del DO), así que está del lado de adentro
 // del límite que arma `src/lib/db/index.ts`, no del lado de las páginas.
-import { createRaffle, getOwnRaffle, markPublished } from '../db/raffles';
+import {
+  createRaffle,
+  getOwnRaffle,
+  markPublished,
+  updateRaffle,
+} from '../db/raffles';
 
 type RaffleNamespace = Env['RAFFLE'];
 
@@ -133,3 +140,65 @@ export const releaseNumbers = async (
   numbers: number[],
 ): Promise<number[]> =>
   raffles.getByName(raffleId).release(requireUser(actor), numbers);
+
+/**
+ * Edita una rifa. Los datos —título, premio, descripción, fecha, teléfono— se
+ * tocan en cualquier estado; el rango —cantidad, arranque, precio— sólo en
+ * DRAFT: fuera de DRAFT se ignora lo que venga, porque cambiarlo le cambiaría
+ * el trato a quien ya compró.
+ *
+ * Si en DRAFT cambió la cantidad o el arranque, la grilla del DO ya no
+ * corresponde: se rehace con destroy() + init(). El precio no vive en el DO,
+ * así que un cambio de sólo precio no lo despierta.
+ */
+export const updateRaffleDetails = async (
+  db: D1Database,
+  raffles: RaffleNamespace,
+  actor: Actor,
+  raffleId: string,
+  input: RaffleUpdate,
+): Promise<void> => {
+  const userId = requireUser(actor);
+  const current = await getOwnRaffle(db, actor, raffleId);
+
+  const details: RaffleDetailsInput = {
+    title: input.title,
+    description: input.description,
+    prize: input.prize,
+    drawDate: input.drawDate,
+    contactPhone: input.contactPhone,
+  };
+
+  const range: RaffleRangeInput | undefined =
+    current.status === 'DRAFT'
+      ? {
+          totalNumbers: input.totalNumbers,
+          numberStart: input.numberStart,
+          ticketPrice: input.ticketPrice,
+        }
+      : undefined;
+
+  await updateRaffle(db, actor, raffleId, details, range);
+
+  const rangeChanged =
+    range !== undefined &&
+    (range.totalNumbers !== current.totalNumbers ||
+      range.numberStart !== current.numberStart);
+
+  if (!rangeChanged) return;
+
+  // La instancia sigue viva entre las dos llamadas. destroy() vacía el meta
+  // (incluido owner_id) y vuelve a migrar; init() ve owner_id === null y
+  // resiembra. `ownerId: userId` es correcto porque destroy() ya pasó su
+  // assertOwner: sólo el dueño real llega hasta acá (un ADMIN se cae en
+  // destroy(), y es a propósito — el DO no tiene bypass).
+  await raffles.getByName(raffleId).destroy(userId);
+  await raffles.getByName(raffleId).init({
+    raffleId,
+    ownerId: userId,
+    tier: current.tier,
+    status: 'DRAFT',
+    numberStart: range.numberStart,
+    totalNumbers: range.totalNumbers,
+  });
+};

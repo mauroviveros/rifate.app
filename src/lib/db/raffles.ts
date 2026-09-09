@@ -239,3 +239,86 @@ export const markPublished = async (
   // docs/04: permite de más y no dice nada. Acá se convierte en un error.
   if (res.meta.changes === 0) throw new AppError('FORBIDDEN');
 };
+
+/** Los campos que se editan en cualquier estado. */
+export type RaffleDetailsInput = {
+  title: string;
+  description: string | null;
+  prize: string | null;
+  drawDate: string;
+  contactPhone: string | null;
+};
+
+/** Cantidad, arranque y precio: sólo se tocan en DRAFT (lo decide el flujo). */
+export type RaffleRangeInput = {
+  totalNumbers: number;
+  numberStart: 0 | 1;
+  ticketPrice: number; // centavos
+};
+
+/**
+ * Edita una rifa. Owner-scoped y con la misma guarda que `markPublished`: un
+ * UPDATE que no tocó ninguna fila es el modo de falla de docs/04 —permite de
+ * más y no dice nada— así que se convierte en FORBIDDEN.
+ *
+ * `range` sólo llega cuando la rifa está en DRAFT. El `AND status = 'DRAFT'` del
+ * WHERE es el segundo cerrojo: aunque el flujo se equivoque, `total_numbers` y
+ * `ticket_price` no se reescriben sobre una rifa publicada.
+ */
+export const updateRaffle = async (
+  db: D1Database,
+  actor: Actor,
+  id: string,
+  details: RaffleDetailsInput,
+  range?: RaffleRangeInput,
+): Promise<void> => {
+  const userId = userIdOf(actor);
+  if (userId === null) throw new AppError('FORBIDDEN');
+
+  const ts = now();
+  const res = range
+    ? await db
+        .prepare(
+          `UPDATE raffles
+              SET title = ?1, description = ?2, prize = ?3, draw_date = ?4,
+                  contact_phone = ?5, total_numbers = ?6, number_start = ?7,
+                  ticket_price = ?8, updated_at = ?9
+            WHERE id = ?10 AND owner_id = ?11 AND status = 'DRAFT'`,
+        )
+        .bind(
+          details.title.trim(),
+          details.description,
+          details.prize,
+          details.drawDate,
+          phone(details.contactPhone),
+          range.totalNumbers,
+          range.numberStart,
+          range.ticketPrice,
+          ts,
+          id,
+          userId,
+        )
+        .run()
+    : await db
+        .prepare(
+          `UPDATE raffles
+              SET title = ?1, description = ?2, prize = ?3, draw_date = ?4,
+                  contact_phone = ?5, updated_at = ?6
+            WHERE id = ?7 AND owner_id = ?8`,
+        )
+        .bind(
+          details.title.trim(),
+          details.description,
+          details.prize,
+          details.drawDate,
+          phone(details.contactPhone),
+          ts,
+          id,
+          userId,
+        )
+        .run();
+
+  // Un UPDATE que no tocó nada: rifa ajena, inexistente, o (en la variante con
+  // rango) ya no está en DRAFT. Los tres se responden igual.
+  if (res.meta.changes === 0) throw new AppError('FORBIDDEN');
+};

@@ -32,6 +32,7 @@ export const createRaffleWithGrid = withDbAndRaffles(
 );
 export const publishRaffle = withDbAndRaffles(flows.publishRaffle);
 export const ownerGrid = withDbAndRaffles(flows.ownerGrid);
+export const updateRaffleDetails = withDbAndRaffles(flows.updateRaffleDetails);
 
 export const sellNumbers = withRaffles(flows.sellNumbers);
 export const releaseNumbers = withRaffles(flows.releaseNumbers);

@@ -13,6 +13,7 @@ import {
   publishRaffle,
   releaseNumbers,
   sellNumbers,
+  updateRaffleDetails,
 } from './flows';
 
 /**
@@ -183,5 +184,69 @@ describe('sellNumbers · releaseNumbers', () => {
     const seven = afterRelease.numbers.find((n) => n.number === 7);
     expect(seven?.status).toBe('AVAILABLE');
     expect(seven?.buyerName).toBeNull();
+  });
+});
+
+describe('updateRaffleDetails', () => {
+  it('en una rifa publicada cambia los datos y deja el rango quieto', async () => {
+    const { id } = await createFor('ana');
+    const ana = organizer('ana');
+    await publishRaffle(env.DB, env.RAFFLE, ana, id);
+    await sellNumbers(env.RAFFLE, ana, id, [5], { name: 'Leo', phone: null });
+
+    await updateRaffleDetails(env.DB, env.RAFFLE, ana, id, {
+      ...NEW_RAFFLE,
+      prize: 'Una bici nueva',
+      ticketPrice: 999999, // se ignora: la rifa no está en DRAFT
+      totalNumbers: 50, // idem
+    });
+
+    const row = await env.DB.prepare(
+      `SELECT prize, ticket_price, total_numbers FROM raffles WHERE id = ?`,
+    )
+      .bind(id)
+      .first<{ prize: string; ticket_price: number; total_numbers: number }>();
+
+    expect(row?.prize).toBe('Una bici nueva');
+    expect(row?.ticket_price).toBe(250000); // el de NEW_RAFFLE, intacto
+    expect(row?.total_numbers).toBe(100);
+
+    const grid = await env.RAFFLE.getByName(id).publicGrid();
+    expect(grid).toHaveLength(100);
+    expect(grid.find((n) => n.number === 5)?.status).toBe('SOLD');
+  });
+
+  it('en DRAFT, cambiar la cantidad rehace la grilla', async () => {
+    const { id } = await createFor('ana');
+
+    await updateRaffleDetails(env.DB, env.RAFFLE, organizer('ana'), id, {
+      ...NEW_RAFFLE,
+      totalNumbers: 30,
+    });
+
+    const row = await env.DB.prepare(
+      `SELECT total_numbers FROM raffles WHERE id = ?`,
+    )
+      .bind(id)
+      .first<{ total_numbers: number }>();
+    expect(row?.total_numbers).toBe(30);
+
+    const grid = await env.RAFFLE.getByName(id).publicGrid();
+    expect(grid).toHaveLength(30);
+    expect(await metaOf(id, 'owner_id')).toBe('ana'); // init() volvió a correr
+  });
+
+  it('una rifa ajena se niega en D1', async () => {
+    const { id } = await createFor('ana');
+
+    await expect(
+      updateRaffleDetails(
+        env.DB,
+        env.RAFFLE,
+        organizer('beto'),
+        id,
+        NEW_RAFFLE,
+      ),
+    ).rejects.toThrow('FORBIDDEN');
   });
 });

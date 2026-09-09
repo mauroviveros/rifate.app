@@ -5,12 +5,14 @@ import {
   publishRaffle,
   releaseNumbers,
   sellNumbers,
+  updateRaffleDetails,
 } from '@/lib/raffles';
 
 import { asActionError } from './errors';
 import {
   newRaffleSchema,
   publishRaffleSchema,
+  raffleUpdateSchema,
   releaseNumbersSchema,
   sellNumbersSchema,
 } from './raffle.schema';
@@ -41,6 +43,16 @@ export const publish = defineAction({
   handler: ({ id }, { locals }) =>
     translatingErrors(async () => {
       await publishRaffle(locals.actor, id);
+      return { id };
+    }),
+});
+
+export const update = defineAction({
+  accept: 'form',
+  input: raffleUpdateSchema,
+  handler: ({ id, ...input }, { locals }) =>
+    translatingErrors(async () => {
+      await updateRaffleDetails(locals.actor, id, input);
       return { id };
     }),
 });

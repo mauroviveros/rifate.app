@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { newRaffleSchema, sellNumbersSchema } from './raffle.schema';
+import {
+  newRaffleSchema,
+  raffleUpdateSchema,
+  sellNumbersSchema,
+} from './raffle.schema';
 
 /**
  * Estos tests corren el esquema con objetos planos, NO con un `FormData`: el
@@ -78,6 +82,28 @@ describe('newRaffleSchema', () => {
     expect(
       newRaffleSchema.safeParse({ ...BASE, contactPhone: 'llamame' }).success,
     ).toBe(false);
+  });
+});
+
+describe('raffleUpdateSchema', () => {
+  const BASE_UPDATE = { ...BASE, id: crypto.randomUUID() };
+
+  it('pide un id que sea uuid', () => {
+    expect(raffleUpdateSchema.safeParse(BASE_UPDATE).success).toBe(true);
+    expect(
+      raffleUpdateSchema.safeParse({ ...BASE_UPDATE, id: 'la-del-club' })
+        .success,
+    ).toBe(false);
+  });
+
+  it('valida los datos igual que el alta', () => {
+    const parsed = raffleUpdateSchema.parse({
+      ...BASE_UPDATE,
+      ticketPrice: 2500,
+      numberStart: '1',
+    });
+    expect(parsed.ticketPrice).toBe(250000);
+    expect(parsed.numberStart).toBe(1);
   });
 });
 
