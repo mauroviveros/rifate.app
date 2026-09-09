@@ -277,5 +277,15 @@ const value = (name: string) => formValue(formData, name);
 
     for (const box of boxes) box.addEventListener('change', paint);
     paint();
+
+    const firstError = form.querySelector<HTMLElement>('[aria-invalid="true"]');
+    if (firstError) {
+      const focusError = () => {
+        firstError.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        firstError.focus({ preventScroll: true });
+      };
+      if (document.fonts) document.fonts.ready.then(focusError);
+      else focusError();
+    }
   }
 </script>
