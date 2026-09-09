@@ -1,5 +1,6 @@
 ---
 import { actions, isInputError } from 'astro:actions';
+import { Icon } from 'astro-icon/components';
 
 import BackLink from '@/components/panel/BackLink.astro';
 import Actions from '@/components/panel/detail/Actions.astro';
@@ -9,6 +10,7 @@ import Sale from '@/components/panel/detail/Sale.astro';
 import SaleBar from '@/components/panel/detail/SaleBar.astro';
 import Stats from '@/components/panel/detail/Stats.astro';
 import StatusBadge from '@/components/panel/StatusBadge.astro';
+import { Button } from '@/components/starwind/button';
 import Dashboard from '@/layouts/Dashboard.astro';
 import { ownerGrid } from '@/lib/raffles';
 import { codeOf } from '@/utils/errors';
@@ -134,31 +136,51 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
       'lg:grid-cols-[1fr_380px] lg:items-start lg:gap-7.5',
     ]}
   >
-    <Grid
-      numbers={numbers}
-      numberStart={raffle.numberStart}
-      totalNumbers={raffle.totalNumbers}
-      selected={selectedNumbers}
-      form="sale"
-    />
+    <div class="contents lg:flex lg:flex-col lg:gap-7">
+      <Grid
+        numbers={numbers}
+        numberStart={raffle.numberStart}
+        totalNumbers={raffle.totalNumbers}
+        selected={selectedNumbers}
+        form="sale"
+      />
 
-    <Sale
-      id="sale"
-      class="lg:sticky lg:top-24 lg:row-span-2"
-      raffleId={raffle.id}
-      ticketPrice={raffle.ticketPrice}
-      sellAction={actions.raffle.sell}
-      releaseAction={actions.raffle.release}
-      formData={formData}
-      errors={saleErrors}
-      error={saleError}
-    />
+      <Buyers
+        class="order-2 lg:order-0"
+        numbers={numbers}
+        numberStart={raffle.numberStart}
+        totalNumbers={raffle.totalNumbers}
+      />
+    </div>
 
-    <Buyers
-      numbers={numbers}
-      numberStart={raffle.numberStart}
-      totalNumbers={raffle.totalNumbers}
-    />
+    <div class="order-1 flex flex-col gap-6 lg:sticky lg:top-24 lg:order-0">
+      <Sale
+        id="sale"
+        raffleId={raffle.id}
+        ticketPrice={raffle.ticketPrice}
+        sellAction={actions.raffle.sell}
+        releaseAction={actions.raffle.release}
+        formData={formData}
+        errors={saleErrors}
+        error={saleError}
+      />
+
+      <div class="rounded-xl border-2 border-dashed border-border p-6">
+        <h2 class="text-[1.25rem] font-extrabold">Editar los datos</h2>
+        <p class="mt-1 text-support text-subtle-foreground">
+          Cambiá el título, el premio, la descripción o la fecha del sorteo.
+        </p>
+        <Button
+          href={`/panel/rifa/${raffle.id}/editar`}
+          variant="outline"
+          size="md"
+          class="mt-4 w-full"
+        >
+          <Icon name="lucide:pencil" aria-hidden="true" />
+          Editar la rifa
+        </Button>
+      </div>
+    </div>
   </div>
 
   <SaleBar />

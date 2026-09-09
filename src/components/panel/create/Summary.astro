@@ -1,17 +1,20 @@
 ---
 import { pesos } from '@/utils/format';
-import { formNumber, formValue } from '@/utils/forms';
+import { formValue, numberOr } from '@/utils/forms';
 
 import { RAFFLE_PLACEHOLDER } from './placeholder';
 
 interface Props {
   formData: FormData | null;
+  /** Los valores actuales, para el primer GET de la edición (ver `Form`). */
+  initial?: Record<string, string>;
 }
 
-const { formData } = Astro.props;
-const value = (name: string) => formValue(formData, name);
-const totalNumbers = formNumber(formData, 'totalNumbers', 100);
-const ticketPrice = formNumber(formData, 'ticketPrice', 2500);
+const { formData, initial } = Astro.props;
+const value = (name: string) =>
+  formValue(formData, name) || initial?.[name] || '';
+const totalNumbers = numberOr(value('totalNumbers'), 100);
+const ticketPrice = numberOr(value('ticketPrice'), 2500);
 const numberStart = value('numberStart') === '1' ? 1 : 0;
 
 const title = value('title') || RAFFLE_PLACEHOLDER.title;

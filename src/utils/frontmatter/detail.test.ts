@@ -11,6 +11,7 @@ import {
   publishHint,
   selectionKind,
   tally,
+  toEditInitial,
 } from './detail';
 
 const cell = (over: Partial<OwnerNumber> = {}): OwnerNumber => ({
@@ -187,6 +188,24 @@ describe('publishHint', () => {
   });
 });
 
+describe('toEditInitial', () => {
+  it('pasa el precio de centavos a pesos, en string', () => {
+    expect(toEditInitial(raffle({ ticketPrice: 250000 }))).toMatchObject({
+      ticketPrice: '2500',
+      totalNumbers: '100',
+      numberStart: '1',
+    });
+  });
+
+  it('los textos que faltan salen como cadena vacía, no null', () => {
+    expect(
+      toEditInitial(
+        raffle({ description: null, prize: null, contactPhone: null }),
+      ),
+    ).toMatchObject({ description: '', prize: '', contactPhone: '' });
+  });
+});
+
 describe('flashMessage', () => {
   it('sin flag no hay cartel', () => {
     expect(flashMessage(null)).toBeNull();
@@ -199,6 +218,10 @@ describe('flashMessage', () => {
 
   it('publicada no lleva cuenta', () => {
     expect(flashMessage('published')).toBe('Listo: tu rifa quedó publicada.');
+  });
+
+  it('editada no lleva cuenta', () => {
+    expect(flashMessage('updated')).toBe('Listo: guardamos los cambios.');
   });
 
   it('vender: singular y plural', () => {

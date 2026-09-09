@@ -2,6 +2,9 @@
 import type { HTMLAttributes } from 'astro/types';
 import { Icon } from 'astro-icon/components';
 
+import { Input } from '@/components/starwind/input';
+import { Textarea } from '@/components/starwind/textarea';
+
 interface Props extends Omit<HTMLAttributes<'div'>, 'class'> {
   /** El `name` del control. Es también la raíz de sus ids. */
   name: string;
@@ -24,6 +27,14 @@ interface Props extends Omit<HTMLAttributes<'div'>, 'class'> {
   /** Prefijo pegado adentro del campo, como el `$` del precio. */
   prefix?: string;
   controlHidden?: boolean;
+  /**
+   * Campo bloqueado: se ve pero no se puede tocar ni enfocar. Lo maneja el
+   * `disabled` de `Input`/`Textarea` de starwind (`cursor-not-allowed`, apagado).
+   * Un `disabled` NO se envía: el valor real viaja por un campo oculto aparte.
+   */
+  disabled?: boolean;
+  /** Nota bajo el control, para explicar por qué está bloqueado (regla 7). */
+  note?: string;
   class?: string;
 }
 
@@ -42,6 +53,8 @@ const {
   step,
   prefix,
   controlHidden = false,
+  disabled = false,
+  note,
   class: className,
   ...rest
 } = Astro.props;
@@ -53,12 +66,20 @@ const describedBy =
     .filter(Boolean)
     .join(' ') || undefined;
 
-const FIELD_CLASSES = [
-  'w-full rounded-[0.9375rem] border-2 border-input bg-white px-4.5',
-  'text-[1.1875rem] font-semibold text-foreground',
-  'placeholder:font-normal placeholder:text-disabled-foreground',
-  'aria-invalid:border-error',
-];
+/**
+ * El look de Talonario (papel, borde de 2px, 60px de alto). Va por `class`, que
+ * `Input`/`Textarea` mergean por encima de su base de starwind.
+ */
+const FIELD_BASE =
+  'w-full rounded-[0.9375rem] border-2 border-input bg-white px-4.5 ' +
+  'text-[1.1875rem] font-semibold text-foreground ' +
+  'placeholder:font-normal placeholder:text-disabled-foreground ' +
+  'aria-invalid:border-error';
+
+const inputClass = [FIELD_BASE, 'h-field', prefix && 'pl-9.5']
+  .filter(Boolean)
+  .join(' ');
+const textareaClass = `${FIELD_BASE} h-27 py-4 leading-normal`;
 ---
 
 <div data-field={name} class:list={className} {...rest}>
@@ -83,34 +104,36 @@ const FIELD_CLASSES = [
   <div class="relative mt-2.5" data-field-control hidden={controlHidden}>
     {
       type === 'textarea' ? (
-        <textarea
+        <Textarea
           id={name}
           name={name}
           rows={3}
           required={required}
-          class:list={[...FIELD_CLASSES, 'h-27 py-4 leading-normal']}
+          disabled={disabled}
+          class={textareaClass}
           placeholder={placeholder}
           aria-describedby={describedBy}
           aria-invalid={error ? 'true' : undefined}
-          set:text={value}
+          value={value}
         />
       ) : (
         <>
           {prefix && (
             <span
-              class="pointer-events-none absolute inset-y-0 left-4.5 flex items-center text-[1.1875rem] font-semibold text-subtle-foreground"
+              class="pointer-events-none absolute inset-y-0 left-4.5 z-10 flex items-center text-[1.1875rem] font-semibold text-subtle-foreground"
               aria-hidden="true"
             >
               {prefix}
             </span>
           )}
-          <input
+          <Input
             id={name}
             name={name}
             type={type}
             value={value}
             required={required}
-            class:list={[...FIELD_CLASSES, 'h-field', prefix && 'pl-9.5']}
+            disabled={disabled}
+            class={inputClass}
             inputmode={inputmode}
             placeholder={placeholder}
             min={min}
@@ -123,6 +146,8 @@ const FIELD_CLASSES = [
       )
     }
   </div>
+
+  {note && <p class="mt-2 text-support text-subtle-foreground">{note}</p>}
 
   {
     error && (
