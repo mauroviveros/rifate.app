@@ -30,6 +30,18 @@
       "version": "2.0.2",
       "framework": "astro",
       "registry": "default"
+    },
+    {
+      "name": "input",
+      "version": "2.0.1",
+      "framework": "astro",
+      "registry": "default"
+    },
+    {
+      "name": "textarea",
+      "version": "1.4.0",
+      "framework": "astro",
+      "registry": "default"
     }
   ],
   "tailwind": {
