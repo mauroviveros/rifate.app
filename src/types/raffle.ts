@@ -90,6 +90,14 @@ export type NewRaffle = {
   contactPhone: string | null;
 };
 
+/**
+ * Lo que edita `raffle.update`. Hoy son los mismos campos que el alta: la
+ * pantalla de edición manda todos y el flujo decide cuáles aplica según el
+ * estado. Se le da nombre propio para que el día que diverja de `NewRaffle` no
+ * haya que desenredarlo.
+ */
+export type RaffleUpdate = NewRaffle;
+
 export type RaffleCard = {
   id: string;
   slug: string;

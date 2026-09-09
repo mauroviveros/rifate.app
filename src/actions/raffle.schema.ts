@@ -1,6 +1,6 @@
 import { z } from 'astro/zod';
 
-import type { NewRaffle } from '@/types/raffle';
+import type { NewRaffle, RaffleUpdate } from '@/types/raffle';
 import { pesos, today } from '@/utils/format';
 import { phone } from '@/utils/normalize';
 
@@ -130,6 +130,13 @@ export const newRaffleSchema = z.object({
 });
 
 export const publishRaffleSchema = z.object({ id: raffleId });
+
+/**
+ * El update valida los mismos campos que el alta, más el id. La pantalla de
+ * edición manda todos —los de rango van de sólo lectura cuando la rifa no está
+ * en DRAFT, pero viajan igual— y el flujo decide cuáles aplica.
+ */
+export const raffleUpdateSchema = newRaffleSchema.extend({ id: raffleId });
 export const releaseNumbersSchema = z.object({
   id: raffleId,
   numbers,
@@ -158,4 +165,9 @@ type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
  */
 export type _SchemaMatchesNewRaffle = Assert<
   Equal<z.infer<typeof newRaffleSchema>, NewRaffle>
+>;
+
+/** El update es el alta más el id: los mismos campos, misma garantía. */
+export type _SchemaMatchesRaffleUpdate = Assert<
+  Equal<Omit<z.infer<typeof raffleUpdateSchema>, 'id'>, RaffleUpdate>
 >;
