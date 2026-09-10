@@ -1,0 +1,39 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+import Stat from '@/components/panel/Stat.astro';
+import type { OwnerRaffle } from '@/types/raffle';
+import { pesos } from '@/utils/format';
+
+interface Props extends HTMLAttributes<'dl'> {
+  raffle: OwnerRaffle;
+  /** Cuántos ítems de «Antes de publicar» faltan (0 → «Nada»). */
+  pending: number;
+}
+
+const { raffle, pending, class: className, ...rest } = Astro.props;
+
+const potCents = raffle.totalNumbers * raffle.ticketPrice;
+const falta =
+  pending === 0 ? 'Nada' : `${pending} cosa${pending === 1 ? '' : 's'}`;
+---
+
+<dl
+  class:list={['grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4', className]}
+  aria-label="Resumen de la rifa"
+  {...rest}
+>
+  <Stat label="Números">
+    {raffle.totalNumbers}
+  </Stat>
+
+  <Stat label="Precio">
+    {pesos(raffle.ticketPrice)}
+    &nbsp;
+    <span class="text-xl text-subtle-foreground sm:text-2xl">c/u</span>
+  </Stat>
+
+  <Stat label="Si vendés todo" tone="ink">{pesos(potCents)}</Stat>
+
+  <Stat label="Falta" tone="alert">{falta}</Stat>
+</dl>

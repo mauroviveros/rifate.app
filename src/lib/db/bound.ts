@@ -32,6 +32,7 @@ export const getPublicRaffleBySlug = withDb(raffles.getPublicRaffleBySlug);
 export const listOwnRaffles = withDb(raffles.listOwnRaffles);
 export const markPublished = withDb(raffles.markPublished);
 export const updateRaffle = withDb(raffles.updateRaffle);
+export const setContactPhone = withDb(raffles.setContactPhone);
 
 export const issueVoucher = withDb(vouchers.issueVoucher);
 export const redeemVoucher = withDb(vouchers.redeemVoucher);

@@ -1,5 +1,5 @@
 import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
-import { progress } from '@/utils/format';
+import { pesos, progress } from '@/utils/format';
 
 /* ── Las etiquetas de la grilla ──────────────────────────────────────────── */
 
@@ -149,6 +149,29 @@ export const previewNumbers = (
 export const publishHint = (raffle: OwnerRaffle): string | null =>
   raffle.contactPhone === null ? 'Cargá un teléfono para publicar' : null;
 
+/* ── Antes de publicar (detalle en DRAFT) ────────────────────────────────── */
+
+export type ChecklistItem = { label: string; done: boolean };
+
+/**
+ * La lista «Antes de publicar». Los tres primeros ítems siempre están hechos
+ * —el alta los exige—; el teléfono es el único que puede faltar, y es lo que
+ * `publishRaffle` chequea antes de dejar publicar.
+ */
+export const beforePublishItems = (raffle: OwnerRaffle): ChecklistItem[] => [
+  { label: 'El título y el premio', done: true },
+  {
+    label: `${raffle.totalNumbers} números a ${pesos(raffle.ticketPrice)}`,
+    done: true,
+  },
+  { label: 'La fecha del sorteo', done: true },
+  { label: 'Un teléfono de contacto', done: raffle.contactPhone !== null },
+];
+
+/** Cuántos ítems de `beforePublishItems` faltan (0 → se puede publicar). */
+export const pendingBeforePublish = (raffle: OwnerRaffle): number =>
+  beforePublishItems(raffle).filter((i) => !i.done).length;
+
 /* ── Editar ──────────────────────────────────────────────────────────────── */
 
 /**
@@ -171,6 +194,7 @@ export const toEditInitial = (raffle: OwnerRaffle): Record<string, string> => ({
 const FLASH: Record<string, (count: number) => string> = {
   published: () => 'Listo: tu rifa quedó publicada.',
   updated: () => 'Listo: guardamos los cambios.',
+  phone: () => 'Listo: guardamos el teléfono.',
   sold: (count) => `Vendiste ${count} número${count === 1 ? '' : 's'}.`,
   freed: (count) => `Liberaste ${count} número${count === 1 ? '' : 's'}.`,
 };

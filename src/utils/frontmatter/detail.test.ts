@@ -4,9 +4,11 @@ import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
 
 import { flashMessage } from './detail';
 import {
+  beforePublishItems,
   buyersOf,
   numberLabel,
   numberWidth,
+  pendingBeforePublish,
   previewNumbers,
   publishHint,
   selectionKind,
@@ -203,6 +205,28 @@ describe('toEditInitial', () => {
         raffle({ description: null, prize: null, contactPhone: null }),
       ),
     ).toMatchObject({ description: '', prize: '', contactPhone: '' });
+  });
+});
+
+describe('beforePublishItems · pendingBeforePublish', () => {
+  it('sin teléfono, sólo falta el teléfono', () => {
+    const items = beforePublishItems(raffle({ contactPhone: null }));
+    expect(items.map((i) => i.done)).toEqual([true, true, true, false]);
+    expect(items[3]?.label).toBe('Un teléfono de contacto');
+    expect(pendingBeforePublish(raffle({ contactPhone: null }))).toBe(1);
+  });
+
+  it('con teléfono, no falta nada', () => {
+    expect(
+      pendingBeforePublish(raffle({ contactPhone: '+5493410000000' })),
+    ).toBe(0);
+  });
+
+  it('el ítem del rango dice la cantidad y el precio', () => {
+    const [, rango] = beforePublishItems(
+      raffle({ totalNumbers: 200, ticketPrice: 500000 }),
+    );
+    expect(rango?.label).toBe('200 números a $5.000');
   });
 });
 

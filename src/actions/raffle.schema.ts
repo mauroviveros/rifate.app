@@ -59,6 +59,13 @@ const optionalPhone = z
   .nullable()
   .default(null);
 
+/** Como `optionalPhone` pero obligatorio — lo usa `raffle.setPhone`. */
+const requiredPhone = z
+  .string({ error: 'Poné un teléfono de contacto.' })
+  .trim()
+  .min(1, 'Poné un teléfono de contacto.')
+  .refine(isPhone, 'Ese teléfono no se entiende. Ejemplo: 341 555 1234.');
+
 const isRealDate = (iso: string): boolean =>
   new Date(`${iso}T00:00:00.000Z`).toISOString().startsWith(iso);
 
@@ -129,7 +136,21 @@ export const newRaffleSchema = z.object({
   contactPhone: optionalPhone,
 });
 
-export const publishRaffleSchema = z.object({ id: raffleId });
+/**
+ * `contactPhone` opcional: el botón del encabezado manda sólo `{ id }`, pero el
+ * renglón «Guardar y publicar» del detalle en DRAFT manda además el teléfono,
+ * que el flujo guarda antes de publicar.
+ */
+export const publishRaffleSchema = z.object({
+  id: raffleId,
+  contactPhone: optionalPhone,
+});
+
+/** Cargar el teléfono desde el detalle sin publicar todavía. */
+export const setPhoneSchema = z.object({
+  id: raffleId,
+  contactPhone: requiredPhone,
+});
 
 /**
  * El update valida los mismos campos que el alta, más el id. La pantalla de
