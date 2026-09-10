@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   newRaffleSchema,
+  publishRaffleSchema,
   raffleUpdateSchema,
   sellNumbersSchema,
+  setPhoneSchema,
 } from './raffle.schema';
 
 /**
@@ -104,6 +106,36 @@ describe('raffleUpdateSchema', () => {
     });
     expect(parsed.ticketPrice).toBe(250000);
     expect(parsed.numberStart).toBe(1);
+  });
+});
+
+describe('publishRaffleSchema', () => {
+  const id = crypto.randomUUID();
+
+  it('acepta sólo el id (el botón del encabezado)', () => {
+    const r = publishRaffleSchema.parse({ id });
+    expect(r.contactPhone).toBeNull();
+  });
+
+  it('acepta el id más el teléfono (Guardar y publicar)', () => {
+    const r = publishRaffleSchema.parse({ id, contactPhone: '341 555 1234' });
+    expect(r.contactPhone).toBe('341 555 1234');
+  });
+});
+
+describe('setPhoneSchema', () => {
+  const id = crypto.randomUUID();
+
+  it('exige un teléfono válido', () => {
+    expect(
+      setPhoneSchema.safeParse({ id, contactPhone: '341 555 1234' }).success,
+    ).toBe(true);
+    expect(setPhoneSchema.safeParse({ id, contactPhone: null }).success).toBe(
+      false,
+    );
+    expect(
+      setPhoneSchema.safeParse({ id, contactPhone: 'llamame' }).success,
+    ).toBe(false);
   });
 });
 

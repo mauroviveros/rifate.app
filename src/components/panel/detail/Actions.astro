@@ -8,19 +8,23 @@ import { publishHint } from '@/utils/frontmatter/detail';
 
 interface Props {
   raffle: OwnerRaffle;
+  /** `actions.raffle.publish`. */
   publishAction: string;
   /** El link público completo (`https://rifate.app/r/slug`). */
   publicUrl: string;
-  /** Un error de dominio de `publish` (no de campo), para mostrar junto al botón. */
-  publishError?: string | null;
 }
 
-const { raffle, publishAction, publicUrl, publishError = null } = Astro.props;
+const { raffle, publishAction, publicUrl } = Astro.props;
 
-/* En borrador la acción del encabezado es publicar; una vez publicada, es
-   compartir. Nunca las dos: mantiene un solo vermellón por pantalla (regla 2). */
+/* En borrador el encabezado tiene editar y publicar. Si falta el teléfono,
+   publicar va APAGADO diciendo el motivo (regla 7) y el único vermellón activo
+   es el de la tarjeta «Antes de publicar». Con todo listo, publicar acá arriba
+   es el único vermellón (regla 2) y la tarjeta ya no repite el botón — así el
+   acto queda a la vista sin scrollear, sobre todo en el celular. Publicada, la
+   acción es compartir. */
 const draft = raffle.status === 'DRAFT';
 const publishBlocked = publishHint(raffle);
+const editUrl = `/panel/rifa/${raffle.id}/editar`;
 const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
   `${raffle.title} 👉 ${publicUrl}`,
 )}`;
@@ -28,28 +32,41 @@ const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
 
 {
   draft ? (
-    <div class="flex w-full flex-col gap-2 sm:w-auto sm:items-start">
-      <form method="POST" action={publishAction} class="w-full sm:w-auto">
-        <input type="hidden" name="id" value={raffle.id} />
+    <div class="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row sm:items-center">
+      <Button
+        href={editUrl}
+        variant="outline"
+        size="md"
+        class="w-full sm:w-auto"
+      >
+        <Icon name="lucide:pencil" aria-hidden="true" />
+        Editar los datos
+      </Button>
+
+      {publishBlocked ? (
         <Button
-          type="submit"
+          type="button"
           variant="primary"
           size="md"
-          disabled={publishBlocked !== null}
+          disabled
           class="w-full sm:w-auto"
         >
-          {publishBlocked ?? 'Publicar la rifa'}
+          <Icon name="lucide:circle-alert" aria-hidden="true" />
+          {publishBlocked}
         </Button>
-      </form>
-
-      {publishError && (
-        <p
-          class="flex items-start gap-2 text-label font-bold text-error"
-          role="alert"
-        >
-          <Icon name="lucide:circle-alert" class="mt-0.5 size-4.5 shrink-0" />
-          <span>{publishError}</span>
-        </p>
+      ) : (
+        <form method="POST" action={publishAction} class="w-full sm:w-auto">
+          <input type="hidden" name="id" value={raffle.id} />
+          <Button
+            type="submit"
+            variant="primary"
+            size="md"
+            class="w-full sm:w-auto"
+          >
+            <Icon name="lucide:check" aria-hidden="true" />
+            Publicar la rifa
+          </Button>
+        </form>
       )}
     </div>
   ) : (

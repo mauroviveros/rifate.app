@@ -6,14 +6,23 @@ interface Props {
   /** Tildado desde el server, para repoblar tras un error de validación. */
   checked?: boolean;
   /** El `id` del <form> del panel al que se ata el checkbox. */
-  form: string;
+  form?: string;
+  /** Sin panel de venta (rifa en DRAFT/cerrada): la celda no se puede tocar. */
+  readOnly?: boolean;
   status: NumberStatus;
   value: number;
   /** Ancho de padding de la etiqueta (de `numberWidth`). */
   width: number;
 }
 
-const { checked = false, form, status, value, width } = Astro.props;
+const {
+  checked = false,
+  form,
+  readOnly = false,
+  status,
+  value,
+  width,
+} = Astro.props;
 const label = numberLabel(value, width);
 /** Vendido o reservado: se puede tildar igual, para liberarlo sin otra pantalla. */
 const taken = status === 'SOLD' || status === 'RESERVED';
@@ -34,18 +43,32 @@ const TAKEN = [
   'tachado cursor-not-allowed border-border bg-muted text-disabled-foreground',
   'has-checked:border-primary has-checked:text-foreground has-checked:sello-primary',
 ];
+
+/** Sin panel al que atarse: la celda es sólo lectura, sin hover ni checkbox. */
+const STATIC = taken
+  ? 'tachado border-border bg-muted text-disabled-foreground'
+  : 'border-input bg-card text-foreground';
 ---
 
-<label class:list={[BASE, taken ? TAKEN : FREE]}>
-  <input
-    type="checkbox"
-    name="numbers"
-    value={value}
-    form={form}
-    checked={checked}
-    data-taken={taken ? '' : undefined}
-    class="sr-only"
-  />
-  <span data-numero>{label}</span>
-  {taken && <span class="sr-only"> · vendido</span>}
-</label>
+{
+  readOnly ? (
+    <div class:list={[BASE, STATIC]}>
+      <span data-numero>{label}</span>
+      {taken && <span class="sr-only"> · vendido</span>}
+    </div>
+  ) : (
+    <label class:list={[BASE, taken ? TAKEN : FREE]}>
+      <input
+        type="checkbox"
+        name="numbers"
+        value={value}
+        form={form}
+        checked={checked}
+        data-taken={taken ? '' : undefined}
+        class="sr-only"
+      />
+      <span data-numero>{label}</span>
+      {taken && <span class="sr-only"> · vendido</span>}
+    </label>
+  )
+}

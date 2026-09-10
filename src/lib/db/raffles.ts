@@ -322,3 +322,33 @@ export const updateRaffle = async (
   // rango) ya no está en DRAFT. Los tres se responden igual.
   if (res.meta.changes === 0) throw new AppError('FORBIDDEN');
 };
+
+/**
+ * Sólo el teléfono de contacto. Existe aparte de `updateRaffle` porque el
+ * renglón «Cargar el teléfono» del detalle en DRAFT manda un único campo, y
+ * `raffleUpdateSchema` pide todos. Owner-scoped, misma guarda que el resto.
+ *
+ * `contactPhone` llega ya validado por el esquema; `phone()` sólo lo normaliza
+ * a E.164. Un `null` borra el teléfono — la usa `raffle.setPhone` para un
+ * borrador; sobre una rifa publicada el CHECK de la tabla lo rechaza.
+ */
+export const setContactPhone = async (
+  db: D1Database,
+  actor: Actor,
+  id: string,
+  contactPhone: string | null,
+): Promise<void> => {
+  const userId = userIdOf(actor);
+  if (userId === null) throw new AppError('FORBIDDEN');
+
+  const ts = now();
+  const res = await db
+    .prepare(
+      `UPDATE raffles SET contact_phone = ?1, updated_at = ?2
+        WHERE id = ?3 AND owner_id = ?4`,
+    )
+    .bind(phone(contactPhone), ts, id, userId)
+    .run();
+
+  if (res.meta.changes === 0) throw new AppError('FORBIDDEN');
+};

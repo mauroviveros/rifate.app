@@ -1,5 +1,6 @@
 import { defineAction } from 'astro:actions';
 
+import { setContactPhone } from '@/lib/db';
 import {
   createRaffleWithGrid,
   publishRaffle,
@@ -15,6 +16,7 @@ import {
   raffleUpdateSchema,
   releaseNumbersSchema,
   sellNumbersSchema,
+  setPhoneSchema,
 } from './raffle.schema';
 
 /**
@@ -40,9 +42,19 @@ export const create = defineAction({
 export const publish = defineAction({
   accept: 'form',
   input: publishRaffleSchema,
-  handler: ({ id }, { locals }) =>
+  handler: ({ id, contactPhone }, { locals }) =>
     translatingErrors(async () => {
-      await publishRaffle(locals.actor, id);
+      await publishRaffle(locals.actor, id, contactPhone);
+      return { id };
+    }),
+});
+
+export const setPhone = defineAction({
+  accept: 'form',
+  input: setPhoneSchema,
+  handler: ({ id, contactPhone }, { locals }) =>
+    translatingErrors(async () => {
+      await setContactPhone(locals.actor, id, contactPhone);
       return { id };
     }),
 });

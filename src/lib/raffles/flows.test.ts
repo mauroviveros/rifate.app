@@ -124,6 +124,28 @@ describe('publishRaffle', () => {
     expect(await metaOf(id, 'status')).toBe('DRAFT');
   });
 
+  it('carga el teléfono en el mismo gesto y publica', async () => {
+    const { id } = await createFor('ana', WITHOUT_PHONE);
+
+    await publishRaffle(
+      env.DB,
+      env.RAFFLE,
+      organizer('ana'),
+      id,
+      '0341 555-1234',
+    );
+
+    const row = await env.DB.prepare(
+      `SELECT status, contact_phone FROM raffles WHERE id = ?`,
+    )
+      .bind(id)
+      .first<{ status: string; contact_phone: string | null }>();
+
+    expect(row?.status).toBe('PUBLISHED');
+    expect(row?.contact_phone).toBe('+543415551234');
+    expect(await metaOf(id, 'status')).toBe('PUBLISHED');
+  });
+
   it('una rifa ajena se niega en D1, sin tocar el objeto', async () => {
     const { id } = await createFor('ana');
 

@@ -29,6 +29,7 @@ import {
   createRaffle,
   getOwnRaffle,
   markPublished,
+  setContactPhone,
   updateRaffle,
 } from '../db/raffles';
 
@@ -72,8 +73,20 @@ export const publishRaffle = async (
   raffles: RaffleNamespace,
   actor: Actor,
   raffleId: string,
+  /**
+   * El teléfono, si se está cargando en el mismo gesto («Guardar y publicar»
+   * del renglón «Antes de publicar»). Se guarda ANTES de leer la fila, así el
+   * chequeo de abajo lo ve. Sin esto, el botón del encabezado sigue mandando
+   * sólo `{ id }` y este parámetro llega `null`.
+   */
+  contactPhone: string | null = null,
 ): Promise<void> => {
   const userId = requireUser(actor);
+
+  if (contactPhone !== null) {
+    await setContactPhone(db, actor, raffleId, contactPhone);
+  }
+
   const raffle = await getOwnRaffle(db, actor, raffleId);
 
   // El CHECK de la tabla lo exige igual; acá se convierte en un mensaje.

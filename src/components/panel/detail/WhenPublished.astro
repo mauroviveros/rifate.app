@@ -1,0 +1,25 @@
+---
+interface Props {
+  /** El link público completo. */
+  publicUrl: string;
+}
+
+const { publicUrl } = Astro.props;
+const shown = publicUrl.replace(/^https?:\/\//, '');
+---
+
+<div class="rounded-xl bg-card p-6 ring-2 ring-border">
+  <h2 class="text-[1.25rem]">Cuando publiques</h2>
+  <hr class="my-3.5 perforado" />
+  <p class="text-support text-subtle-foreground">
+    La rifa toma su link y cualquiera puede abrirlo:
+  </p>
+  <div
+    class="mt-3 flex h-12 items-center rounded-lg border-2 border-dashed border-input bg-background px-4 text-support font-semibold text-subtle-foreground"
+  >
+    {shown}
+  </div>
+  <p class="mt-3.5 text-support text-subtle-foreground">
+    Recién ahí vas a poder anotar lo que vendés desde esta misma pantalla.
+  </p>
+</div>

@@ -10,6 +10,7 @@ import {
   getPublicRaffleBySlug,
   listOwnRaffles,
   markPublished,
+  setContactPhone,
 } from './raffles';
 
 const organizador = (userId: string): Actor => ({ kind: 'organizer', userId });
@@ -193,5 +194,27 @@ describe('raffles · escritura', () => {
     await expect(markPublished(env.DB, organizador('ana'), id)).rejects.toThrow(
       'FORBIDDEN',
     );
+  });
+});
+
+describe('setContactPhone', () => {
+  it('carga y normaliza el teléfono de un borrador sin teléfono', async () => {
+    const { id } = await createRaffle(env.DB, organizador('ana'), {
+      ...RIFA,
+      contactPhone: null,
+    });
+
+    await setContactPhone(env.DB, organizador('ana'), id, '0341 555-9999');
+
+    const rifa = await getOwnRaffle(env.DB, organizador('ana'), id);
+    expect(rifa.contactPhone).toBe('+543415559999');
+  });
+
+  it('una rifa ajena se niega', async () => {
+    const { id } = await createRaffle(env.DB, organizador('ana'), RIFA);
+
+    await expect(
+      setContactPhone(env.DB, organizador('beto'), id, '341 555 9999'),
+    ).rejects.toThrow('FORBIDDEN');
   });
 });
