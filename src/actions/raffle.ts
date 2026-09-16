@@ -4,6 +4,7 @@ import { setContactPhone } from '@/lib/db';
 import {
   createRaffleWithGrid,
   publishRaffle,
+  rebuildGrid as rebuildRaffleGrid,
   releaseNumbers,
   sellNumbers,
   updateRaffleDetails,
@@ -14,6 +15,7 @@ import {
   newRaffleSchema,
   publishRaffleSchema,
   raffleUpdateSchema,
+  rebuildGridSchema,
   releaseNumbersSchema,
   sellNumbersSchema,
   setPhoneSchema,
@@ -83,4 +85,14 @@ export const release = defineAction({
   input: releaseNumbersSchema,
   handler: ({ id, numbers }, { locals }) =>
     translatingErrors(() => releaseNumbers(locals.actor, id, numbers)),
+});
+
+export const rebuildGrid = defineAction({
+  accept: 'form',
+  input: rebuildGridSchema,
+  handler: ({ id }, { locals }) =>
+    translatingErrors(async () => {
+      await rebuildRaffleGrid(locals.actor, id);
+      return { id };
+    }),
 });

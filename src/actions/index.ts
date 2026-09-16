@@ -1,4 +1,12 @@
-import { create, publish, release, sell, setPhone, update } from './raffle';
+import {
+  create,
+  publish,
+  rebuildGrid,
+  release,
+  sell,
+  setPhone,
+  update,
+} from './raffle';
 
 export const server = {
   raffle: {
@@ -8,5 +16,6 @@ export const server = {
     release,
     update,
     setPhone,
+    rebuildGrid,
   },
 };
