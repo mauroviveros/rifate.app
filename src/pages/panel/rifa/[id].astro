@@ -8,6 +8,7 @@ import BeforePublish from '@/components/panel/detail/BeforePublish.astro';
 import BeforePublishBar from '@/components/panel/detail/BeforePublishBar.astro';
 import Buyers from '@/components/panel/detail/Buyers.astro';
 import DraftSummary from '@/components/panel/detail/DraftSummary.astro';
+import EmptyGrid from '@/components/panel/detail/EmptyGrid.astro';
 import Grid from '@/components/panel/detail/Grid.astro';
 import Sale from '@/components/panel/detail/Sale.astro';
 import SaleBar from '@/components/panel/detail/SaleBar.astro';
@@ -32,6 +33,7 @@ const publishResult = Astro.getActionResult(actions.raffle.publish);
 const setPhoneResult = Astro.getActionResult(actions.raffle.setPhone);
 const sellResult = Astro.getActionResult(actions.raffle.sell);
 const releaseResult = Astro.getActionResult(actions.raffle.release);
+const rebuildResult = Astro.getActionResult(actions.raffle.rebuildGrid);
 
 if (publishResult && !publishResult.error) {
   return Astro.redirect(`/panel/rifa/${id}?ok=published`, 303);
@@ -50,6 +52,9 @@ if (releaseResult && !releaseResult.error) {
     `/panel/rifa/${id}?ok=freed-${releaseResult.data.length}`,
     303,
   );
+}
+if (rebuildResult && !rebuildResult.error) {
+  return Astro.redirect(`/panel/rifa/${id}?ok=rebuilt`, 303);
 }
 
 /**
@@ -74,6 +79,8 @@ if (saleResult?.error) {
   if (isInputError(saleResult.error)) saleErrors = saleResult.error.fields;
   else saleError = saleResult.error.message;
 }
+
+const rebuildError = rebuildResult?.error?.message ?? null;
 
 /**
  * Una rifa ajena y una inexistente se ven igual: un 404. Que exista o no es
@@ -125,6 +132,13 @@ const isDraft = raffle.status === 'DRAFT';
 const isPublished = raffle.status === 'PUBLISHED';
 const pending = pendingBeforePublish(raffle);
 
+/**
+ * La grilla nunca es vacía en una rifa sana: el alta exige `totalNumbers >= 1`.
+ * Si llega vacía es que `init()` del DO no corrió (ver `ownerGrid()` en
+ * lib/raffles/flows.ts) — no hay nada que vender ni mostrar hasta rearmarla.
+ */
+const isEmpty = numbers.length === 0;
+
 const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
 ---
 
@@ -170,21 +184,35 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
     ]}
   >
     <div class="contents lg:flex lg:flex-col lg:gap-7">
-      <Grid
-        numbers={numbers}
-        numberStart={raffle.numberStart}
-        totalNumbers={raffle.totalNumbers}
-        selected={selectedNumbers}
-        form={isPublished ? 'sale' : undefined}
-        draft={isDraft}
-      />
+      {
+        isEmpty ? (
+          <EmptyGrid
+            raffleId={raffle.id}
+            rebuildAction={actions.raffle.rebuildGrid}
+            error={rebuildError}
+          />
+        ) : (
+          <Grid
+            numbers={numbers}
+            numberStart={raffle.numberStart}
+            totalNumbers={raffle.totalNumbers}
+            selected={selectedNumbers}
+            form={isPublished ? 'sale' : undefined}
+            draft={isDraft}
+          />
+        )
+      }
 
-      <Buyers
-        class="order-2 lg:order-0"
-        numbers={numbers}
-        numberStart={raffle.numberStart}
-        totalNumbers={raffle.totalNumbers}
-      />
+      {
+        !isEmpty && (
+          <Buyers
+            class="order-2 lg:order-0"
+            numbers={numbers}
+            numberStart={raffle.numberStart}
+            totalNumbers={raffle.totalNumbers}
+          />
+        )
+      }
     </div>
 
     <div class="order-1 flex flex-col gap-6 lg:sticky lg:top-24 lg:order-0">
@@ -205,7 +233,7 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
       }
 
       {
-        isPublished && (
+        isPublished && !isEmpty && (
           <Sale
             id="sale"
             raffleId={raffle.id}
@@ -241,7 +269,7 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
     </div>
   </div>
 
-  {isPublished && <SaleBar />}
+  {isPublished && !isEmpty && <SaleBar />}
   {isDraft && raffle.contactPhone === null && <BeforePublishBar />}
 </Dashboard>
 

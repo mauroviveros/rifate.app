@@ -197,6 +197,7 @@ const FLASH: Record<string, (count: number) => string> = {
   phone: () => 'Listo: guardamos el teléfono.',
   sold: (count) => `Vendiste ${count} número${count === 1 ? '' : 's'}.`,
   freed: (count) => `Liberaste ${count} número${count === 1 ? '' : 's'}.`,
+  rebuilt: () => 'Listo: rearmamos el talonario.',
 };
 
 /* ── Mensajes de flash del panel de venta ───────────────────────────────────── */

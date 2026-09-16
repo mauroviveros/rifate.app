@@ -1,0 +1,61 @@
+---
+import { Icon } from 'astro-icon/components';
+
+import { Button } from '@/components/starwind/button';
+
+interface Props {
+  raffleId: string;
+  /** `actions.raffle.rebuildGrid`. */
+  rebuildAction: string;
+  /** Error de dominio de un intento anterior. */
+  error?: string | null;
+}
+
+const { raffleId, rebuildAction, error = null } = Astro.props;
+---
+
+<section
+  class="rounded-xl bg-card p-6 text-center ring-2 ring-warning/55 sm:p-8"
+  aria-labelledby="grid-empty-title"
+>
+  <span
+    class="mx-auto flex size-12 items-center justify-center rounded-full bg-warning/15 text-warning"
+    aria-hidden="true"
+  >
+    <Icon name="lucide:circle-alert" class="size-6" />
+  </span>
+
+  <h2 id="grid-empty-title" class="mt-4 text-[1.25rem]">
+    El talonario no se terminó de armar
+  </h2>
+  <p class="mx-auto mt-1 max-w-sm text-support text-subtle-foreground">
+    La rifa quedó creada pero los números todavía no se generaron. Pasa a veces
+    por un problema pasajero — rearmalo y no perdés nada de lo que ya cargaste.
+  </p>
+
+  {
+    error && (
+      <p
+        class="mx-auto mt-4 flex max-w-sm items-start gap-2 rounded-lg bg-primary/8 p-3 text-left text-support font-bold text-primary"
+        role="alert"
+      >
+        <Icon name="lucide:circle-alert" class="mt-0.5 size-5 shrink-0" />
+        <span>{error}</span>
+      </p>
+    )
+  }
+
+  <form method="POST" class="mt-5">
+    <input type="hidden" name="id" value={raffleId} />
+    <Button
+      type="submit"
+      formaction={rebuildAction}
+      variant="outline"
+      size="md"
+      class="w-full sm:w-auto"
+    >
+      <Icon name="lucide:rotate-ccw" aria-hidden="true" />
+      Rearmar el talonario
+    </Button>
+  </form>
+</section>

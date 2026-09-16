@@ -467,34 +467,50 @@ pnpm add -D prettier-plugin-tailwindcss
 > salen de esa pantalla. Esta media fase cierra lo que traba *publicar y
 > arreglar* una rifa; sortear y anular van en la fase 9.
 
-- [ ] **`raffle.update`** — action + esquema para título, premio, descripción,
+- [x] **`raffle.update`** — action + esquema para título, premio, descripción,
       fecha de sorteo y teléfono. Con la rifa `PUBLISHED` **y con ventas**,
       `total_numbers` y `ticket_price` quedan **bloqueados**: cambiarlos le
       cambia el trato a quien ya pagó y desincroniza D1 con el DO. En `DRAFT`
       los dos se editan. No toca el DO salvo que cambie el rango, que en `DRAFT`
       es un `destroy()` + `init()`.
-- [ ] **`/panel/rifa/[id]/editar`** contra `DetailEdit` / `DetailEditMobile` —
+- [x] **`/panel/rifa/[id]/editar`** contra `DetailEdit` / `DetailEditMobile` —
       reusa `Form` y `Summary` del alta, no un layout nuevo. Cinco campos con
       ayuda arriba de cada uno: es una **página**, no un diálogo (igual que
       «crear»; en el celular un modal con cinco campos es peor). Entra por un
       renglón discreto bajo la bajada del encabezado, no por un tercer botón.
-- [ ] **Cargar el teléfono desde el detalle** contra `DetailDraftPhone` /
+- [x] **Cargar el teléfono desde el detalle** contra `DetailDraftPhone` /
       `DetailDraftPhoneMobile` — el renglón «Un teléfono de contacto» de la
       lista «Antes de publicar» **se vuelve el input**, ahí mismo. Es un campo,
       no una pantalla ni un diálogo. El botón hace las dos cosas: «Guardar y
       publicar la rifa», con «Guardar sin publicar todavía» abajo.
-- [ ] **Estado `DRAFT` del detalle** contra `DetailDraft` / `DetailDraftMobile`
+- [x] **Estado `DRAFT` del detalle** contra `DetailDraft` / `DetailDraftMobile`
       — sin panel de venta (no hay nada que vender); en su lugar la lista
       «Antes de publicar» y el CTA de publicar apagado con el motivo (regla 7).
-- [ ] **Grilla vacía** contra `DetailEmpty` / `DetailEmptyMobile` — la fila
-      quedó en D1 y el `init()` del DO no llegó a correr. `ownerGrid()` vuelve
-      `numbers: []`; la pantalla ofrece rearmar el talonario (`init()` es
-      idempotente). Es el único estado que no depende de `raffle.update`.
-- [ ] Gate en `[id].astro`: con la rifa fuera de `DRAFT`/`PUBLISHED` el panel
-      `Sale` no se renderiza (hoy sigue interactivo).
-- [ ] **✅ Checkpoint: crear una `DRAFT` sin teléfono, cargárselo desde el
-      detalle, publicar, y después editar el premio con ventas ya cargadas sin
-      que se toque `ticket_price`**
+- [x] **Grilla vacía** — resultó ser un bug más serio que el planeado. La fila
+      queda en D1, pero si el `init()` del DO no llega a correr, su `owner_id`
+      nunca se fija — y `assertOwner()` falla **cerrado** ante eso (a
+      propósito: «un objeto a medio crear se niega a todo»), así que el
+      `ownerGrid()` del DO tiraba `FORBIDDEN`. La pantalla lo confundía con una
+      rifa ajena y devolvía **404**: el dueño no encontraba su propia rifa, sin
+      ningún indicio de qué pasó ni cómo arreglarlo. No era «la grilla sale en
+      blanco», como decía este ítem — era que la rifa desaparecía.
+      Arreglado en `flows.ts`: `ownerGrid()` ahora distingue ese `FORBIDDEN` del
+      DO —después de que D1 ya confirmó que sos el dueño, sólo puede significar
+      «huérfana»— y le pasa a la pantalla `numbers: []` en vez de propagar el
+      error. `[id].astro` renderiza `EmptyGrid` en ese caso (reemplaza `Grid`,
+      oculta `Buyers`/`Sale`/`SaleBar`: no hay nada que vender ni mostrar) con
+      un botón «Rearmar el talonario» → la action `raffle.rebuildGrid`, que
+      vuelve a llamar `init()` con los datos de D1 (no-op si ya prendió).
+      Cubierto en `flows.test.ts` simulando la huérfana de verdad: `createRaffle`
+      de D1 sin el `init()` del DO.
+- [x] Gate en `[id].astro`: con la rifa fuera de `DRAFT`/`PUBLISHED` el panel
+      `Sale` no se renderiza (`isPublished && !isEmpty`).
+- [x] **Checkpoint** — verificado por partes, no de punta a punta a mano: los
+      199 tests (`pnpm test`), `pnpm lint` y `pnpm check` pasan limpios, y el
+      estado de grilla vacía se revisó visualmente contra una página de prueba
+      descartable. Falta correr el flujo completo autenticado (crear → cargar
+      teléfono → publicar → editar con ventas) contra Google OAuth real — no
+      hay credenciales de Google configuradas en este entorno.
 
 ---
 

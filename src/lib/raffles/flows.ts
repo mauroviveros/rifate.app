@@ -17,7 +17,7 @@ import type {
   RaffleUpdate,
   SellResult,
 } from '@/types/raffle';
-import { AppError } from '@/utils/errors';
+import { AppError, codeOf } from '@/utils/errors';
 
 import type { Actor } from '../auth/actor';
 import { userIdOf } from '../auth/actor';
@@ -54,8 +54,9 @@ export const createRaffleWithGrid = async (
 ): Promise<{ id: string; slug: string }> => {
   const { id, slug, ownerId } = await createRaffle(db, actor, input);
 
-  // Si esto falla queda una fila huérfana en D1 y se reintenta: init() es
-  // idempotente justamente para eso.
+  // Si esto falla queda una fila huérfana en D1: el dueño la ve en su panel,
+  // `ownerGrid()` le devuelve la grilla vacía en vez de un 404, y `rebuildGrid`
+  // reintenta este mismo init() — idempotente justamente para eso.
   await raffles.getByName(id).init({
     raffleId: id,
     ownerId,
@@ -125,9 +126,47 @@ export const ownerGrid = async (
   const userId = requireUser(actor);
 
   const raffle = await getOwnRaffle(db, actor, raffleId);
-  const numbers = await raffles.getByName(raffleId).ownerGrid(userId);
+
+  // D1 ya confirmó que sos el dueño de esta rifa. Un FORBIDDEN del objeto acá
+  // sólo puede significar que init() nunca corrió —el objeto falla cerrado
+  // sin dueño, ver assertOwner()— y la fila quedó huérfana: no es una rifa
+  // ajena, es una grilla sin armar. Antes esto tiraba para arriba y la
+  // pantalla lo confundía con una rifa inexistente (404); ahora se lo pasamos
+  // vacío, y es la pantalla la que ofrece rearmarlo con `rebuildGrid`.
+  const numbers = await raffles
+    .getByName(raffleId)
+    .ownerGrid(userId)
+    .catch((error: unknown) => {
+      if (codeOf(error) === 'FORBIDDEN') return [];
+      throw error;
+    });
 
   return { raffle, numbers };
+};
+
+/**
+ * Reintenta `init()` sobre una rifa huérfana: el alta escribió la fila en D1
+ * pero la llamada al DO que arma la grilla no llegó a buen puerto (ver el
+ * comentario de `createRaffleWithGrid`). `init()` es un no-op si el objeto ya
+ * tiene dueño, así que llamarlo de más nunca pisa una grilla que sí prendió.
+ */
+export const rebuildGrid = async (
+  db: D1Database,
+  raffles: RaffleNamespace,
+  actor: Actor,
+  raffleId: string,
+): Promise<void> => {
+  const userId = requireUser(actor);
+  const raffle = await getOwnRaffle(db, actor, raffleId);
+
+  await raffles.getByName(raffleId).init({
+    raffleId,
+    ownerId: userId,
+    tier: raffle.tier,
+    status: raffle.status,
+    numberStart: raffle.numberStart,
+    totalNumbers: raffle.totalNumbers,
+  });
 };
 
 /**

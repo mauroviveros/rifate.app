@@ -5,12 +5,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Raffle } from '@/do/raffle';
 import { getMeta, type MetaKey } from '@/do/schema';
 import type { Actor } from '@/lib/auth/actor';
+import { createRaffle } from '@/lib/db/raffles';
 import type { NewRaffle } from '@/types/raffle';
 
 import {
   createRaffleWithGrid,
   ownerGrid,
   publishRaffle,
+  rebuildGrid,
   releaseNumbers,
   sellNumbers,
   updateRaffleDetails,
@@ -179,6 +181,65 @@ describe('ownerGrid', () => {
     await expect(
       ownerGrid(env.DB, env.RAFFLE, organizer('beto'), id),
     ).rejects.toThrow('FORBIDDEN');
+  });
+
+  it('rifa huérfana: el dueño ve la grilla vacía en vez de un 404', async () => {
+    // D1 sola, sin el init() del DO: reproduce el alta que se cortó a mitad
+    // de camino (ver el comentario de createRaffleWithGrid).
+    const { id } = await createRaffle(env.DB, organizer('ana'), NEW_RAFFLE);
+
+    const { raffle, numbers } = await ownerGrid(
+      env.DB,
+      env.RAFFLE,
+      organizer('ana'),
+      id,
+    );
+
+    expect(raffle.title).toBe('Rifa del Club');
+    expect(numbers).toEqual([]);
+  });
+});
+
+describe('rebuildGrid', () => {
+  it('rearma una rifa huérfana sin tocar D1', async () => {
+    const { id } = await createRaffle(env.DB, organizer('ana'), NEW_RAFFLE);
+    expect(await metaOf(id, 'owner_id')).toBeNull();
+
+    await rebuildGrid(env.DB, env.RAFFLE, organizer('ana'), id);
+
+    const grid = await env.RAFFLE.getByName(id).publicGrid();
+    expect(grid).toHaveLength(100);
+    expect(await metaOf(id, 'owner_id')).toBe('ana');
+
+    const { numbers } = await ownerGrid(
+      env.DB,
+      env.RAFFLE,
+      organizer('ana'),
+      id,
+    );
+    expect(numbers).toHaveLength(100);
+  });
+
+  it('sobre una rifa sana no hace nada: init() es idempotente', async () => {
+    const { id } = await createFor('ana');
+    const ana = organizer('ana');
+    await sellNumbers(env.RAFFLE, ana, id, [5], { name: 'Leo', phone: null });
+
+    await rebuildGrid(env.DB, env.RAFFLE, ana, id);
+
+    const { numbers } = await ownerGrid(env.DB, env.RAFFLE, ana, id);
+    expect(numbers).toHaveLength(100);
+    expect(numbers.find((n) => n.number === 5)?.status).toBe('SOLD');
+  });
+
+  it('una rifa ajena se niega en D1, sin tocar el objeto', async () => {
+    const { id } = await createRaffle(env.DB, organizer('ana'), NEW_RAFFLE);
+
+    await expect(
+      rebuildGrid(env.DB, env.RAFFLE, organizer('beto'), id),
+    ).rejects.toThrow('FORBIDDEN');
+
+    expect(await metaOf(id, 'owner_id')).toBeNull();
   });
 });
 

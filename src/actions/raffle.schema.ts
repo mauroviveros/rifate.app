@@ -152,6 +152,9 @@ export const setPhoneSchema = z.object({
   contactPhone: requiredPhone,
 });
 
+/** Rearmar el talonario de una rifa huérfana: sólo hace falta el id. */
+export const rebuildGridSchema = z.object({ id: raffleId });
+
 /**
  * El update valida los mismos campos que el alta, más el id. La pantalla de
  * edición manda todos —los de rango van de sólo lectura cuando la rifa no está
