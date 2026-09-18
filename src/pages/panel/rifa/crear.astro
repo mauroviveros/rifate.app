@@ -1,10 +1,11 @@
 ---
-import { actions, isInputError } from 'astro:actions';
+import { actions } from 'astro:actions';
 
 import BackLink from '@/components/panel/BackLink.astro';
 import Form from '@/components/panel/create/Form.astro';
 import Summary from '@/components/panel/create/Summary.astro';
 import Dashboard from '@/layouts/Dashboard.astro';
+import { formErrors } from '@/utils/action-result';
 
 const result = Astro.getActionResult(actions.raffle.create);
 
@@ -16,13 +17,7 @@ if (result && !result.error) {
   return Astro.redirect(`/panel/rifa/${result.data.id}`, 303);
 }
 
-let errors: Record<string, string[] | undefined> = {};
-let error: string | null = null;
-
-if (result?.error) {
-  if (isInputError(result.error)) errors = result.error.fields;
-  else error = result.error.message;
-}
+const { fields: errors, message: error } = formErrors(result);
 
 /**
  * Lo que se tipeó, para no devolver el formulario vacío.

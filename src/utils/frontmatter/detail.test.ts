@@ -6,6 +6,7 @@ import { flashMessage } from './detail';
 import {
   beforePublishItems,
   buyersOf,
+  detailView,
   numberLabel,
   numberWidth,
   pendingBeforePublish,
@@ -256,5 +257,89 @@ describe('flashMessage', () => {
   it('liberar: singular y plural', () => {
     expect(flashMessage('freed-1')).toBe('Liberaste 1 número.');
     expect(flashMessage('freed-2')).toBe('Liberaste 2 números.');
+  });
+});
+
+describe('detailView', () => {
+  const view = (over: Partial<Parameters<typeof detailView>[0]> = {}) =>
+    detailView({
+      raffle: raffle(),
+      numbers: [cell({ number: 1 })],
+      formData: null,
+      ok: null,
+      site: new URL('https://rifate.app'),
+      ...over,
+    });
+
+  it('sin descripción, la bajada arranca en mayúscula', () => {
+    expect(view().subtitle).toBe('Se sortea el 24 de diciembre');
+  });
+
+  it('con descripción, la fecha va detrás del separador', () => {
+    const subtitle = view({
+      raffle: raffle({ description: 'A beneficio del club' }),
+    }).subtitle;
+
+    expect(subtitle).toBe(
+      'A beneficio del club · se sortea el 24 de diciembre',
+    );
+  });
+
+  it('una rifa cerrada ya se sorteó', () => {
+    expect(view({ raffle: raffle({ status: 'CLOSED' }) }).subtitle).toBe(
+      'Se sorteó el 24 de diciembre',
+    );
+  });
+
+  it('el link público sale del slug', () => {
+    expect(view().publicUrl).toBe('https://rifate.app/r/rifa-del-club');
+  });
+
+  it('sin `Astro.site` cae al dominio de producción', () => {
+    expect(view({ site: undefined }).publicUrl).toBe(
+      'https://rifate.app/r/rifa-del-club',
+    );
+  });
+
+  it('los estados son excluyentes', () => {
+    expect(view()).toMatchObject({ isDraft: true, isPublished: false });
+    expect(view({ raffle: raffle({ status: 'PUBLISHED' }) })).toMatchObject({
+      isDraft: false,
+      isPublished: true,
+    });
+    expect(view({ raffle: raffle({ status: 'CLOSED' }) })).toMatchObject({
+      isDraft: false,
+      isPublished: false,
+    });
+  });
+
+  it('una grilla sin números es la que no se sembró', () => {
+    expect(view({ numbers: [] }).isEmpty).toBe(true);
+    expect(view().isEmpty).toBe(false);
+  });
+
+  it('sin POST no hay nada tildado ni tipeado', () => {
+    expect(view()).toMatchObject({ selectedNumbers: [], phoneValue: '' });
+  });
+
+  it('repuebla los números tildados y descarta la basura', () => {
+    const formData = new FormData();
+    formData.append('numbers', '7');
+    formData.append('numbers', 'no-es-un-número');
+    formData.append('numbers', '12');
+
+    expect(view({ formData }).selectedNumbers).toEqual([7, 12]);
+  });
+
+  it('repuebla el teléfono que se tipeó', () => {
+    const formData = new FormData();
+    formData.append('contactPhone', '11 2345-6789');
+
+    expect(view({ formData }).phoneValue).toBe('11 2345-6789');
+  });
+
+  it('el cartel de éxito sale del `?ok=`', () => {
+    expect(view({ ok: 'sold-2' }).okMessage).toBe('Vendiste 2 números.');
+    expect(view({ ok: null }).okMessage).toBeNull();
   });
 });

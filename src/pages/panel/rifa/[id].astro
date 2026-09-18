@@ -1,5 +1,5 @@
 ---
-import { actions, isInputError } from 'astro:actions';
+import { actions } from 'astro:actions';
 import { Icon } from 'astro-icon/components';
 
 import BackLink from '@/components/panel/BackLink.astro';
@@ -16,23 +16,30 @@ import StatusBadge from '@/components/panel/StatusBadge.astro';
 import { Button } from '@/components/starwind/button';
 import Dashboard from '@/layouts/Dashboard.astro';
 import { ownerGrid } from '@/lib/raffles';
+import { formErrors } from '@/utils/action-result';
 import { codeOf } from '@/utils/errors';
-import { longDate } from '@/utils/format';
-import { flashMessage, pendingBeforePublish } from '@/utils/frontmatter/detail';
+import { detailView } from '@/utils/frontmatter/detail';
 
 const { id } = Astro.params;
 if (!id) return Astro.rewrite('/404');
 
-/**
- * PRG: las tres acciones del detalle redirigen con 303 en el éxito, así un F5
- * no reenvía el formulario. Mismo patrón que el alta.
- */
 const publishResult = Astro.getActionResult(actions.raffle.publish);
 const setPhoneResult = Astro.getActionResult(actions.raffle.setPhone);
 const sellResult = Astro.getActionResult(actions.raffle.sell);
 const releaseResult = Astro.getActionResult(actions.raffle.release);
 const rebuildResult = Astro.getActionResult(actions.raffle.rebuildGrid);
 
+/**
+ * PRG: las cinco acciones del detalle vuelven acá con un 303 en el éxito, así
+ * un F5 no reenvía el formulario. Mismo patrón que el alta.
+ *
+ * ⚠️ El `Astro.redirect` va repetido y NO envuelto en un helper. Se probó:
+ * cualquier `const done = …` / `function done()` que sólo se use desde estos
+ * `return` sale reportado por `astro check` como «'done' is declared but its
+ * value is never read» (ts 6133). El language server no ve los usos que están
+ * después de un `return` en el frontmatter, y el `check` es parte del gate de
+ * pre-push. Cinco líneas repetidas valen menos que un warning permanente.
+ */
 if (publishResult && !publishResult.error) {
   return Astro.redirect(`/panel/rifa/${id}?ok=published`, 303);
 }
@@ -56,29 +63,13 @@ if (rebuildResult && !rebuildResult.error) {
 }
 
 /**
- * `publish` y `setPhone` van los dos al mismo `<form>` de «Antes de publicar»,
- * así que su error —de campo o de dominio— se muestra ahí.
+ * `publish` y `setPhone` comparten el `<form>` de «Antes de publicar», y `sell`
+ * y `release` el del panel de venta: cada par muestra su error en un solo
+ * lugar, sin importar cuál de los dos botones se apretó.
  */
-const draftFormResult = publishResult ?? setPhoneResult;
-let phoneErrors: string[] | undefined;
-let phoneError: string | null = null;
-if (draftFormResult?.error) {
-  if (isInputError(draftFormResult.error)) {
-    phoneErrors = draftFormResult.error.fields.contactPhone;
-  } else {
-    phoneError = draftFormResult.error.message;
-  }
-}
-
-const saleResult = sellResult ?? releaseResult;
-let saleErrors: Record<string, string[] | undefined> = {};
-let saleError: string | null = null;
-if (saleResult?.error) {
-  if (isInputError(saleResult.error)) saleErrors = saleResult.error.fields;
-  else saleError = saleResult.error.message;
-}
-
-const rebuildError = rebuildResult?.error?.message ?? null;
+const phone = formErrors(publishResult, setPhoneResult);
+const sale = formErrors(sellResult, releaseResult);
+const rebuild = formErrors(rebuildResult);
 
 /**
  * Una rifa ajena y una inexistente se ven igual: un 404. Que exista o no es
@@ -94,18 +85,6 @@ const loaded = await ownerGrid(Astro.locals.actor, id).catch(
 if (!loaded) return Astro.rewrite('/404');
 const { raffle, numbers } = loaded;
 
-const publicUrl = new URL(
-  `/r/${raffle.slug}`,
-  Astro.site ?? 'https://rifate.app',
-).href;
-
-/** La bajada del canvas: la descripción y la fecha del sorteo en una línea. */
-const drawVerb = raffle.status === 'CLOSED' ? 'sorteó' : 'sortea';
-const drawLine = `se ${drawVerb} el ${longDate(raffle.drawDate)}`;
-const subtitle = raffle.description
-  ? `${raffle.description} · ${drawLine}`
-  : drawLine.charAt(0).toUpperCase() + drawLine.slice(1);
-
 /** Lo que se tipeó / eligió, para no perderlo tras un error de validación. */
 let formData: FormData | null = null;
 if (Astro.request.method === 'POST') {
@@ -115,29 +94,29 @@ if (Astro.request.method === 'POST') {
     formData = null;
   }
 }
-const selectedNumbers = (formData?.getAll('numbers') ?? [])
-  .map((entry) => Number(entry))
-  .filter((n) => Number.isInteger(n));
-
-const phoneField = formData?.get('contactPhone');
-const phoneValue = typeof phoneField === 'string' ? phoneField : '';
 
 /**
- * El panel de venta vive sólo en `PUBLISHED`. En `DRAFT` lo reemplaza «Antes de
- * publicar»; en `CLOSED`/`CANCELLED` no hay nada que vender (fase 9).
+ * El resto lo deriva `detailView()`. El panel de venta, por ejemplo, vive sólo
+ * en `PUBLISHED`: en `DRAFT` lo reemplaza «Antes de publicar», y en
+ * `CLOSED`/`CANCELLED` no hay nada que vender (fase 9).
  */
-const isDraft = raffle.status === 'DRAFT';
-const isPublished = raffle.status === 'PUBLISHED';
-const pending = pendingBeforePublish(raffle);
-
-/**
- * La grilla nunca es vacía en una rifa sana: el alta exige `totalNumbers >= 1`.
- * Si llega vacía es que `init()` del DO no corrió (ver `ownerGrid()` en
- * lib/raffles/flows.ts) — no hay nada que vender ni mostrar hasta rearmarla.
- */
-const isEmpty = numbers.length === 0;
-
-const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
+const {
+  subtitle,
+  publicUrl,
+  isDraft,
+  isPublished,
+  isEmpty,
+  pending,
+  okMessage,
+  selectedNumbers,
+  phoneValue,
+} = detailView({
+  raffle,
+  numbers,
+  formData,
+  ok: Astro.url.searchParams.get('ok'),
+  site: Astro.site,
+});
 ---
 
 <Dashboard
@@ -187,7 +166,7 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
           <EmptyGrid
             raffleId={raffle.id}
             rebuildAction={actions.raffle.rebuildGrid}
-            error={rebuildError}
+            error={rebuild.message}
           />
         ) : (
           <Grid
@@ -221,8 +200,8 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
               raffle={raffle}
               publishAction={actions.raffle.publish}
               setPhoneAction={actions.raffle.setPhone}
-              phoneErrors={phoneErrors}
-              phoneError={phoneError}
+              phoneErrors={phone.fields.contactPhone}
+              phoneError={phone.message}
               phoneValue={phoneValue}
             />
             <WhenPublished publicUrl={publicUrl} />
@@ -239,8 +218,8 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
             sellAction={actions.raffle.sell}
             releaseAction={actions.raffle.release}
             formData={formData}
-            errors={saleErrors}
-            error={saleError}
+            errors={sale.fields}
+            error={sale.message}
           />
         )
       }

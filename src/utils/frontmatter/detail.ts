@@ -1,5 +1,6 @@
 import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
-import { pesos, progress } from '@/utils/format';
+import { longDate, pesos, progress } from '@/utils/format';
+import { formValue } from '@/utils/forms';
 
 /* ── Las etiquetas de la grilla ──────────────────────────────────────────── */
 
@@ -207,4 +208,80 @@ export const flashMessage = (ok: string | null): string | null => {
   const [kind, count] = ok.split('-');
   const build = FLASH[kind ?? ''];
   return build ? build(Number(count) || 0) : null;
+};
+
+/* ── La pantalla entera ──────────────────────────────────────────────────── */
+
+/** Si `Astro.site` no está configurado. Es el dominio de producción. */
+const FALLBACK_ORIGIN = 'https://rifate.app';
+
+type DetailInput = {
+  raffle: OwnerRaffle;
+  numbers: OwnerNumber[];
+  /** El `FormData` del POST, si lo hubo: repuebla lo que se tipeó. */
+  formData: FormData | null;
+  /** El `?ok=…` de la URL, para el cartel de éxito. */
+  ok: string | null;
+  /** `Astro.site`. */
+  site: URL | undefined;
+};
+
+export type DetailView = {
+  /** La bajada del encabezado: la descripción y la fecha, en una línea. */
+  subtitle: string;
+  /** El link público completo (`https://rifate.app/r/slug`). */
+  publicUrl: string;
+  isDraft: boolean;
+  isPublished: boolean;
+  /**
+   * La grilla llegó vacía. En una rifa sana no pasa —el alta exige
+   * `totalNumbers >= 1`—: significa que el `init()` del Durable Object no
+   * corrió, y no hay nada que vender ni mostrar hasta rearmarla.
+   */
+  isEmpty: boolean;
+  /** Cuántos ítems de «Antes de publicar» faltan. 0 → se puede publicar. */
+  pending: number;
+  /** El cartel de éxito, ya redactado. `null` si no hay `?ok=…`. */
+  okMessage: string | null;
+  /** Números tildados, para repoblar la grilla tras un error de validación. */
+  selectedNumbers: number[];
+  /** El teléfono que se tipeó, para no perderlo tras un error. */
+  phoneValue: string;
+};
+
+/**
+ * Todo lo que el detalle deriva de la rifa, la grilla y el POST que la trajo.
+ *
+ * Existe para que `/panel/rifa/[id].astro` no tenga que hacerlo a mano: esa
+ * página acumulaba un bloque más de frontmatter por cada feature nueva. Acá
+ * todo esto es una función pura, que se puede leer y testear de una.
+ *
+ * Lo que NO está acá y se queda en la página es lo que no es puro: los
+ * `getActionResult`, los redirects del PRG y el `await` de la grilla.
+ */
+export const detailView = ({
+  raffle,
+  numbers,
+  formData,
+  ok,
+  site,
+}: DetailInput): DetailView => {
+  const drawVerb = raffle.status === 'CLOSED' ? 'sorteó' : 'sortea';
+  const drawLine = `se ${drawVerb} el ${longDate(raffle.drawDate)}`;
+
+  return {
+    subtitle: raffle.description
+      ? `${raffle.description} · ${drawLine}`
+      : drawLine.charAt(0).toUpperCase() + drawLine.slice(1),
+    publicUrl: new URL(`/r/${raffle.slug}`, site ?? FALLBACK_ORIGIN).href,
+    isDraft: raffle.status === 'DRAFT',
+    isPublished: raffle.status === 'PUBLISHED',
+    isEmpty: numbers.length === 0,
+    pending: pendingBeforePublish(raffle),
+    okMessage: flashMessage(ok),
+    selectedNumbers: (formData?.getAll('numbers') ?? [])
+      .map((entry) => Number(entry))
+      .filter((n) => Number.isInteger(n)),
+    phoneValue: formValue(formData, 'contactPhone'),
+  };
 };
