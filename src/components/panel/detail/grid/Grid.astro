@@ -2,9 +2,10 @@
 import type { HTMLAttributes } from 'astro/types';
 import { Icon } from 'astro-icon/components';
 
-import Cell from '@/components/panel/detail/Cell.astro';
 import type { OwnerNumber } from '@/types/raffle';
 import { numberWidth } from '@/utils/frontmatter/detail';
+
+import Cell from './Cell.astro';
 
 interface Props extends HTMLAttributes<'section'> {
   /** El `id` del <form> del panel de venta. Sin él la grilla es sólo lectura. */
