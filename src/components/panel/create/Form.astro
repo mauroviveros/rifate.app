@@ -228,16 +228,9 @@ const totalNumbersMatchesQuickPick =
 </form>
 
 <script>
-  const selector = '[aria-invalid="true"]';
-  const firstError = document.querySelector<HTMLElement>(selector);
+  import { revealAndFocus } from '@/utils/reveal';
 
-  if (firstError) {
-    const scrollToError = () => {
-      firstError.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      firstError.focus({ preventScroll: true });
-    };
-
-    if (document.fonts) document.fonts.ready.then(scrollToError);
-    else scrollToError();
-  }
+  /* Tras un error de validación, al primer campo marcado. Es la única pantalla
+     que busca en todo el documento: acá el formulario es la página. */
+  revealAndFocus(document.querySelector<HTMLElement>('[aria-invalid="true"]'));
 </script>

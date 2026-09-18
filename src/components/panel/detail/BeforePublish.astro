@@ -177,6 +177,8 @@ const alertBox =
 }
 
 <script>
+  import { revealAndFocus } from '@/utils/reveal';
+
   const card = document.querySelector<HTMLElement>('#antes-de-publicar');
   const input = card?.querySelector<HTMLInputElement>('[name="contactPhone"]');
 
@@ -187,17 +189,10 @@ const alertBox =
     card?.querySelector<HTMLElement>('[aria-invalid="true"]') ??
     card?.querySelector<HTMLElement>('[role="alert"]');
 
-  if (card && flagged) {
-    const focusError = () => {
-      (input ?? flagged).scrollIntoView({
-        block: 'center',
-        behavior: 'smooth',
-      });
-      input?.focus({ preventScroll: true });
-    };
-    if (document.fonts) document.fonts.ready.then(focusError);
-    else focusError();
-  }
+  /* Se scrollea al campo si está —el error de dominio no marca ninguno, y ahí
+     lo marcado es el párrafo del alerta, que no se puede enfocar. El `?? null`
+     es explícito: «scrolleá, pero no enfoques nada». */
+  if (flagged) revealAndFocus(input ?? flagged, input ?? null);
 
   /* La barra fija de mobile lleva al mismo campo: es el mismo gesto, sin el
      error de por medio. */
