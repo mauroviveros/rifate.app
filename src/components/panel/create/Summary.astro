@@ -1,8 +1,9 @@
 ---
-import { pesos } from '@/utils/format';
-import { formValue, numberOr } from '@/utils/forms';
-
-import { RAFFLE_PLACEHOLDER } from './placeholder';
+import { formValue } from '@/utils/forms';
+import {
+  PREVIEW_CELL_CLASS,
+  summarySnapshot,
+} from '@/utils/frontmatter/summary';
 
 interface Props {
   formData: FormData | null;
@@ -13,20 +14,15 @@ interface Props {
 const { formData, initial } = Astro.props;
 const value = (name: string) =>
   formValue(formData, name) || initial?.[name] || '';
-const totalNumbers = numberOr(value('totalNumbers'), 100);
-const ticketPrice = numberOr(value('ticketPrice'), 2500);
-const numberStart = value('numberStart') === '1' ? 1 : 0;
 
-const title = value('title') || RAFFLE_PLACEHOLDER.title;
-const description = value('description') || RAFFLE_PLACEHOLDER.description;
-const total = pesos(totalNumbers * ticketPrice * 100);
-const width = String(numberStart + totalNumbers - 2).length;
-
-const PREVIEW = 30;
-const numbers = Array.from(
-  { length: Math.min(PREVIEW, totalNumbers) },
-  (_, i) => String(numberStart + i).padStart(width, '0'),
-);
+/* La misma cuenta que rehace el <script> de abajo en cada tecla. */
+const summary = summarySnapshot({
+  title: value('title'),
+  description: value('description'),
+  ticketPrice: value('ticketPrice'),
+  totalNumbers: value('totalNumbers'),
+  numberStart: value('numberStart'),
+});
 ---
 
 <aside class="flex flex-col gap-5">
@@ -41,7 +37,7 @@ const numbers = Array.from(
     </h2>
 
     <p class="mt-1 font-display text-display font-extrabold" data-numero>
-      <output data-total>{total}</output>
+      <output data-total>{summary.total}</output>
     </p>
 
     <div
@@ -55,9 +51,9 @@ const numbers = Array.from(
       class="flex justify-between text-[1.0625rem] font-bold text-warning-foreground/85"
       data-numero
     >
-      <span><output data-cantidad>{totalNumbers}</output> números</span>
+      <span><output data-cantidad>{summary.totalNumbers}</output> números</span>
       <span aria-hidden="true">×</span>
-      <span><output data-precio>{pesos(ticketPrice * 100)}</output></span>
+      <span><output data-precio>{summary.ticketPrice}</output></span>
     </p>
   </div>
 
@@ -67,10 +63,10 @@ const numbers = Array.from(
 
     <div class="mt-4 rounded-lg bg-foreground p-4.5 text-background">
       <p class="font-display text-[1.3125rem] font-extrabold tracking-tight">
-        <span data-preview-title>{title}</span>
+        <span data-preview-title>{summary.title}</span>
       </p>
       <p class="text-label text-background/75">
-        <span data-preview-description>{description}</span>
+        <span data-preview-description>{summary.description}</span>
       </p>
     </div>
 
@@ -80,14 +76,8 @@ const numbers = Array.from(
       data-preview-grid
     >
       {
-        numbers.map((number) => (
-          <li
-            class:list={[
-              'flex aspect-square items-center justify-center',
-              'rounded-xs border-2 border-input bg-card text-[0.75rem] font-extrabold',
-            ]}
-            data-numero
-          >
+        summary.numbers.map((number) => (
+          <li class={PREVIEW_CELL_CLASS} data-numero>
             {number}
           </li>
         ))
@@ -105,94 +95,82 @@ const numbers = Array.from(
 </aside>
 
 <script>
-  import { pesos } from '@/utils/format';
-  import { numberOr } from '@/utils/forms';
+  import {
+    PREVIEW_CELL_CLASS,
+    summarySnapshot,
+  } from '@/utils/frontmatter/summary';
 
-  import { RAFFLE_PLACEHOLDER } from './placeholder';
-
-  const $totalCard = document.querySelector<HTMLElement>(
-    '[data-summary-total]',
-  );
+  const $total = document.querySelector<HTMLElement>('[data-total]');
+  const $cantidad = document.querySelector<HTMLElement>('[data-cantidad]');
+  const $precio = document.querySelector<HTMLElement>('[data-precio]');
   const $previewTitle = document.querySelector<HTMLElement>(
     '[data-preview-title]',
   );
+  const $previewDescription = document.querySelector<HTMLElement>(
+    '[data-preview-description]',
+  );
+  const $grid = document.querySelector<HTMLElement>('[data-preview-grid]');
 
-  if ($totalCard && $previewTitle) {
-    const $field = {
-      price: document.querySelector<HTMLInputElement>('[name="ticketPrice"]'),
-      totalNumbers: document.querySelector<HTMLInputElement>(
-        '[name="totalNumbers"]',
-      ),
+  if (
+    $total &&
+    $cantidad &&
+    $precio &&
+    $previewTitle &&
+    $previewDescription &&
+    $grid
+  ) {
+    const field = {
       title: document.querySelector<HTMLInputElement>('[name="title"]'),
       description: document.querySelector<HTMLTextAreaElement>(
         '[name="description"]',
       ),
+      ticketPrice: document.querySelector<HTMLInputElement>(
+        '[name="ticketPrice"]',
+      ),
+      totalNumbers: document.querySelector<HTMLInputElement>(
+        '[name="totalNumbers"]',
+      ),
     };
 
-    const read = () => {
-      const $numberStart = document.querySelector<HTMLInputElement>(
-        '[name="numberStart"]:checked',
-      );
+    /* Lo único que hace el cliente distinto del server es de DÓNDE lee: acá de
+       los inputs, allá del FormData. La cuenta es la misma función. */
+    const draw = () => {
+      const summary = summarySnapshot({
+        title: field.title?.value ?? '',
+        description: field.description?.value ?? '',
+        ticketPrice: field.ticketPrice?.value ?? '',
+        totalNumbers: field.totalNumbers?.value ?? '',
+        numberStart:
+          document.querySelector<HTMLInputElement>(
+            '[name="numberStart"]:checked',
+          )?.value ?? '',
+      });
 
-      return {
-        price: numberOr($field.price?.value ?? '', 2500),
-        totalNumbers: numberOr($field.totalNumbers?.value ?? '', 100),
-        numberStart: $numberStart?.value === '0' ? 0 : 1,
-      };
-    };
-
-    const drawTotal = () => {
-      const { price, totalNumbers: quantity } = read();
-
-      $totalCard.querySelector<HTMLOutputElement>('[data-total]')!.textContent =
-        pesos(price * quantity * 100);
-      $totalCard.querySelector<HTMLOutputElement>(
-        '[data-cantidad]',
-      )!.textContent = String(quantity);
-      $totalCard.querySelector<HTMLOutputElement>(
-        '[data-precio]',
-      )!.textContent = pesos(price * 100);
-    };
-
-    const drawPreview = () => {
-      const { totalNumbers: quantity, numberStart: start } = read();
-
-      $previewTitle.textContent =
-        $field.title?.value.trim() || RAFFLE_PLACEHOLDER.title;
-      document.querySelector('[data-preview-description]')!.textContent =
-        $field.description?.value.trim() || RAFFLE_PLACEHOLDER.description;
-
-      const width = String(start + quantity - 2).length;
-      const $grid = document.querySelector('[data-preview-grid]')!;
+      $total.textContent = summary.total;
+      $cantidad.textContent = String(summary.totalNumbers);
+      $precio.textContent = summary.ticketPrice;
+      $previewTitle.textContent = summary.title;
+      $previewDescription.textContent = summary.description;
 
       $grid.replaceChildren(
-        ...Array.from({ length: Math.min(30, quantity) }, (_, i) => {
+        ...summary.numbers.map((number) => {
           const li = document.createElement('li');
-          li.className =
-            'flex aspect-square items-center justify-center rounded-xs border-2 border-input bg-card text-[0.75rem] font-extrabold';
+          li.className = PREVIEW_CELL_CLASS;
           li.dataset.numero = '';
-          li.textContent = String(start + i).padStart(width, '0');
+          li.textContent = number;
           return li;
         }),
       );
     };
 
-    const draw = () => {
-      drawTotal();
-      drawPreview();
-    };
-
-    for (const field of [
-      $field.price,
-      $field.totalNumbers,
-      $field.title,
-      $field.description,
-    ]) {
-      field?.addEventListener('input', draw);
+    for (const input of Object.values(field)) {
+      input?.addEventListener('input', draw);
     }
 
-    document
-      .querySelectorAll<HTMLInputElement>('[name="numberStart"]')
-      .forEach((radio) => radio.addEventListener('change', draw));
+    for (const radio of document.querySelectorAll<HTMLInputElement>(
+      '[name="numberStart"]',
+    )) {
+      radio.addEventListener('change', draw);
+    }
   }
 </script>
