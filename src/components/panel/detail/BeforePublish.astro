@@ -3,6 +3,7 @@ import { Icon } from 'astro-icon/components';
 
 import Field from '@/components/form/Field.astro';
 import { Button } from '@/components/starwind/button';
+import { button } from '@/components/starwind/button/variants';
 import type { OwnerRaffle } from '@/types/raffle';
 import {
   beforePublishItems,
@@ -144,17 +145,49 @@ const alertBox =
   }
 </div>
 
+{
+  /* La barra fija de mobile, con la misma condición `needsPhone` que decide el
+     formulario de arriba. Vive en este archivo porque su único trabajo es
+     llevar a ese campo: separada, tenía que buscar `#antes-de-publicar` y
+     `[name="contactPhone"]` en el documento, adivinando el markup de acá. El
+     espaciador que le reserva el alto lo pone la página. */
+}
+{
+  needsPhone && (
+    <div
+      class:list={[
+        'fixed inset-x-0 bottom-0 z-20 lg:hidden',
+        'border-t-2 border-border bg-card px-5 pt-3 pb-4',
+        'shadow-[0_-12px_28px_-16px_rgba(23,24,28,0.5)]',
+      ]}
+    >
+      <p class="mb-2.5 text-center text-support font-bold text-subtle-foreground">
+        Falta el teléfono para poder publicar
+      </p>
+      <button
+        type="button"
+        class:list={[button({ variant: 'primary', size: 'md' }), 'w-full']}
+        data-goto-phone
+      >
+        <Icon name="lucide:phone" aria-hidden="true" />
+        Cargar el teléfono
+      </button>
+    </div>
+  )
+}
+
 <script>
+  const card = document.querySelector<HTMLElement>('#antes-de-publicar');
+  const input = card?.querySelector<HTMLInputElement>('[name="contactPhone"]');
+
   /* Tras un error del server —de campo o de dominio, como «Cargá un teléfono
      de contacto antes de publicar.»— llevar la vista al campo del teléfono y
      enfocarlo. Mismo gesto que el alta y el panel de venta. */
-  const card = document.querySelector<HTMLElement>('#antes-de-publicar');
   const flagged =
     card?.querySelector<HTMLElement>('[aria-invalid="true"]') ??
     card?.querySelector<HTMLElement>('[role="alert"]');
 
   if (card && flagged) {
-    const input = card.querySelector<HTMLInputElement>('[name="contactPhone"]');
     const focusError = () => {
       (input ?? flagged).scrollIntoView({
         block: 'center',
@@ -165,4 +198,13 @@ const alertBox =
     if (document.fonts) document.fonts.ready.then(focusError);
     else focusError();
   }
+
+  /* La barra fija de mobile lleva al mismo campo: es el mismo gesto, sin el
+     error de por medio. */
+  document
+    .querySelector<HTMLButtonElement>('[data-goto-phone]')
+    ?.addEventListener('click', () => {
+      card?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      input?.focus({ preventScroll: true });
+    });
 </script>

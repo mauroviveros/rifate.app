@@ -143,6 +143,30 @@ const value = (name: string) => formValue(formData, name);
   </p>
 </form>
 
+<div
+  class:list={[
+    'fixed inset-x-0 bottom-0 z-20 hidden lg:hidden',
+    'items-center gap-3 border-t-2 border-border bg-card px-5 pt-3 pb-4',
+    'shadow-[0_-12px_28px_-16px_rgba(23,24,28,0.5)]',
+  ]}
+  data-salebar
+>
+  <p
+    class="min-w-0 flex-1 truncate text-support font-bold text-subtle-foreground"
+    data-salebar-text
+    data-numero
+  >
+  </p>
+
+  <button
+    type="button"
+    class:list={[button({ variant: 'success', size: 'md' }), 'shrink-0']}
+    data-salebar-go
+  >
+    Cargar la venta
+  </button>
+</div>
+
 <script>
   import { pesos } from '@/utils/format';
   import type { SelectionKind } from '@/utils/frontmatter/detail';
@@ -170,11 +194,14 @@ const value = (name: string) => formValue(formData, name);
     )!;
     const $name = form.querySelector<HTMLInputElement>('[name="name"]');
 
-    // La barra fija de celular, si está montada.
-    const $bar = document.querySelector<HTMLElement>('[data-salebar]');
-    const $barText = document.querySelector<HTMLElement>('[data-salebar-text]');
+    // La barra fija de mobile, que este mismo componente renderiza arriba: si
+    // hay formulario, hay barra. Por eso van con `!` como el resto.
+    const $bar = document.querySelector<HTMLElement>('[data-salebar]')!;
+    const $barText = document.querySelector<HTMLElement>(
+      '[data-salebar-text]',
+    )!;
     const $barButton =
-      document.querySelector<HTMLButtonElement>('[data-salebar-go]');
+      document.querySelector<HTMLButtonElement>('[data-salebar-go]')!;
 
     const s = (n: number) => (n === 1 ? '' : 's');
 
@@ -244,19 +271,17 @@ const value = (name: string) => formValue(formData, name);
       $hint.textContent = HINT[kind];
       $hint.hidden = HINT[kind] === '';
 
-      if ($bar && $barText && $barButton) {
-        $bar.classList.toggle('hidden', count === 0);
-        $bar.classList.toggle('flex', count > 0);
-        $barText.textContent =
-          kind === 'sell'
-            ? `${count} número${s(count)} · ${total}`
-            : kind === 'release'
-              ? `${count} número${s(count)} a liberar`
-              : 'Libres o vendidos, no los dos';
-        $barButton.disabled = kind === 'mixed';
-        $barButton.textContent =
-          kind === 'release' ? 'Ir a liberar' : 'Cargar la venta';
-      }
+      $bar.classList.toggle('hidden', count === 0);
+      $bar.classList.toggle('flex', count > 0);
+      $barText.textContent =
+        kind === 'sell'
+          ? `${count} número${s(count)} · ${total}`
+          : kind === 'release'
+            ? `${count} número${s(count)} a liberar`
+            : 'Libres o vendidos, no los dos';
+      $barButton.disabled = kind === 'mixed';
+      $barButton.textContent =
+        kind === 'release' ? 'Ir a liberar' : 'Cargar la venta';
     };
 
     $chips.addEventListener('click', (e) => {
@@ -270,7 +295,7 @@ const value = (name: string) => formValue(formData, name);
       }
     });
 
-    $barButton?.addEventListener('click', () => {
+    $barButton.addEventListener('click', () => {
       form.scrollIntoView({ behavior: 'smooth', block: 'start' });
       $name?.focus({ preventScroll: true });
     });

@@ -5,13 +5,11 @@ import { Icon } from 'astro-icon/components';
 import BackLink from '@/components/panel/BackLink.astro';
 import Actions from '@/components/panel/detail/Actions.astro';
 import BeforePublish from '@/components/panel/detail/BeforePublish.astro';
-import BeforePublishBar from '@/components/panel/detail/BeforePublishBar.astro';
 import Buyers from '@/components/panel/detail/Buyers.astro';
 import DraftSummary from '@/components/panel/detail/DraftSummary.astro';
 import EmptyGrid from '@/components/panel/detail/EmptyGrid.astro';
 import Grid from '@/components/panel/detail/Grid.astro';
 import Sale from '@/components/panel/detail/Sale.astro';
-import SaleBar from '@/components/panel/detail/SaleBar.astro';
 import Stats from '@/components/panel/detail/Stats.astro';
 import WhenPublished from '@/components/panel/detail/WhenPublished.astro';
 import StatusBadge from '@/components/panel/StatusBadge.astro';
@@ -269,8 +267,19 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
     </div>
   </div>
 
-  {isPublished && !isEmpty && <SaleBar />}
-  {isDraft && raffle.contactPhone === null && <BeforePublishBar />}
+  {
+    /* Reserva el alto de la barra fija que montan `Sale` y `BeforePublish` en
+       mobile, para que el último bloque no quede tapado. Es lo único de esas
+       barras que vive acá: tiene que ser el último elemento del flujo, y la
+       columna lateral —donde viven los dos paneles— va ANTES de la lista de
+       compradores en mobile. */
+  }
+  {isPublished && !isEmpty && <div class="h-20 lg:hidden" aria-hidden="true" />}
+  {
+    isDraft && raffle.contactPhone === null && (
+      <div class="h-24 lg:hidden" aria-hidden="true" />
+    )
+  }
 </Dashboard>
 
 <script>
