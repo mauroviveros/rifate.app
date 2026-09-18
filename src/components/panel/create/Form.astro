@@ -8,8 +8,7 @@ import NumberStartField from '@/components/form/NumberStartField.astro';
 import { Button } from '@/components/starwind/button';
 import { pesos, today } from '@/utils/format';
 import { formValue, numberOr } from '@/utils/forms';
-
-import { RAFFLE_PLACEHOLDER } from './placeholder';
+import { RAFFLE_PLACEHOLDER } from '@/utils/frontmatter/summary';
 
 interface Props extends HTMLAttributes<'form'> {
   formData: FormData | null;
