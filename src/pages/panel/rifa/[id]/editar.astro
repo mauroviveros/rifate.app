@@ -1,11 +1,12 @@
 ---
-import { actions, isInputError } from 'astro:actions';
+import { actions } from 'astro:actions';
 
 import BackLink from '@/components/panel/BackLink.astro';
 import Form from '@/components/panel/create/Form.astro';
 import Summary from '@/components/panel/create/Summary.astro';
 import Dashboard from '@/layouts/Dashboard.astro';
 import { getOwnRaffle } from '@/lib/db';
+import { formErrors } from '@/utils/action-result';
 import { codeOf } from '@/utils/errors';
 import { toEditInitial } from '@/utils/frontmatter/detail';
 
@@ -18,12 +19,7 @@ if (result && !result.error) {
   return Astro.redirect(`/panel/rifa/${id}?ok=updated`, 303);
 }
 
-let errors: Record<string, string[] | undefined> = {};
-let error: string | null = null;
-if (result?.error) {
-  if (isInputError(result.error)) errors = result.error.fields;
-  else error = result.error.message;
-}
+const { fields: errors, message: error } = formErrors(result);
 
 /**
  * Una rifa ajena y una inexistente se ven igual: un 404. Misma idea que
