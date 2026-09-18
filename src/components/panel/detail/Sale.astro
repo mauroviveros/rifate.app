@@ -171,6 +171,7 @@ const value = (name: string) => formValue(formData, name);
   import { pesos } from '@/utils/format';
   import type { SelectionKind } from '@/utils/frontmatter/detail';
   import { selectionKind } from '@/utils/frontmatter/detail';
+  import { revealAndFocus } from '@/utils/reveal';
 
   const form = document.querySelector<HTMLFormElement>('[data-sale]');
   if (form) {
@@ -303,14 +304,8 @@ const value = (name: string) => formValue(formData, name);
     for (const box of boxes) box.addEventListener('change', paint);
     paint();
 
-    const firstError = form.querySelector<HTMLElement>('[aria-invalid="true"]');
-    if (firstError) {
-      const focusError = () => {
-        firstError.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        firstError.focus({ preventScroll: true });
-      };
-      if (document.fonts) document.fonts.ready.then(focusError);
-      else focusError();
-    }
+    /* Tras un error de validación de la venta, al primer campo marcado. Sólo
+       dentro del panel: la grilla de arriba también tiene inputs. */
+    revealAndFocus(form.querySelector<HTMLElement>('[aria-invalid="true"]'));
   }
 </script>
