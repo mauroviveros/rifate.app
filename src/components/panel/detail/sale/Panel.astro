@@ -22,6 +22,12 @@ interface Props extends HTMLAttributes<'form'> {
   raffleId: string;
   /** Precio del número, en centavos: para el «Cobrás» en vivo. */
   ticketPrice: number;
+  /**
+   * Ancho de acolchado de las etiquetas (de `numberWidth`). Viaja en un
+   * `data-` porque los chips los dibuja el `<script>`, que no ve el
+   * frontmatter, y tienen que decir `04` como la grilla y no `4`.
+   */
+  width: number;
   formData: FormData | null;
   errors: Record<string, string[] | undefined>;
   error: string | null;
@@ -30,6 +36,7 @@ interface Props extends HTMLAttributes<'form'> {
 const {
   raffleId,
   ticketPrice,
+  width,
   formData,
   errors,
   error,
@@ -45,6 +52,7 @@ const value = (name: string) => formValue(formData, name);
   novalidate
   data-sale
   data-price={ticketPrice}
+  data-width={width}
   class:list={[
     'rounded-xl bg-card p-6 ring-2 ring-border transition-shadow',
     'data-[kind=release]:ring-foreground data-[kind=sell]:ring-success',

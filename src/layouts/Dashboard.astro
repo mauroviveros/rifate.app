@@ -32,9 +32,12 @@ const { title, heading, lead, description, ...props } = Astro.props;
 
   <main class="mx-auto max-w-wrap px-5 py-9 sm:px-8 sm:py-10">
     <div
-      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8"
+      class:list={[
+        'flex flex-col gap-4',
+        'sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-8',
+      ]}
     >
-      <hgroup class="min-w-0">
+      <hgroup class="min-w-0 sm:flex-[1_0_20rem]">
         <h1 class="text-[2.25rem] text-balance sm:text-display">
           {heading}
         </h1>
@@ -49,7 +52,7 @@ const { title, heading, lead, description, ...props } = Astro.props;
 
       {
         Astro.slots.has('actions') && (
-          <div class="shrink-0">
+          <div class="shrink-0 sm:ml-auto">
             <slot name="actions" />
           </div>
         )
