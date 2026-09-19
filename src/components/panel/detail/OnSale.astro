@@ -1,0 +1,234 @@
+---
+/**
+ * La pantalla de la rifa publicada: la que más se usa.
+ *
+ * El `<script>` vive acá porque es el único lugar desde el que se ven las tres
+ * regiones que el gesto de vender toca a la vez: los checkboxes de la grilla,
+ * el panel de la otra columna y la barra fija del celular. Antes estaba dentro
+ * del panel, que para llegar a la grilla y a la barra tenía que salir a
+ * buscarlas por todo el documento.
+ *
+ * Y es corto porque no decide nada: qué decir y qué habilitar lo resuelve
+ * `salePanel()`, que es puro y está testeado. Acá sólo se copian valores a
+ * nodos.
+ */
+
+import { button } from '@/components/starwind/button/variants';
+import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
+
+import Buyers from './buyers/Buyers.astro';
+import EditLink from './EditLink.astro';
+import Grid from './grid/Grid.astro';
+import Panel from './sale/Panel.astro';
+import Stats from './Stats.astro';
+
+interface Props {
+  raffle: OwnerRaffle;
+  numbers: OwnerNumber[];
+  /** Números tildados, para repoblar la grilla tras un error de validación. */
+  selected?: number[];
+  formData: FormData | null;
+  errors: Record<string, string[] | undefined>;
+  error: string | null;
+}
+
+const { raffle, numbers, selected, formData, errors, error } = Astro.props;
+
+/**
+ * El `id` que ata los checkboxes de la grilla al `<form>` del panel, aunque
+ * estén en columnas distintas del DOM. Sin esto habría que envolver media
+ * pantalla en un `<form>`.
+ */
+const SALE_FORM = 'sale';
+---
+
+<Stats class="mt-7" numbers={numbers} ticketPrice={raffle.ticketPrice} />
+
+<div
+  class:list={[
+    'mt-7 grid gap-7',
+    'lg:grid-cols-[1fr_380px] lg:items-start lg:gap-7.5',
+  ]}
+>
+  {
+    /* `contents` en celular: la grilla y los compradores pasan a ser hijos
+      directos de la grilla CSS, y así el panel puede meterse entre los dos. */
+  }
+  <div class="contents lg:flex lg:flex-col lg:gap-7">
+    <Grid
+      title="Los números"
+      hint="Tocá los que quieras vender. Los tachados ya están vendidos: tocalos para liberarlos."
+      numbers={numbers}
+      numberStart={raffle.numberStart}
+      totalNumbers={raffle.totalNumbers}
+      form={SALE_FORM}
+      selected={selected}
+    />
+
+    <Buyers
+      class="order-2 lg:order-none"
+      numbers={numbers}
+      numberStart={raffle.numberStart}
+      totalNumbers={raffle.totalNumbers}
+    />
+  </div>
+
+  <div class="order-1 flex flex-col gap-6 lg:sticky lg:top-24 lg:order-none">
+    <Panel
+      id={SALE_FORM}
+      raffleId={raffle.id}
+      ticketPrice={raffle.ticketPrice}
+      formData={formData}
+      errors={errors}
+      error={error}
+    />
+    <EditLink raffleId={raffle.id} />
+  </div>
+</div>
+
+{
+  /* La barra fija y el alto que le reserva, juntos — como en `Draft`. Arranca
+    escondida: la muestra el `<script>` en cuanto hay algo tildado. */
+}
+<div
+  class:list={[
+    'fixed inset-x-0 bottom-0 z-20 hidden lg:hidden',
+    'items-center gap-3 border-t-2 border-border bg-card px-5 pt-3 pb-4',
+    'shadow-[0_-12px_28px_-16px_rgba(23,24,28,0.5)]',
+  ]}
+  data-salebar
+>
+  <p
+    class="min-w-0 flex-1 truncate text-support font-bold text-subtle-foreground"
+    data-salebar-text
+    data-numero
+  >
+  </p>
+
+  <button
+    type="button"
+    class:list={[button({ variant: 'success', size: 'md' }), 'shrink-0']}
+    data-salebar-go
+  >
+    Cargar la venta
+  </button>
+</div>
+
+<div class="h-20 lg:hidden" aria-hidden="true"></div>
+
+<script>
+  import { salePanel } from '@/utils/frontmatter/sale';
+  import { revealAndFocus } from '@/utils/reveal';
+
+  const form = document.querySelector<HTMLFormElement>('[data-sale]');
+
+  if (form) {
+    const priceCents = Number(form.dataset.price ?? '0');
+    const boxes = [
+      ...document.querySelectorAll<HTMLInputElement>('input[name="numbers"]'),
+    ];
+    const byValue = new Map(boxes.map((box) => [box.value, box]));
+
+    /* Todo esto lo renderiza esta misma pantalla, así que si hay formulario
+       están: por eso el `!`. */
+    const $sentence = form.querySelector<HTMLElement>('[data-sale-sentence]')!;
+    const $chips = form.querySelector<HTMLElement>('[data-sale-chips]')!;
+    const $cobras = form.querySelector<HTMLElement>('[data-sale-cobras]')!;
+    const $total = form.querySelector<HTMLElement>('[data-sale-total]')!;
+    const $sell = form.querySelector<HTMLButtonElement>('[data-sale-sell]')!;
+    const $sellLabel = form.querySelector<HTMLElement>(
+      '[data-sale-sell-label]',
+    )!;
+    const $release = form.querySelector<HTMLButtonElement>(
+      '[data-sale-release]',
+    )!;
+    const $hint = form.querySelector<HTMLElement>('[data-sale-hint]')!;
+    const $name = form.querySelector<HTMLInputElement>('[name="name"]');
+
+    const $bar = document.querySelector<HTMLElement>('[data-salebar]')!;
+    const $barText = document.querySelector<HTMLElement>(
+      '[data-salebar-text]',
+    )!;
+    const $barGo =
+      document.querySelector<HTMLButtonElement>('[data-salebar-go]')!;
+
+    /** Un chip por número elegido; tocarlo lo destilda. */
+    const drawChips = (picked: HTMLInputElement[]) => {
+      $chips.replaceChildren(
+        ...picked.map((box) => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.dataset.chip = box.value;
+          chip.setAttribute('aria-label', `Quitar el ${box.value}`);
+          chip.className =
+            'inline-flex items-center gap-1 rounded-md bg-foreground px-2 py-1 text-label font-extrabold text-background';
+          chip.textContent = box.value;
+
+          const x = document.createElement('span');
+          x.textContent = '×';
+          x.className = 'text-background/60';
+          x.setAttribute('aria-hidden', 'true');
+          chip.appendChild(x);
+
+          return chip;
+        }),
+      );
+    };
+
+    const paint = () => {
+      const picked = boxes.filter((box) => box.checked);
+      const view = salePanel(
+        picked.map((box) => box.dataset.taken !== undefined),
+        priceCents,
+      );
+
+      form.dataset.kind = view.kind;
+      $sentence.textContent = view.sentence;
+      drawChips(picked);
+
+      /* Toggle de CLASES y no del atributo `hidden`: `el.hidden = false` no le
+         gana a la clase `hidden` de Tailwind, y la fila necesita `flex`. */
+      $cobras.classList.toggle('hidden', view.total === null);
+      $cobras.classList.toggle('flex', view.total !== null);
+      $total.textContent = view.total ?? '';
+
+      $sell.disabled = !view.canSell;
+      $sellLabel.textContent = view.sellLabel;
+      $release.disabled = !view.canRelease;
+      $release.textContent = view.releaseLabel;
+
+      $hint.textContent = view.hint ?? '';
+      $hint.hidden = view.hint === null;
+
+      $bar.classList.toggle('hidden', !view.bar.visible);
+      $bar.classList.toggle('flex', view.bar.visible);
+      $barText.textContent = view.bar.text;
+      $barGo.disabled = !view.bar.enabled;
+      $barGo.textContent = view.bar.label;
+    };
+
+    $chips.addEventListener('click', (event) => {
+      const chip = (event.target as HTMLElement).closest<HTMLElement>(
+        '[data-chip]',
+      );
+      const box = chip && byValue.get(chip.dataset.chip ?? '');
+
+      if (box) {
+        box.checked = false;
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
+    $barGo.addEventListener('click', () => {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      $name?.focus({ preventScroll: true });
+    });
+
+    for (const box of boxes) box.addEventListener('change', paint);
+    paint();
+
+    /* Tras un error de validación, al primer campo marcado. Sólo dentro del
+       panel: la grilla de arriba también tiene inputs. */
+    revealAndFocus(form.querySelector<HTMLElement>('[aria-invalid="true"]'));
+  }
+</script>

@@ -1,0 +1,38 @@
+---
+/**
+ * El paso a la pantalla de edición.
+ *
+ * La comparten la rifa en venta y la cerrada. El borrador NO la monta: ahí
+ * editar es una de las dos acciones del encabezado, y repetirla abajo sería
+ * decir dos veces lo mismo.
+ *
+ * En una rifa cerrada sigue teniendo sentido —corregir un nombre mal escrito,
+ * arreglar la descripción—, aunque el rango ya esté trabado.
+ */
+import { Icon } from 'astro-icon/components';
+
+import { Button } from '@/components/starwind/button';
+
+interface Props {
+  raffleId: string;
+}
+
+const { raffleId } = Astro.props;
+---
+
+<div class="rounded-xl border-2 border-dashed border-border p-6">
+  <h2 class="text-[1.25rem] font-extrabold">Editar los datos</h2>
+  <p class="mt-1 text-support text-subtle-foreground">
+    Cambiá el título, el premio, la descripción o la fecha del sorteo.
+  </p>
+
+  <Button
+    href={`/panel/rifa/${raffleId}/editar`}
+    variant="outline"
+    size="md"
+    class="mt-4 w-full"
+  >
+    <Icon name="lucide:pencil" aria-hidden="true" />
+    Editar la rifa
+  </Button>
+</div>

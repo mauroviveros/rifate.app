@@ -1,0 +1,79 @@
+---
+/**
+ * La rifa que terminó: `CLOSED` o `CANCELLED`. Es una pantalla de consulta —
+ * quién ganó, cuánto entró, quién compró qué—, sin nada que apretar salvo
+ * corregir un dato.
+ *
+ * ⚠️ Hoy no se llega acá desde la app: no hay action ni flujo que ponga
+ * `CLOSED` ni que escriba `winner_number`. Las columnas existen desde la
+ * migración 0003 y la tarjeta del listado ya las muestra, pero el sorteo es
+ * fase 9. La pantalla existe porque `estadoDetalle` despacha a ella, y una
+ * rifa puede quedar cerrada por fuera de la app.
+ *
+ * No agrega ninguna pieza propia salvo el ganador: `Stats`, `Grid`, `Buyers` y
+ * `EditLink` son las mismas de `OnSale`. Si para escribir esto hubiera habido
+ * que tocar alguna de ellas, sería la señal de que el recorte de los pasos
+ * anteriores quedó mal hecho.
+ */
+import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
+
+import Buyers from './buyers/Buyers.astro';
+import Winner from './closed/Winner.astro';
+import EditLink from './EditLink.astro';
+import Grid from './grid/Grid.astro';
+import Stats from './Stats.astro';
+
+interface Props {
+  raffle: OwnerRaffle;
+  numbers: OwnerNumber[];
+}
+
+const { raffle, numbers } = Astro.props;
+
+/** Una cancelada nunca llegó a sortearse: no tiene ganador que mostrar. */
+const cancelled = raffle.status === 'CANCELLED';
+---
+
+<Stats class="mt-7" numbers={numbers} ticketPrice={raffle.ticketPrice} />
+
+{
+  raffle.winnerNumber !== null && (
+    <Winner raffle={raffle} winnerNumber={raffle.winnerNumber} />
+  )
+}
+
+{
+  cancelled && (
+    <p class="mt-7 rounded-xl border-2 border-dashed border-border p-6 text-support text-subtle-foreground">
+      Esta rifa se canceló. Queda acá para consultar lo que se había vendido.
+    </p>
+  )
+}
+
+<div
+  class:list={[
+    'mt-7 grid gap-7',
+    'lg:grid-cols-[1fr_380px] lg:items-start lg:gap-7.5',
+  ]}
+>
+  <div class="flex flex-col gap-7">
+    <Grid
+      title="Los números"
+      hint="La rifa está cerrada: la grilla quedó como terminó."
+      numbers={numbers}
+      numberStart={raffle.numberStart}
+      totalNumbers={raffle.totalNumbers}
+      dimmed
+    />
+
+    <Buyers
+      numbers={numbers}
+      numberStart={raffle.numberStart}
+      totalNumbers={raffle.totalNumbers}
+    />
+  </div>
+
+  <div class="lg:sticky lg:top-24">
+    <EditLink raffleId={raffle.id} />
+  </div>
+</div>
