@@ -21,14 +21,19 @@ export const formValue = (formData: FormData | null, name: string): string => {
 /**
  * Un string a número, con `fallback` si no da uno usable.
  *
- * `Number('') === 0`, que es un valor válido y NO el fallback: por eso no
- * alcanza un `Number(value) || fallback` suelto en cada punto de llamada —da
- * la casualidad de que funciona porque acá el 0 nunca es un valor legítimo
- * (cantidad de números, precio), pero es el tipo de casualidad que se rompe
- * en silencio el día que alguien reuse esto para un campo que sí puede ser 0.
- * `Number.isFinite` de paso descarta un `Infinity` — tipeable en un
- * `<input type="number">` con algo como `1e400` — que si no se filtra
- * arruina cualquier cálculo que se haga después.
+ * Cae al `fallback` todo lo que no sea un número positivo y finito: el vacío,
+ * la basura, un `Infinity` —tipeable en un `<input type="number">` con algo
+ * como `1e400`—, el 0 y los negativos. Ninguno de los campos que pasan por acá
+ * (cantidad de números, precio) admite un 0 ni un negativo, y dejarlos pasar no
+ * es inocuo: arrastrados a una cuenta —como el total de `summarySnapshot()`—
+ * terminan en un `pesos()` de $0 o negativo mostrado en pantalla antes de que
+ * el server llegue a validar nada.
+ *
+ * El `> 0` es también lo que cubre el vacío, que es el caso menos evidente:
+ * `Number('') === 0`, así que un `Number(value) || fallback` suelto en cada
+ * punto de llamada parecería alcanzar, pero deja de alcanzar apenas aparezca un
+ * campo donde 0 sea legítimo. Ese día esto se abre con una opción y el vacío
+ * pasa a necesitar su propio corte; hoy no hace falta ninguno de los dos.
  *
  * Sin `FormData` de por medio a propósito: el `<script>` cliente que recalcula
  * el resumen de `Summary.astro` mientras se tipea necesita el mismo criterio,
@@ -36,12 +41,5 @@ export const formValue = (formData: FormData | null, name: string): string => {
  */
 export const numberOr = (raw: string, fallback: number): number => {
   const value = Number(raw);
-  return Number.isFinite(value) && value !== 0 ? value : fallback;
+  return Number.isFinite(value) && value > 0 ? value : fallback;
 };
-
-/** `numberOr`, leyendo el campo de un `FormData` en vez de un string suelto. */
-export const formNumber = (
-  formData: FormData | null,
-  name: string,
-  fallback: number,
-): number => numberOr(formValue(formData, name), fallback);
