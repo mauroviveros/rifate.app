@@ -7,13 +7,10 @@ import {
 
 interface Props {
   formData: FormData | null;
-  /** Los valores actuales, para el primer GET de la edición (ver `Form`). */
-  initial?: Record<string, string>;
 }
 
-const { formData, initial } = Astro.props;
-const value = (name: string) =>
-  formValue(formData, name) || initial?.[name] || '';
+const { formData } = Astro.props;
+const value = (name: string) => formValue(formData, name);
 
 /* La misma cuenta que rehace el <script> de abajo en cada tecla. */
 const summary = summarySnapshot({

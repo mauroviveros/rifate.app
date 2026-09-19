@@ -1,7 +1,6 @@
 ---
 import { actions } from 'astro:actions';
 
-import BackLink from '@/components/panel/BackLink.astro';
 import Form from '@/components/panel/create/Form.astro';
 import Summary from '@/components/panel/create/Summary.astro';
 import Dashboard from '@/layouts/Dashboard.astro';
@@ -9,19 +8,14 @@ import { formErrors } from '@/utils/action-result';
 
 const result = Astro.getActionResult(actions.raffle.create);
 
-/**
- * Si el resultado de la acción es exitoso, redirigir al usuario a la página de la rifa recién creada.
- * Esto evita que el usuario vea un mensaje de éxito en la misma página y le permite acceder directamente a la rifa.
- */
+/** Si la acción de crear la rifa fue exitosa, redirigir a la página de la rifa. */
 if (result && !result.error) {
   return Astro.redirect(`/panel/rifa/${result.data.id}`, 303);
 }
 
 const { fields: errors, message: error } = formErrors(result);
 
-/**
- * Lo que se tipeó, para no devolver el formulario vacío.
- */
+/** Recuperar los datos del formulario si se ha enviado. */
 let formData: FormData | null = null;
 if (Astro.request.method === 'POST') {
   try {
@@ -35,10 +29,8 @@ if (Astro.request.method === 'POST') {
 <Dashboard
   title="Crear una rifa · rifate.app"
   heading="Armemos tu rifa"
-  description="Son cinco datos. Abajo vas viendo cómo les va a quedar a tus compradores."
+  lead="Son cinco datos. Abajo vas viendo cómo les va a quedar a tus compradores."
 >
-  <BackLink slot="nav" />
-
   <div
     class:list={[
       'mt-7 grid items-start gap-7 sm:mt-9',
