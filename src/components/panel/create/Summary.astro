@@ -7,10 +7,15 @@ import {
 
 interface Props {
   formData: FormData | null;
+  /** Los valores actuales, para el primer GET de la edición (ver `Form`). */
+  initial?: Record<string, string>;
 }
 
-const { formData } = Astro.props;
-const value = (name: string) => formValue(formData, name);
+const { formData, initial } = Astro.props;
+
+/** La misma regla que el `seed()` de `Form`: con POST gana lo que se tipeó. */
+const value = (name: string) =>
+  formData ? formValue(formData, name) : (initial?.[name] ?? '');
 
 /* La misma cuenta que rehace el <script> de abajo en cada tecla. */
 const summary = summarySnapshot({
@@ -129,6 +134,23 @@ const summary = summarySnapshot({
       ),
     };
 
+    /**
+     * El arranque, elija como elija la pantalla.
+     *
+     * En el alta es un radio y se lee con `:checked`. En la edición de una
+     * rifa publicada el rango está bloqueado y viaja en un `<input
+     * type="hidden">`, que nunca matchea `:checked`: sin esta segunda
+     * consulta, tipear en el título recalcularía el resumen con arranque 0 y
+     * la vista previa saltaría de `01..` a `00..` sola.
+     */
+    const numberStart = () =>
+      document.querySelector<HTMLInputElement>(
+        '[name="numberStart"]:checked',
+      ) ??
+      document.querySelector<HTMLInputElement>(
+        'input[type="hidden"][name="numberStart"]',
+      );
+
     /* Lo único que hace el cliente distinto del server es de DÓNDE lee: acá de
        los inputs, allá del FormData. La cuenta es la misma función. */
     const draw = () => {
@@ -137,10 +159,7 @@ const summary = summarySnapshot({
         description: field.description?.value ?? '',
         ticketPrice: field.ticketPrice?.value ?? '',
         totalNumbers: field.totalNumbers?.value ?? '',
-        numberStart:
-          document.querySelector<HTMLInputElement>(
-            '[name="numberStart"]:checked',
-          )?.value ?? '',
+        numberStart: numberStart()?.value ?? '',
       });
 
       $total.textContent = summary.total;
