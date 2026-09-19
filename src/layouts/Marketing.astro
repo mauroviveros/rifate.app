@@ -1,9 +1,8 @@
 ---
-import { Brand } from '@/components/brand';
+import Brand from './components/brand';
+import Layout, { type Props as LayoutProps } from './Layout.astro';
 
-import Base, { type Props as BaseProps } from './Base.astro';
-
-export type Props = BaseProps;
+export type Props = LayoutProps;
 
 const actual = Astro.url.pathname.replace(/\/$/, '');
 const enlaces: { href: string; text: string }[] = [
@@ -13,7 +12,7 @@ const enlaces: { href: string; text: string }[] = [
 ];
 ---
 
-<Base {...Astro.props}>
+<Layout {...Astro.props}>
   <header
     class="mx-auto flex max-w-wrap items-center justify-between px-5 py-5 sm:px-8"
   >
@@ -72,4 +71,4 @@ const enlaces: { href: string; text: string }[] = [
       </p>
     </div>
   </footer>
-</Base>
+</Layout>

@@ -1,14 +1,15 @@
 ---
 import { Icon } from 'astro-icon/components';
 
-import Marketing, { type Props as MarketingProps } from './Marketing.astro';
+import Marketing, {
+  type Props as MarketingProps,
+} from '@/layouts/Marketing.astro';
 
 interface Props extends MarketingProps {
   lead: string;
   updated?: string;
 }
-
-const { title, description, lead, updated } = Astro.props;
+const { title, description, lead, updated, ...props } = Astro.props;
 const updatedDate = updated
   ? new Date(updated).toLocaleDateString('es-AR', {
       dateStyle: 'long',
@@ -17,7 +18,7 @@ const updatedDate = updated
   : undefined;
 ---
 
-<Marketing title={`${title} · rifate.app`} description={description}>
+<Marketing title={`${title} · rifate.app`} description={description} {...props}>
   <div class="mx-auto max-w-180 px-5 py-12 sm:px-8 sm:py-16">
     <header class="flex flex-col gap-4.5">
       <h1
@@ -44,7 +45,7 @@ const updatedDate = updated
       }
     </header>
 
-    <div class="my-9 perforado"></div>
+    <hr class="my-9 perforado" />
 
     <div class="flex flex-col gap-11">
       <slot />

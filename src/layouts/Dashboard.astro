@@ -1,108 +1,61 @@
 ---
-import { Brand } from '@/components/brand';
-
-import Base, { type Props as BaseProps } from './Base.astro';
-import User from './components/User.astro';
-
-interface Props extends BaseProps {
-  /** El `<h1>` visible; `description` es la bajada. Slots: `eyebrow` (algo
-      arriba del título, un badge de estado) y `actions` (bloque a la derecha). */
-  heading?: string;
-  /** El slot `actions` es una barra ancha (chips + botones): el título pasa a
-      ocupar su propia fila para que no lo aprieten. Por defecto (false) las
-      acciones van al lado del encabezado entero, centradas. */
-  wideActions?: boolean;
+import Brand from '@/layouts/components/brand';
+import User from '@/layouts/components/User.astro';
+import Layout, { type Props as LayoutProps } from '@/layouts/Layout.astro';
+interface Props extends LayoutProps {
+  heading: string;
+  lead?: string;
 }
 
-const { title, heading, description, wideActions = false } = Astro.props;
-const hasActions = Astro.slots.has('actions');
+const { title, heading, lead, description, ...props } = Astro.props;
 ---
 
-<Base title={title}>
-  <div class="min-h-dvh trama">
-    <header
-      class="sticky top-0 z-20 h-16 bg-foreground text-background sm:h-19.5"
+<Layout
+  title={title}
+  description={description}
+  class="min-h-dvh trama"
+  {...props}
+>
+  <header
+    class="sticky top-0 z-20 h-16 bg-foreground text-background sm:h-19.5"
+  >
+    <div
+      class="mx-auto flex h-full max-w-wrap items-center justify-between gap-4 px-5 sm:px-8"
     >
-      <div
-        class="mx-auto flex h-full max-w-wrap items-center justify-between gap-4 px-5 sm:px-8"
-      >
-        <div class="flex min-w-0 items-center gap-4 sm:gap-4.5">
-          <Brand href="/panel" size="bar" color="primary" />
-
-          {
-            Astro.slots.has('nav') && (
-              <>
-                <span class="hidden h-6.5 w-0.5 bg-background/18 sm:block" />
-                <slot name="nav" />
-              </>
-            )
-          }
-        </div>
-
-        <User />
+      <div class="flex min-w-0 items-center gap-4 sm:gap-4.5">
+        <Brand href="/panel" size="bar" color="primary" />
       </div>
-    </header>
 
-    <main class="mx-auto max-w-wrap px-5 py-9 sm:px-8 sm:py-10">
+      <User />
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-wrap px-5 py-9 sm:px-8 sm:py-10">
+    <div
+      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8"
+    >
+      <hgroup class="min-w-0">
+        <h1 class="text-[2.25rem] text-balance sm:text-display">
+          {heading}
+        </h1>
+        {
+          lead && (
+            <p class="mt-2 line-clamp-2 text-support text-muted-foreground sm:text-body">
+              {lead}
+            </p>
+          )
+        }
+      </hgroup>
+
       {
-        heading && wideActions && (
-          <div class="grid gap-x-8 gap-y-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-            {/* Título (+ eyebrow): ocupa las dos columnas — no lo aprietan las acciones. */}
-            <hgroup class="min-w-0 lg:col-span-2">
-              {Astro.slots.has('eyebrow') && (
-                <div class="mb-2">
-                  <slot name="eyebrow" />
-                </div>
-              )}
-              <h1 class="text-[2.25rem] text-balance sm:text-display">
-                {heading}
-              </h1>
-            </hgroup>
-
-            {description && (
-              <p class="line-clamp-2 min-w-0 text-support text-muted-foreground sm:text-body lg:col-start-1 lg:row-start-2">
-                {description}
-              </p>
-            )}
-
-            {hasActions && (
-              <div class="min-w-0 lg:col-start-2 lg:row-start-2 lg:self-center lg:justify-self-end">
-                <slot name="actions" />
-              </div>
-            )}
+        Astro.slots.has('actions') && (
+          <div class="shrink-0">
+            <slot name="actions" />
           </div>
         )
       }
+    </div>
 
-      {
-        heading && !wideActions && (
-          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
-            <hgroup class="min-w-0">
-              {Astro.slots.has('eyebrow') && (
-                <div class="mb-2">
-                  <slot name="eyebrow" />
-                </div>
-              )}
-              <h1 class="text-[2.25rem] text-balance sm:text-display">
-                {heading}
-              </h1>
-              {description && (
-                <p class="mt-2 line-clamp-2 text-support text-muted-foreground sm:text-body">
-                  {description}
-                </p>
-              )}
-            </hgroup>
-
-            {hasActions && (
-              <div class="shrink-0">
-                <slot name="actions" />
-              </div>
-            )}
-          </div>
-        )
-      }
-
-      <slot />
-    </main>
-  </div>
-</Base>
+    <slot />
+  </main>
+</Layout>
