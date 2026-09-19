@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formNumber, formValue, numberOr } from './forms';
+import { formValue, numberOr } from './forms';
 
 const formDataWith = (fields: Record<string, string>): FormData => {
   const fd = new FormData();
@@ -45,50 +45,17 @@ describe('numberOr', () => {
   it('funciona sobre un string suelto, sin pasar por FormData', () => {
     expect(numberOr('250', 100)).toBe(250);
     expect(numberOr('', 100)).toBe(100);
+    expect(numberOr('   ', 100)).toBe(100);
     expect(numberOr('1e400', 100)).toBe(100);
-  });
-});
-
-describe('formNumber', () => {
-  it('sin FormData da el fallback', () => {
-    expect(formNumber(null, 'totalNumbers', 100)).toBe(100);
-  });
-
-  it('un número de verdad se respeta', () => {
-    expect(
-      formNumber(formDataWith({ totalNumbers: '250' }), 'totalNumbers', 100),
-    ).toBe(250);
-  });
-
-  it('vacío o basura cae al fallback', () => {
-    expect(
-      formNumber(formDataWith({ totalNumbers: '' }), 'totalNumbers', 100),
-    ).toBe(100);
-    expect(
-      formNumber(formDataWith({ totalNumbers: 'abc' }), 'totalNumbers', 100),
-    ).toBe(100);
   });
 
   /**
-   * `Number('') === 0`, así que un `Number(v) || fallback` a secas no
-   * distingue "no vino nada" de "vale cero" — acá el 0 nunca es legítimo
-   * (cantidad de números, precio), así que se lo trata igual que el vacío. Si
-   * algún día se reusa para un campo donde 0 SÍ es válido, este test es el que
-   * avisa.
+   * El 0 y los negativos caen al fallback: ver el comment de `numberOr` para el
+   * porqué (arrastrados a una cuenta como `summarySnapshot()`, terminan en un
+   * `pesos()` de $0 o negativo mostrado en pantalla).
    */
-  it('el 0 también cae al fallback: acá nunca es un valor real', () => {
-    expect(
-      formNumber(formDataWith({ totalNumbers: '0' }), 'totalNumbers', 100),
-    ).toBe(100);
-  });
-
-  /* Un número que no entra en punto flotante (ej. "1e400" tipeado en un
-     <input type="number">) da Infinity, y eso arruina todo lo que se calcule
-     después (Array.from({ length: Infinity }) revienta). Cae al fallback en
-     vez de propagar el infinito. */
-  it('un valor que desborda a Infinity cae al fallback', () => {
-    expect(
-      formNumber(formDataWith({ totalNumbers: '1e400' }), 'totalNumbers', 100),
-    ).toBe(100);
+  it('el 0 y los negativos caen al fallback', () => {
+    expect(numberOr('0', 100)).toBe(100);
+    expect(numberOr('-50', 100)).toBe(100);
   });
 });
