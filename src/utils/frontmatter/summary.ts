@@ -13,12 +13,16 @@
  * Acá vive la cuenta. Lo que cada lado sigue haciendo por su cuenta es LEER:
  * el server desde un `FormData`, el cliente desde los `input.value`. Por eso
  * `summarySnapshot()` recibe strings crudos y no un `FormData`.
+ *
+ * `totalNumbers` y `ticketPrice` pasan por `numberOr`, así que un 0 o un
+ * negativo tipeado acá —antes de que el server llegue a validar nada— cae al
+ * fallback en vez de arrastrarse hasta `pesos()` y mostrar un total de $0 o
+ * negativo en pantalla.
  */
 
 import { pesos } from '@/utils/format';
 import { numberOr } from '@/utils/forms';
-
-import { numberLabel, numberWidth } from './detail';
+import { numberLabel, numberWidth } from '@/utils/frontmatter/numbers';
 
 /**
  * El ejemplo que se muestra cuando el campo está vacío. Lo usan el resumen
