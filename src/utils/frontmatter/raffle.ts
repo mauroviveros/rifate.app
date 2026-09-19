@@ -14,8 +14,8 @@ import { progress } from '@/utils/format';
  *
  * `CANCELLED` y `CLOSED` se dicen igual —la rifa terminó, no hay nada que
  * hacerle—, y «últimos días» es una capa encima de `PUBLISHED` que depende de
- * la fecha y no de la columna. Un solo discriminante para las dos tablas de
- * abajo, así el badge y el botón no pueden contradecirse.
+ * la fecha y no de la columna. Un solo discriminante para las tres funciones de
+ * abajo, así el badge, el botón y la bajada no pueden contradecirse.
  */
 export type EstadoTarjeta =
   'cerrada' | 'borrador' | 'ultimos-dias' | 'en-venta';
@@ -92,11 +92,16 @@ export const puntosDe = (rifa: RaffleListItem): boolean[] => {
 /**
  * La bajada: el premio, o quién ganó cuando la rifa ya se sorteó. Puede volver
  * `null` — una rifa sin premio cargado no muestra la línea.
+ *
+ * Recibe el `EstadoTarjeta` ya calculado, no un `boolean` suelto: así usa el
+ * mismo discriminante que `BADGE` y `ACCION` en vez de que cada función decida
+ * por su cuenta qué es «cerrada». El call site es `bajadaDe(rifa,
+ * estadoDe(rifa, limite))`.
  */
 export const bajadaDe = (
   rifa: RaffleListItem,
-  cerrada: boolean,
+  estado: EstadoTarjeta,
 ): string | null =>
-  cerrada && rifa.winnerNumber !== null
+  estado === 'cerrada' && rifa.winnerNumber !== null
     ? `Ganó el número ${rifa.winnerNumber}${rifa.winnerName ? ` · ${rifa.winnerName}` : ''}`
     : rifa.prize;

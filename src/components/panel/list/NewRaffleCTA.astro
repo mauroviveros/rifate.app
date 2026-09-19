@@ -1,9 +1,8 @@
 ---
 import { Icon } from 'astro-icon/components';
 
-import Tile from '@/components/tile';
-
-import NewRaffleButton from './NewRaffleButton.astro';
+import NewRaffleBtn from '@/components/panel/list/NewRaffleBtn.astro';
+import Tile from '@/components/ui/tile';
 ---
 
 <div
@@ -26,7 +25,7 @@ import NewRaffleButton from './NewRaffleButton.astro';
     </div>
   </div>
 
-  <NewRaffleButton
+  <NewRaffleBtn
     variant="default"
     size="sm"
     icono={false}

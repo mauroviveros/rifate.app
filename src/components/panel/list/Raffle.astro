@@ -13,23 +13,23 @@ import {
 } from '@/utils/frontmatter/raffle';
 
 export interface Props {
-  rifa: RaffleListItem;
+  raffle: RaffleListItem;
   /** El día del calendario a partir del cual una rifa está en «últimos días».
       Lo calcula la página una vez por request y baja por prop: si fuera un
       `const` de módulo se congelaría con el isolate de Workers. */
   limite: string;
 }
 
-const { rifa, limite } = Astro.props;
+const { raffle, limite } = Astro.props;
 
-const estadoActual = estadoDe(rifa, limite);
+const estadoActual = estadoDe(raffle, limite);
 const cerrada = estadoActual === 'cerrada';
 
 const estado = BADGE[estadoActual];
 const accion = ACCION[estadoActual];
-const puntos = puntosDe(rifa);
-const bajada = bajadaDe(rifa, cerrada);
-const porcentaje = progress(rifa.soldCount, rifa.totalNumbers);
+const puntos = puntosDe(raffle);
+const bajada = bajadaDe(raffle, estadoActual);
+const porcentaje = progress(raffle.soldCount, raffle.totalNumbers);
 const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
 ---
 
@@ -38,7 +38,7 @@ const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
     class="flex flex-1 flex-col rounded-xl bg-card p-6 ring-2 ring-border"
   >
     <div class="mb-1.5 flex items-start justify-between gap-3">
-      <h2 class="text-[1.375rem] sm:text-2xl">{rifa.title}</h2>
+      <h2 class="text-[1.375rem] sm:text-2xl">{raffle.title}</h2>
       <span
         class:list={[
           'shrink-0 rounded-full px-2.5 py-1.5',
@@ -77,7 +77,7 @@ const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
       class:list={['mb-2 items-baseline justify-between gap-3', soloEscritorio]}
     >
       <span class="text-support font-bold sm:text-body" data-numero>
-        {rifa.soldCount} de {rifa.totalNumbers} vendidos
+        {raffle.soldCount} de {raffle.totalNumbers} vendidos
       </span>
       <span
         class:list={[
@@ -121,14 +121,14 @@ const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
         />
 
         <span>
-          Sortea el <time datetime={rifa.drawDate}
-            >{shortDate(rifa.drawDate)}</time
+          Sortea el <time datetime={raffle.drawDate}
+            >{shortDate(raffle.drawDate)}</time
           >
         </span>
       </span>
 
       <span class="shrink-0 text-support font-extrabold" data-numero>
-        {pesos(rifa.ticketPrice)}<span
+        {pesos(raffle.ticketPrice)}<span
           class="text-label font-semibold text-subtle-foreground"
           >&nbsp;c/u</span
         >
@@ -136,11 +136,11 @@ const soloEscritorio = cerrada ? 'hidden sm:flex' : 'flex';
     </div>
 
     <Button
-      href={`/panel/rifa/${rifa.id}`}
+      href={`/panel/rifa/${raffle.id}`}
       variant={accion.variante}
       size="sm"
       class="mt-auto w-full"
-      aria-label={`${accion.texto} ${rifa.title}`}
+      aria-label={`${accion.texto} ${raffle.title}`}
     >
       {accion.texto}
       {

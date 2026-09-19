@@ -76,21 +76,32 @@ describe('puntosDe', () => {
 
 describe('bajadaDe', () => {
   it('en venta muestra el premio', () => {
-    expect(bajadaDe(rifa(), false)).toBe('Una bici');
+    expect(bajadaDe(rifa(), 'en-venta')).toBe('Una bici');
   });
 
   it('sorteada muestra el ganador', () => {
     const sorteada = rifa({ winnerNumber: 34, winnerName: 'Ana Ríos' });
-    expect(bajadaDe(sorteada, true)).toBe('Ganó el número 34 · Ana Ríos');
+    expect(bajadaDe(sorteada, 'cerrada')).toBe('Ganó el número 34 · Ana Ríos');
   });
 
   it('sorteada sin nombre no deja el separador colgando', () => {
-    expect(bajadaDe(rifa({ winnerNumber: 34 }), true)).toBe(
+    expect(bajadaDe(rifa({ winnerNumber: 34 }), 'cerrada')).toBe(
       'Ganó el número 34',
     );
   });
 
   it('cerrada sin ganador cargado cae en el premio', () => {
-    expect(bajadaDe(rifa(), true)).toBe('Una bici');
+    expect(bajadaDe(rifa(), 'cerrada')).toBe('Una bici');
+  });
+
+  /**
+   * `estadoDe` nunca devuelve 'cerrada' para una rifa sin winner por status
+   * DRAFT/PUBLISHED, pero `bajadaDe` recibe el estado ya calculado y no
+   * revalida la rifa — así que 'borrador' o 'ultimos-dias' también caen acá,
+   * sin pasar por la rama del ganador.
+   */
+  it('borrador o últimos días también muestran el premio', () => {
+    expect(bajadaDe(rifa(), 'borrador')).toBe('Una bici');
+    expect(bajadaDe(rifa(), 'ultimos-dias')).toBe('Una bici');
   });
 });
