@@ -1,18 +1,7 @@
-/**
- * La normalización de lo que se GUARDA. Los nombres son cortos a propósito:
- * el verbo lo pone el módulo —`normalize.phone()`, `normalize.voucherCode()`—
- * y repetirlo en cada función sólo alargaba el punto de llamada.
- *
- * La punta opuesta del mismo eje es `format.ts`, que deriva lo que se LEE.
- */
-
-import { AppError } from './errors';
+import { AppError } from '../errors';
 
 /** Argentina. Es el único mercado en el que se opera. */
 const COUNTRY_CODE = '54';
-
-/** La única fuente de `updated_at` / `created_at`. */
-export const now = (): number => Date.now();
 
 /**
  * Devuelve E.164 (`+5493415551234`) o `null` si no hay teléfono.
@@ -50,26 +39,3 @@ export const phone = (raw: string | null | undefined): string | null => {
 
   return e164;
 };
-
-export const voucherCode = (raw: string): string => raw.trim().toUpperCase();
-
-/** `Rifa del Club 2026` → `rifa-del-club-2026`. Sin acentos ni signos. */
-export const slugify = (text: string): string =>
-  text
-    .toLowerCase() // convierte a minúsculas
-    .normalize('NFD') // descompone los caracteres acentuados en dos caracteres: la letra y el acento
-    .replace(/[\u0300-\u036f]/g, '') // quita acentos
-    .replace(/[^a-z0-9]+/g, '-') // reemplaza todo por guion (excepto letras y números)
-    .replace(/^-+|-+$/g, '') // quita guiones al principio y al final
-    .slice(0, 60) || 'rifa';
-
-/**
- * El slug con el que se guarda una rifa: `slugify()` más ocho caracteres al
- * azar, para que dos rifas con el mismo título no choquen.
- *
- * Se llama `genSlug` y no `slug` a propósito: al lado de `slugify()` un `slug()`
- * sería una moneda al aire en el punto de llamada, y el `gen` avisa que el
- * resultado no es determinista.
- */
-export const genSlug = (title: string): string =>
-  `${slugify(title)}-${crypto.randomUUID().slice(0, 8)}`;
