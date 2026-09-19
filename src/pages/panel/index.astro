@@ -1,36 +1,32 @@
 ---
-import Empty from '@/components/panel/Empty.astro';
-import MobileBar from '@/components/panel/MobileBar.astro';
-import NewRaffle from '@/components/panel/NewRaffle.astro';
-import NewRaffleButton from '@/components/panel/NewRaffleButton.astro';
-import Raffles from '@/components/panel/Raffles.astro';
-import Stats from '@/components/panel/Stats.astro';
+import Empty from '@/components/panel/list/Empty.astro';
+import MobileBar from '@/components/panel/list/MobileBar.astro';
+import NewRaffleBtn from '@/components/panel/list/NewRaffleBtn.astro';
+import NewRaffleCTA from '@/components/panel/list/NewRaffleCTA.astro';
+import Raffles from '@/components/panel/list/Raffles.astro';
+import Stats from '@/components/panel/list/Stats.astro';
 import Dashboard from '@/layouts/Dashboard.astro';
 import { listOwnRaffles } from '@/lib/db';
 import { panelSummary } from '@/utils/frontmatter/panel';
 
-const rifas = await listOwnRaffles(Astro.locals.actor);
+const raffles = await listOwnRaffles(Astro.locals.actor);
 ---
 
 <Dashboard
   title="Mis rifas · rifate.app"
   heading="Mis rifas"
-  description={panelSummary(rifas)}
+  lead={panelSummary(raffles)}
 >
-  {
-    rifas.length > 0 && (
-      <NewRaffleButton slot="actions" class="hidden sm:flex" />
-    )
-  }
+  {raffles.length > 0 && <NewRaffleBtn slot="actions" class="hidden sm:flex" />}
 
   {
-    rifas.length === 0 ? (
+    raffles.length === 0 ? (
       <Empty />
     ) : (
       <>
-        <Stats rifas={rifas} />
-        <Raffles rifas={rifas} />
-        <NewRaffle />
+        <Stats raffles={raffles} />
+        <Raffles raffles={raffles} />
+        <NewRaffleCTA />
         <MobileBar />
       </>
     )
