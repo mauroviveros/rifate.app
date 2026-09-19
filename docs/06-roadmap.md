@@ -303,11 +303,11 @@ pnpm add -D prettier-plugin-tailwindcss
 - [x] Legales `/terminos` · `/privacidad` · `/contacto` contra sus artboards de
       la página «Lo que ve el comprador» del canvas, sobre
       `src/layouts/Article.astro` (título + bajada + fecha + secciones) y
-      `src/components/article/Section.astro` (sección numerada). Las tres
+      `src/components/ui/Section.astro` (sección numerada). Las tres
       `prerender = true`
 - [x] `src/layouts/Focused.astro` — extraído de `ingresar` y `404`, que tenían
       duplicado el `<main>` centrado sobre la trama
-- [x] `src/components/tile/Tile.astro` — el cuadradito con ícono o número, con
+- [x] `src/components/ui/tile/Tile.astro` — el cuadradito con ícono o número, con
       variants `size` (sm–xl) y `tone` (ink/muted/primary). Unifica el badge de
       `Section`, los pasos de `HowItWorks` y los íconos de las tarjetas de contacto
 - [x] `release()` en el Durable Object — faltaba la contracara de `sell()`
@@ -316,9 +316,11 @@ pnpm add -D prettier-plugin-tailwindcss
       `reserved_count`, que el DO proyecta cuando vende. Tipo `RaffleListItem`
       (= `RaffleCard` + `prize` + ganador) con su propio `toListItem()`, para no
       ensanchar la card base que también van a usar las superficies públicas.
-      La pantalla se descompone como la landing: `Header` · `Stats` · `Raffles`
-      · `NewRaffle` · `MobileBar` en `src/components/panel/`, más
-      `NewRaffleButton`, que concentra la ruta y el copy del CTA que estaba
+      La pantalla se descompone como la landing: ~~`Header` · `Stats` ·
+      `Raffles` · `NewRaffle` · `MobileBar` en `src/components/panel/`, más
+      `NewRaffleButton`~~ → hoy en **`src/components/panel/list/`**: `Stats` ·
+      `Raffles`/`Raffle` · `Empty` · `NewRaffleCTA` · `MobileBar` ·
+      `NewRaffleBtn`, que concentra la ruta y el copy del CTA que estaba
       repetido en cuatro lugares. El frontmatter de la tarjeta —estado, badge,
       acción, puntos, bajada— vive en `src/utils/frontmatter/raffle.ts` con 14
       tests propios: el frontmatter de un `.astro` no se puede testear
@@ -336,14 +338,16 @@ pnpm add -D prettier-plugin-tailwindcss
       `no-restricted-syntax`, no una regex en el selector
 - [x] `/panel/rifa/crear` contra el artboard `Create` — alta con Zod →
       `createRaffleWithGrid`
-- [x] `/panel/rifa/[id]` contra el artboard `Detail`: `Header` (badge de estado
-      + bajada premio/fecha + `Actions`) · `Stats` · `Grid`/`Cell` · `Sale` ·
-      `SaleBar` (barra fija hasta `lg`) · `Buyers`/`BuyerRow` en
+- [x] `/panel/rifa/[id]` contra el artboard `Detail`. ~~`Header` (badge de
+      estado + bajada premio/fecha + `Actions`) · `Stats` · `Grid`/`Cell` ·
+      `Sale` · `SaleBar` (barra fija hasta `lg`) · `Buyers`/`BuyerRow` en
       `src/components/panel/detail/`, con la lógica pura en
       `src/utils/frontmatter/detail.ts` y sus tests. `Dashboard` ganó `heading`
-      / `description` como props, slots `eyebrow` / `actions` y un `wideActions`
-      para el modo «título a su propia fila»; `panel/Header.astro` se plegó
-      adentro y su frase-resumen fue a `frontmatter/panel.ts`
+      / `description` como props, slots `eyebrow` / `actions` y un
+      `wideActions` para el modo «título a su propia fila»~~
+      → **la pantalla se reescribió entera**; ver «Reescritura del detalle»
+      más abajo. Lo que sí quedó de este ítem: `panel/Header.astro` se plegó
+      adentro del layout y su frase-resumen fue a `frontmatter/panel.ts`
 - [x] Vender / liberar → `sell()` / `release()` del DO desde un solo `<form>`
       con dos `formaction`. **La deuda de la fase 5 quedó cerrada**: el código
       del error sobrevive el RPC — `sell()` de un número ya vendido llega como
@@ -403,11 +407,14 @@ pnpm add -D prettier-plugin-tailwindcss
 >
 > | Layout | Qué arma | Lo usan |
 > |---|---|---|
-> | `Base.astro` | shell `<html>` + fuentes | todos |
+> | `Layout.astro` ¹ | shell `<html>` + fuentes | todos |
 > | `Marketing.astro` | nav + footer del sitio público | landing · legales |
 > | `Article.astro` | página de texto larga, sobre `Marketing` | `/terminos` · `/privacidad` · `/contacto` |
 > | `Focused.astro` | una tarjeta centrada sobre la trama | `/ingresar` · `/404` |
 > | `Dashboard.astro` | la app | `/panel/*` |
+>
+> ¹ Se llamaba `Base.astro`. Y la marca se mudó con él: `components/brand/`
+> pasó a `src/layouts/components/brand/`, que es el único lugar que la usa.
 >
 > El middleware corta antes de resolver sesión en las rutas `prerender = true`
 > (chequea `isPrerendered` en `src/middleware.ts`): la landing y las legales se
@@ -443,19 +450,26 @@ pnpm add -D prettier-plugin-tailwindcss
 >
 > | Qué | Dónde se resuelve |
 > |---|---|
-> | No hay cómo **editar** una rifa: una `DRAFT` creada sin `contact_phone` no se puede publicar *ni* arreglar | **diseñado** — ver «Antes de la fase 7» abajo |
-> | El panel `Sale` sigue interactivo en `CLOSED` / `CANCELLED` (`sell()` del DO no chequea estado); además `estadoDe()` muestra `CANCELLED` como «Ya sorteada» | **diseñado** — fase 9 |
+> | ~~No hay cómo **editar** una rifa~~ | ✅ **hecho** — `/panel/rifa/[id]/editar` |
+> | ~~El panel `Sale` sigue interactivo en `CLOSED` / `CANCELLED`~~ | ✅ **imposible por construcción**: `estadoDetalle()` manda a `Closed.astro`, que no monta el panel. La guarda del DO sigue faltando |
+> | `estadoDe()` muestra `CANCELLED` como «Ya sorteada» en la tarjeta del listado | fase 9 |
 > | Teléfono del comprador en E.164 (`+54…`), no `11 4455-2211` como el canvas | `src/lib/whatsapp/` en la fase 7 |
 > | La celda `RESERVED` se rotula «· vendido» en el `sr-only` | fase 8 (ahí aparecen las reservas) |
 > | `buyers.note` quedó vestigial (la nota se lee de `numbers.note`); `upsertBuyer` tampoco la actualiza en un comprador que repite | limpiar si estorba |
 > | La Nota del formulario de venta siempre visible (el canvas no la tiene) | cosmético: plegarla en `<details>` si el form se siente largo |
-> | La bajada del detalle concatena descripción + fecha con `line-clamp-2`: una descripción muy larga puede recortar el «· se sortea el…» | separar la fecha a su renglón si aparece el caso |
+> | La bajada del detalle concatena descripción + fecha con `line-clamp-2`: una descripción muy larga puede recortar el «· se sortea el…» | **confirmado en celular** el 2026-09-19: dice «se sortea el 31 de…». Separar la fecha a su renglón |
+> | `Closed.astro` y `NoGrid.astro` están escritos pero `cerrada` es inalcanzable: nada pone una rifa en `CLOSED` | fase 9 |
+> | Ningún test cubre el render: los dos bugs visuales del 2026-09-19 pasaron con 244 tests en verde | fase 10 — Container API en un segundo proyecto de vitest |
 
-> **Con qué seguir: primero el bloque «Antes de la fase 7» de acá abajo**
-> (editar una rifa + los estados del detalle), después la fase 7 (`/r/[slug]`
-> público + imagen para compartir + OG fijo). El botón «Compartir por WhatsApp»
-> del detalle ya apunta a `/r/{slug}` — hoy 404. Ninguna de las dos pide
-> **Workers Paid**: el OG dejó de renderizarse en el Worker (ver la fase 7).
+> ~~**Con qué seguir: primero el bloque «Antes de la fase 7» de acá abajo**
+> (editar una rifa + los estados del detalle)~~ → **cerrado**, y después
+> reescrito entero (ver «Reescritura del detalle»).
+>
+> **Con qué seguir: la fase 7** — `/r/[slug]` público + imagen para compartir +
+> OG fijo. El botón «Compartir por WhatsApp» del detalle apunta a `/r/{slug}`,
+> que **sigue dando 404**: confirmado a mano el 2026-09-19. Es la única punta
+> suelta visible para el usuario. No pide **Workers Paid**: el OG dejó de
+> renderizarse en el Worker (ver la fase 7).
 
 ---
 
@@ -503,14 +517,97 @@ pnpm add -D prettier-plugin-tailwindcss
       vuelve a llamar `init()` con los datos de D1 (no-op si ya prendió).
       Cubierto en `flows.test.ts` simulando la huérfana de verdad: `createRaffle`
       de D1 sin el `init()` del DO.
-- [x] Gate en `[id].astro`: con la rifa fuera de `DRAFT`/`PUBLISHED` el panel
-      `Sale` no se renderiza (`isPublished && !isEmpty`).
+      **El arreglo de `flows.ts` sigue igual**; los nombres de pantalla de este
+      párrafo no: `EmptyGrid` es hoy `NoGrid.astro`, y es una pantalla entera —
+      no un reemplazo de la grilla. Ver «Reescritura del detalle».
+- [x] ~~Gate en `[id].astro`: con la rifa fuera de `DRAFT`/`PUBLISHED` el panel
+      `Sale` no se renderiza (`isPublished && !isEmpty`)~~
+      → el gate ya no existe como condición: `estadoDetalle()` despacha a la
+      pantalla del estado, y las que no venden simplemente no montan el panel.
 - [x] **Checkpoint** — verificado por partes, no de punta a punta a mano: los
       199 tests (`pnpm test`), `pnpm lint` y `pnpm check` pasan limpios, y el
       estado de grilla vacía se revisó visualmente contra una página de prueba
-      descartable. Falta correr el flujo completo autenticado (crear → cargar
+      descartable. ~~Falta correr el flujo completo autenticado (crear → cargar
       teléfono → publicar → editar con ventas) contra Google OAuth real — no
-      hay credenciales de Google configuradas en este entorno.
+      hay credenciales de Google configuradas en este entorno.~~
+      → **corrido el 2026-09-19** contra Google OAuth real, sobre el dev server
+      local: crear → publicar → vender → liberar → editar. El PRG cierra (el
+      flash sale y el `?ok=` se limpia de la URL) y la mezcla de libres con
+      vendidos apaga los dos botones **y lo explica**. Ahí salieron los dos
+      bugs visuales del recuadro de abajo.
+
+---
+
+## Reescritura del detalle — 2026-09-19
+
+> No estaba planificado. El detalle funcionaba y pasó su checkpoint, pero la
+> pantalla había crecido feature por feature hasta volverse el peor archivo del
+> repo: 270 líneas de página, 12 componentes y **cero tests** sobre la lógica de
+> pantalla. Se reescribió entera. La API pública no cambió — las cinco actions,
+> los flujos y el modelo son los mismos.
+
+**Los cinco problemas que tenía, y cómo se cerraron:**
+
+| Problema | Cómo era | Cómo quedó |
+|---|---|---|
+| Sopa de booleanos | `isDraft` / `isPublished` / `isEmpty` en 8 condiciones dispersas — 8 combinaciones posibles, 4 reales | `estadoDetalle()`: un discriminante, 4 ramas adyacentes, con tests |
+| La bolsa | `detailView()` devolvía 9 campos de 3 orígenes distintos | `subtitleOf` · `publicUrlOf` · `selectedNumbers` · `flashMessage`, cada una con su test |
+| PRG repetido | 5 `if` con su propio `Astro.redirect`, más un comment pidiendo disculpas | una expresión y **un** `redirect` |
+| Acción a distancia | la barra fija la montaba un componente y su espaciador vivía al fondo de la página | los dos en líneas contiguas, en `Draft` y en `OnSale` |
+| Componentes gigantes | `Sale.astro`: 311 líneas, 142 de `<script>`, sin test | `salePanel()` puro con 19 tests + un `paint()` mecánico |
+
+**Cómo quedó repartido:**
+
+```
+components/panel/detail/
+  Draft · OnSale · Closed · NoGrid   ← una pantalla por estado, sin condiciones adentro
+  Actions · Stats · EditLink         ← lo que comparten
+  grid/{Grid,Cell,SellCell} · buyers/{Buyers,BuyerRow}
+  draft/{Checklist,Summary,WhenPublished} · sale/Panel · closed/Winner
+
+utils/frontmatter/
+  detail/   estado · tally · buyers · publish · edit · flash · subtitle · link · selection
+  sale.ts   ← aparte: es lo único del detalle que corre en el NAVEGADOR
+```
+
+> ⚠️ **`sale.ts` no entra al barril de `detail/` a propósito.** Se importa desde
+> un `<script>` del cliente, y ponerlo detrás del barril arrastraría `tally`,
+> `buyersOf` y el resto al bundle del navegador.
+
+**Decisiones que cambiaron lo planificado:**
+
+- **Una pantalla por estado**, no un esqueleto con ranuras. Se evaluaron las dos:
+  la variante con ranura evita repetir la cáscara de dos columnas, pero obliga a
+  un `Record` de componentes que no cierra —los paneles no reciben los mismos
+  props— o a `if` adentro. Con un archivo por estado, abrís `Draft.astro` y ves
+  la pantalla del borrador de corrido. El precio es la cáscara repetida en tres
+  archivos, aceptado.
+- **El encabezado se queda en la página**, por una restricción de Astro que
+  conviene saber: `slot="actions"` tiene que ser hijo **directo** de
+  `<Dashboard>`. Un `slot="actions"` dentro de `Draft.astro` apuntaría a quien
+  llamó a `Draft` —la página—, no al layout. Por eso los componentes por estado
+  gobiernan el **cuerpo** y nada más.
+- **`sin-grilla` gana sobre los cuatro status.** Antes el cartel de rearmar
+  convivía con la checklist de publicar; sin números no hay nada que publicar, y
+  ofrecerlo era ofrecer algo que no iba a funcionar.
+- ~~`wideActions` para el modo «título a su propia fila»~~ → **el encabezado
+  decide solo**. El prop se había sacado por no tener consumidor y la regresión
+  apareció al medir: a 768px las acciones del detalle son 617px y le dejaban
+  **55px** al título, que se desbordaba por encima. Ahora la fila es
+  `flex-wrap` con el título en `flex-[1_0_20rem]`.
+
+> ⚠️ **El `0` del medio de `flex-[1_0_20rem]` es lo que hace que funcione.**
+> `flex-wrap` por sí solo no baja nada mientras el título PUEDA encogerse:
+> flexbox achica antes de partir la línea, que es exactamente cómo llegó a
+> 55px. Con `flex-shrink: 0` las dos piezas no entran y recién ahí las acciones
+> se van abajo. Lo mismo con el `ml-auto` que las alinea a la derecha: va con
+> `sm:` porque en celular el contenedor es `flex-col`, el eje transversal es el
+> horizontal, y un margen automático ahí **cancela el `align-items: stretch`** —
+> sin el prefijo el div mide por contenido y se sale de la pantalla.
+
+**Lo que la reescritura NO resolvió:** el estado `cerrada` sigue siendo
+inalcanzable (fase 9), y nada cubre el render — los dos bugs visuales de ese día
+pasaron con 244 tests en verde.
 
 ---
 
@@ -622,7 +719,10 @@ No es una fase: es lo que sostiene a todas. Hecho el 2026-09-04, durante la
 fase 6.
 
 - [x] **`src/utils/`** — `format.ts`, `normalize.ts` y `errors.ts` se mudaron
-      ahí con sus tests. En `src/lib/` quedan las piezas con dependencias
+      ahí con sus tests. ~~Tres archivos~~ → **los tres son carpetas** con
+      barril: `format/` (dates · money · initials · progress), `normalize/`
+      (phone · slug) y `errors/` (app-error · catalog · codes · resolve). Los
+      importadores no cambiaron: `@/utils/format` resuelve al `index.ts`. En `src/lib/` quedan las piezas con dependencias
       propias: `auth/`, `db/`, `raffles.ts` (D1 + DO) y `tv.ts`. El criterio es
       el tamaño de la dependencia, no la palabra «util».
 - [x] **`src/lib/db/bound.ts`** — `conDB` y el `import { env }` salieron del
