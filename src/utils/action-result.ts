@@ -4,26 +4,12 @@
  * Es la punta opuesta de `src/actions/errors.ts`: allá un error de dominio se
  * convierte en `ActionError`; acá ese `ActionError` se abre en lo que el
  * formulario tiene que mostrar — errores por campo, o un mensaje suelto.
- *
- * Las cuatro pantallas con formulario repetían el mismo destildado a mano:
- *
- *     if (result?.error) {
- *       if (isInputError(result.error)) errors = result.error.fields;
- *       else error = result.error.message;
- *     }
- *
- * ⚠️ NO vive en `utils/frontmatter/`, que sería su lugar natural, por un motivo
- * concreto: importa `astro:actions`, un módulo virtual que sólo existe dentro
- * del build de Astro. `vitest.config.ts` corre con una config de Vite propia,
- * SIN el plugin de Astro, así que un archivo de `utils/frontmatter/` —todos con
- * su `.test.ts` al lado— que importara esto dejaría de poder testearse. Acá
- * queda a la vista que este módulo no se testea, y por qué.
  */
 
 import { type ActionError, isInputError } from 'astro:actions';
 
 /** Lo que devuelve `Astro.getActionResult()`. Sin POST todavía, `undefined`. */
-type ActionResult =
+export type ActionResult =
   | { data: unknown; error: undefined }
   | { data: undefined; error: ActionError }
   | undefined;
@@ -46,10 +32,10 @@ export type FormErrors = {
  * el navegador manda un botón por submit.
  */
 export const formErrors = (...results: ActionResult[]): FormErrors => {
-  const error = results.find((result) => result?.error)?.error;
-  if (!error) return { fields: {}, message: null };
+  const firstError = results.find((result) => result?.error)?.error;
+  if (!firstError) return { fields: {}, message: null };
 
-  return isInputError(error)
-    ? { fields: error.fields, message: null }
-    : { fields: {}, message: error.message };
+  return isInputError(firstError)
+    ? { fields: firstError.fields, message: null }
+    : { fields: {}, message: firstError.message };
 };
