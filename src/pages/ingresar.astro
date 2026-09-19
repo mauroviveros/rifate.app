@@ -1,7 +1,6 @@
 ---
 import { Icon } from 'astro-icon/components';
 
-import { Brand } from '@/components/brand';
 import { Button } from '@/components/starwind/button';
 import {
   Card,
@@ -10,7 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/starwind/card';
+import { Brand } from '@/layouts/components/brand';
 import Focused from '@/layouts/Focused.astro';
+
+export const prerender = false;
 
 // Con sesión abierta esta pantalla no tiene nada que ofrecer.
 if (Astro.locals.actor.kind !== 'visitor') {
