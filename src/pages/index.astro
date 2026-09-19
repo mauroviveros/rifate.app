@@ -4,15 +4,13 @@ import FAQs from '@/components/landing/FAQs.astro';
 import Hero from '@/components/landing/Hero.astro';
 import HowItWorks from '@/components/landing/HowItWorks.astro';
 import Marketing from '@/layouts/Marketing.astro';
-
 export const prerender = true;
-
-const title = 'rifate.app · rifas de barrio por WhatsApp';
-const description =
-  'Armá la rifa una vez, mandá el link y mirá en vivo qué números se vendieron. Sin cuaderno y sin que tus compradores se registren.';
 ---
 
-<Marketing title={title} description={description}>
+<Marketing
+  title="rifate.app · rifas de barrio por WhatsApp"
+  description="Armá la rifa una vez, mandá el link y mirá en vivo qué números se vendieron. Sin cuaderno y sin que tus compradores se registren."
+>
   <Hero />
   <HowItWorks />
   <FAQs />
