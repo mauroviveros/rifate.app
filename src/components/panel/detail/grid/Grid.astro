@@ -1,38 +1,58 @@
 ---
+/**
+ * El talonario dibujado: la tarjeta, el encabezado y los números.
+ *
+ * NO sabe en qué estado está la rifa. La versión anterior recibía `form?` y
+ * `draft?` y deducía de ahí si era de sólo lectura, con lo cual dos props
+ * hacían de discriminante encubierto y el copy de las tres pantallas vivía
+ * acá adentro en una cadena de ternarios. Ahora cada pantalla trae sus
+ * palabras y la grilla se ocupa de dibujar números.
+ */
 import type { HTMLAttributes } from 'astro/types';
-import { Icon } from 'astro-icon/components';
 
 import type { OwnerNumber } from '@/types/raffle';
-import { numberWidth } from '@/utils/frontmatter/detail';
+import { numberWidth } from '@/utils/frontmatter/numbers';
 
 import Cell from './Cell.astro';
+import SellCell from './SellCell.astro';
 
 interface Props extends HTMLAttributes<'section'> {
-  /** El `id` del <form> del panel de venta. Sin él la grilla es sólo lectura. */
-  form?: string;
-  /** Rifa en DRAFT: la grilla es la vista previa y va con el pill «Los N están libres». */
-  draft?: boolean;
+  title: string;
+  hint: string;
   numbers: OwnerNumber[];
   numberStart: number;
-  /** Números tildados desde el server (repoblado tras un error). */
-  selected?: number[];
   totalNumbers: number;
+  /** Apaga la grilla cuando no se puede tocar (borrador, rifa cerrada). */
+  dimmed?: boolean;
+  /**
+   * El `id` del `<form>` del panel de venta. Con él los números se tildan y se
+   * mandan; sin él son de sólo mirar.
+   *
+   * Es un dato de HTML —a qué formulario pertenece este control—, no el estado
+   * de la rifa disfrazado: quién decide si esta pantalla vende es la pantalla,
+   * que pasa o no pasa el `form`. Lo que el `Grid` anterior hacía mal era otra
+   * cosa: de ese mismo `form` deducía además el copy del encabezado.
+   */
+  form?: string;
+  /** Números ya tildados, para repoblar tras un error de validación. */
+  selected?: number[];
 }
 
 const {
-  class: className,
-  form,
-  draft = false,
+  title,
+  hint,
   numbers,
   numberStart,
-  selected = [],
   totalNumbers,
+  dimmed = false,
+  form,
+  selected = [],
+  class: className,
   ...rest
 } = Astro.props;
 
 const width = numberWidth(numberStart, totalNumbers);
 const picked = new Set(selected);
-const readOnly = form === undefined;
 ---
 
 <section
@@ -40,49 +60,35 @@ const readOnly = form === undefined;
   aria-labelledby="grid-title"
   {...rest}
 >
-  <h2 id="grid-title" class="text-[1.25rem]">
-    {draft ? 'Así la va a ver la gente' : 'Los números'}
-  </h2>
-  <p class="mt-0.5 text-label text-subtle-foreground">
-    {
-      draft
-        ? 'Todavía no podés anotar ventas: la rifa no está publicada.'
-        : readOnly
-          ? 'La rifa está cerrada: la grilla quedó como terminó.'
-          : 'Tocá los que quieras vender. Los tachados ya están vendidos: tocalos para liberarlos.'
-    }
-  </p>
+  <h2 id="grid-title" class="text-[1.25rem]">{title}</h2>
+  <p class="mt-0.5 text-label text-subtle-foreground">{hint}</p>
 
   <div class="relative mt-4">
     <div
       class:list={[
         'grid grid-cols-5 gap-1.5 sm:grid-cols-10 sm:gap-1',
-        readOnly && 'opacity-55',
+        dimmed && 'opacity-55',
       ]}
       role="group"
       aria-label="Números de la rifa"
     >
       {
-        numbers.map(({ number, status }) => (
-          <Cell
-            value={number}
-            status={status}
-            width={width}
-            form={form}
-            readOnly={readOnly}
-            checked={picked.has(number)}
-          />
-        ))
+        numbers.map(({ number, status }) =>
+          form ? (
+            <SellCell
+              value={number}
+              status={status}
+              width={width}
+              form={form}
+              checked={picked.has(number)}
+            />
+          ) : (
+            <Cell value={number} status={status} width={width} />
+          ),
+        )
       }
     </div>
 
-    {
-      draft && (
-        <p class="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-support font-extrabold whitespace-nowrap text-background shadow-lg">
-          <Icon name="lucide:lock" class="size-4.5 text-warning" />
-          Los {numbers.length} están libres
-        </p>
-      )
-    }
+    <slot />
   </div>
 </section>

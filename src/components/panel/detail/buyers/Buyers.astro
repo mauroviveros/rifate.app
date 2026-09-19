@@ -1,8 +1,15 @@
 ---
+/**
+ * Quién compró qué. La usan la rifa en venta y la rifa cerrada: en las dos es
+ * la misma lista, y en la cerrada es lo único que queda para consultar.
+ *
+ * El borrador no la monta — no puede haber vendido nada todavía.
+ */
 import type { HTMLAttributes } from 'astro/types';
 
 import type { OwnerNumber } from '@/types/raffle';
-import { buyersOf, numberWidth } from '@/utils/frontmatter/detail';
+import { buyersOf } from '@/utils/frontmatter/detail';
+import { numberWidth } from '@/utils/frontmatter/numbers';
 
 import BuyerRow from './BuyerRow.astro';
 

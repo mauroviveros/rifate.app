@@ -1,74 +1,36 @@
 ---
+/**
+ * Un número del talonario, de sólo lectura.
+ *
+ * Todavía no existe la versión tildable: la va a necesitar la pantalla de venta
+ * (`OnSale`), que es la única donde se puede anotar algo. Mientras tanto esto
+ * es lo que ven el borrador y la rifa cerrada — mirar, no tocar.
+ */
 import type { NumberStatus } from '@/types/raffle';
-import { numberLabel } from '@/utils/frontmatter/detail';
+import { numberLabel } from '@/utils/frontmatter/numbers';
 
 interface Props {
-  /** Tildado desde el server, para repoblar tras un error de validación. */
-  checked?: boolean;
-  /** El `id` del <form> del panel al que se ata el checkbox. */
-  form?: string;
-  /** Sin panel de venta (rifa en DRAFT/cerrada): la celda no se puede tocar. */
-  readOnly?: boolean;
   status: NumberStatus;
   value: number;
   /** Ancho de padding de la etiqueta (de `numberWidth`). */
   width: number;
 }
 
-const {
-  checked = false,
-  form,
-  readOnly = false,
-  status,
-  value,
-  width,
-} = Astro.props;
-const label = numberLabel(value, width);
-/** Vendido o reservado: se puede tildar igual, para liberarlo sin otra pantalla. */
+const { status, value, width } = Astro.props;
+
+/** Vendido o reservado: para el que mira, las dos cosas son «ya no está». */
 const taken = status === 'SOLD' || status === 'RESERVED';
-
-const BASE = [
-  'flex aspect-square items-center justify-center',
-  'rounded-md border-2 text-support font-extrabold transition-all select-none',
-  'has-focus-visible:ring-3 has-focus-visible:ring-outline/50',
-];
-
-const FREE = [
-  'cursor-pointer border-input bg-card text-foreground hover:-translate-y-0.5',
-  'has-checked:border-foreground has-checked:bg-foreground',
-  'has-checked:text-background has-checked:sello-primary',
-];
-
-const TAKEN = [
-  'tachado cursor-not-allowed border-border bg-muted text-disabled-foreground',
-  'has-checked:border-primary has-checked:text-foreground has-checked:sello-primary',
-];
-
-/** Sin panel al que atarse: la celda es sólo lectura, sin hover ni checkbox. */
-const STATIC = taken
-  ? 'tachado border-border bg-muted text-disabled-foreground'
-  : 'border-input bg-card text-foreground';
 ---
 
-{
-  readOnly ? (
-    <div class:list={[BASE, STATIC]}>
-      <span data-numero>{label}</span>
-      {taken && <span class="sr-only"> · vendido</span>}
-    </div>
-  ) : (
-    <label class:list={[BASE, taken ? TAKEN : FREE]}>
-      <input
-        type="checkbox"
-        name="numbers"
-        value={value}
-        form={form}
-        checked={checked}
-        data-taken={taken ? '' : undefined}
-        class="sr-only"
-      />
-      <span data-numero>{label}</span>
-      {taken && <span class="sr-only"> · vendido</span>}
-    </label>
-  )
-}
+<div
+  class:list={[
+    'flex aspect-square items-center justify-center',
+    'rounded-md border-2 text-support font-extrabold select-none',
+    taken
+      ? 'border-border bg-muted tachado text-disabled-foreground'
+      : 'border-input bg-card text-foreground',
+  ]}
+>
+  <span data-numero>{numberLabel(value, width)}</span>
+  {taken && <span class="sr-only"> · vendido</span>}
+</div>

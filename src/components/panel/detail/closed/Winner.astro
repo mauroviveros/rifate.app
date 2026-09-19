@@ -1,0 +1,52 @@
+---
+/**
+ * El número que ganó. Es lo primero que alguien busca al abrir una rifa que ya
+ * se sorteó, así que va arriba y a todo el ancho.
+ *
+ * El número va acolchado con el mismo ancho que la grilla —`07` y no `7`—:
+ * quien lo busca lo busca contra el talonario, no contra un número suelto.
+ *
+ * El nombre puede faltar aunque el número esté: la migración 0003 sólo ata el
+ * `winner_number` al rango de la rifa, y `winner_name` queda libre. Una rifa
+ * puede quedar sorteada con el número cargado y el nombre todavía no.
+ */
+import type { OwnerRaffle } from '@/types/raffle';
+import { numberLabel, numberWidth } from '@/utils/frontmatter/numbers';
+
+interface Props {
+  raffle: OwnerRaffle;
+  /** El número ganador. Lo chequea quien monta esto: acá ya no es `null`. */
+  winnerNumber: number;
+}
+
+const { raffle, winnerNumber } = Astro.props;
+
+const label = numberLabel(
+  winnerNumber,
+  numberWidth(raffle.numberStart, raffle.totalNumbers),
+);
+---
+
+<div class="mt-7 rounded-xl bg-foreground p-6 text-background sm:p-8">
+  <h2
+    class="text-support font-extrabold tracking-[0.04em] text-background/60"
+    id="winner-title"
+  >
+    EL NÚMERO GANADOR
+  </h2>
+
+  <p class="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+    <span
+      class="font-display text-display font-extrabold tracking-tight text-warning"
+      data-numero
+    >
+      {label}
+    </span>
+
+    {
+      raffle.winnerName && (
+        <span class="text-xl font-bold sm:text-2xl">{raffle.winnerName}</span>
+      )
+    }
+  </p>
+</div>

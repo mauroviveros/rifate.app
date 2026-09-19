@@ -1,11 +1,8 @@
 ---
 import { Icon } from 'astro-icon/components';
 
-import {
-  type BuyerGroup,
-  numberLabel,
-  previewNumbers,
-} from '@/utils/frontmatter/detail';
+import { type BuyerGroup, previewNumbers } from '@/utils/frontmatter/detail';
+import { numberLabel } from '@/utils/frontmatter/numbers';
 
 interface Props {
   buyer: BuyerGroup;
@@ -74,6 +71,7 @@ const stub = shown.map(label).join(' · ');
               </li>
             ))}
           </ul>
+
           {buyer.notes.length > 0 && (
             <p class="mt-3 text-support text-muted-foreground">
               {buyer.notes.join(' — ')}
@@ -94,12 +92,14 @@ const stub = shown.map(label).join(' · ');
             </span>
           )}
         </span>
+
         <span
           class="mt-0.5 block truncate text-label text-subtle-foreground"
           data-numero
         >
           {count} {unit} · {stub}
         </span>
+
         {buyer.notes.length > 0 && (
           <p class="mt-2 text-support text-muted-foreground">
             {buyer.notes.join(' — ')}

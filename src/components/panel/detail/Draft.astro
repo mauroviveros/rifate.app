@@ -1,0 +1,141 @@
+---
+/**
+ * La pantalla del borrador, entera y de corrido.
+ *
+ * Es la primera que ve alguien: acá lo deja el redirect de `crear.astro`. Lo
+ * único que importa en esta pantalla es llegar a publicar, así que todo lo que
+ * hay o cuenta qué falta, o muestra cómo va a quedar.
+ *
+ * La barra fija de mobile y su espaciador viven acá, uno al lado del otro. En
+ * la versión anterior la barra la montaba la checklist y el espaciador estaba
+ * al fondo de la página, tres niveles más arriba: mover un bloque de lugar
+ * rompía el otro sin que nada avisara.
+ */
+import { Icon } from 'astro-icon/components';
+
+import { button } from '@/components/starwind/button/variants';
+import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
+import { pendingBeforePublish } from '@/utils/frontmatter/detail';
+
+import Checklist from './draft/Checklist.astro';
+import Summary from './draft/Summary.astro';
+import WhenPublished from './draft/WhenPublished.astro';
+import Grid from './grid/Grid.astro';
+
+interface Props {
+  raffle: OwnerRaffle;
+  numbers: OwnerNumber[];
+  /** El link que va a tomar la rifa cuando se publique. */
+  publicUrl: string;
+  phoneErrors?: string[];
+  phoneError?: string | null;
+  phoneValue?: string;
+}
+
+const { raffle, numbers, publicUrl, phoneErrors, phoneError, phoneValue } =
+  Astro.props;
+
+const pending = pendingBeforePublish(raffle);
+
+/** Sin teléfono no se puede publicar: es lo único que puede faltar. */
+const needsPhone = raffle.contactPhone === null;
+---
+
+<Summary class="mt-7" raffle={raffle} pending={pending} />
+
+<div
+  class:list={[
+    'mt-7 grid gap-7',
+    'lg:grid-cols-[1fr_380px] lg:items-start lg:gap-7.5',
+  ]}
+>
+  <Grid
+    title="Así la va a ver la gente"
+    hint="Todavía no podés anotar ventas: la rifa no está publicada."
+    numbers={numbers}
+    numberStart={raffle.numberStart}
+    totalNumbers={raffle.totalNumbers}
+    dimmed
+  >
+    <p
+      class="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-support font-extrabold whitespace-nowrap text-background shadow-lg"
+    >
+      <Icon
+        name="lucide:lock"
+        class="size-4.5 text-warning"
+        aria-hidden="true"
+      />
+      Los {numbers.length} están libres
+    </p>
+  </Grid>
+
+  <div
+    class="order-first flex flex-col gap-6 lg:sticky lg:top-24 lg:order-none"
+  >
+    <Checklist
+      raffle={raffle}
+      pending={pending}
+      phoneErrors={phoneErrors}
+      phoneError={phoneError}
+      phoneValue={phoneValue}
+    />
+    <WhenPublished publicUrl={publicUrl} />
+  </div>
+</div>
+
+{
+  needsPhone && (
+    <>
+      {/* La barra y el alto que le reserva, juntos: si mañana la barra cambia
+          de alto o se va, las dos líneas están a la vista. */}
+      <div
+        class:list={[
+          'fixed inset-x-0 bottom-0 z-20 lg:hidden',
+          'border-t-2 border-border bg-card px-5 pt-3 pb-4',
+          'shadow-[0_-12px_28px_-16px_rgba(23,24,28,0.5)]',
+        ]}
+      >
+        <p class="mb-2.5 text-center text-support font-bold text-subtle-foreground">
+          Falta el teléfono para poder publicar
+        </p>
+        <button
+          type="button"
+          class:list={[button({ variant: 'primary', size: 'md' }), 'w-full']}
+          data-goto-phone
+        >
+          <Icon name="lucide:phone" aria-hidden="true" />
+          Cargar el teléfono
+        </button>
+      </div>
+
+      <div class="h-24 lg:hidden" aria-hidden="true" />
+    </>
+  )
+}
+
+<script>
+  import { revealAndFocus } from '@/utils/reveal';
+
+  const card = document.querySelector<HTMLElement>('#antes-de-publicar');
+  const input = card?.querySelector<HTMLInputElement>('[name="contactPhone"]');
+
+  /* Tras un error del server —de campo o de dominio, como «Cargá un teléfono
+     de contacto antes de publicar.»— llevar la vista al campo y enfocarlo.
+     Mismo gesto que el alta. */
+  const flagged =
+    card?.querySelector<HTMLElement>('[aria-invalid="true"]') ??
+    card?.querySelector<HTMLElement>('[role="alert"]');
+
+  /* El error de dominio no marca ningún campo, y ahí lo marcado es el párrafo
+     del alerta, que no se puede enfocar. El `?? null` es explícito:
+     «scrolleá, pero no enfoques nada». */
+  if (flagged) revealAndFocus(input ?? flagged, input ?? null);
+
+  /* La barra fija lleva al mismo campo: el mismo gesto, sin el error. */
+  document
+    .querySelector<HTMLButtonElement>('[data-goto-phone]')
+    ?.addEventListener('click', () => {
+      card?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      input?.focus({ preventScroll: true });
+    });
+</script>

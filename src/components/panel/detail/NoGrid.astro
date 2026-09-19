@@ -1,0 +1,85 @@
+---
+/**
+ * La rifa a la que no se le generó el talonario.
+ *
+ * En una rifa sana no pasa: `createRaffleWithGrid` arma la grilla en el alta.
+ * Significa que el `init()` del Durable Object no corrió — un problema pasajero
+ * del lado de Cloudflare, casi siempre.
+ *
+ * Es la única pantalla del detalle con UNA sola cosa: sin números no hay nada
+ * que vender, que publicar ni que mirar, así que ofrecer cualquier otra acción
+ * al lado sería ofrecer algo que no va a funcionar. Por eso `estadoDetalle`
+ * pone `sin-grilla` por encima de los cuatro status.
+ *
+ * Rearmar no pierde nada de lo cargado: `init()` es un no-op si el objeto ya
+ * tiene dueño, así que apretar de más nunca pisa una grilla que sí prendió.
+ */
+import { actions } from 'astro:actions';
+import { Icon } from 'astro-icon/components';
+
+import { Button } from '@/components/starwind/button';
+import type { OwnerRaffle } from '@/types/raffle';
+
+interface Props {
+  raffle: OwnerRaffle;
+  /** Error de dominio de un intento anterior de rearmar. */
+  error?: string | null;
+}
+
+const { raffle, error = null } = Astro.props;
+
+/** Lo que el botón va a generar, para que se sepa antes de apretarlo. */
+const first = raffle.numberStart;
+const last = raffle.numberStart + raffle.totalNumbers - 1;
+---
+
+<section
+  class="mt-7 rounded-xl bg-card p-6 text-center ring-2 ring-warning/55 sm:p-8"
+  aria-labelledby="no-grid-title"
+>
+  <span
+    class="mx-auto flex size-12 items-center justify-center rounded-full bg-warning/15 text-warning"
+    aria-hidden="true"
+  >
+    <Icon name="lucide:circle-alert" class="size-6" />
+  </span>
+
+  <h2 id="no-grid-title" class="mt-4 text-[1.25rem]">
+    El talonario no se terminó de armar
+  </h2>
+
+  <p class="mx-auto mt-1 max-w-sm text-support text-subtle-foreground">
+    La rifa quedó creada pero los números todavía no se generaron. Pasa a veces
+    por un problema pasajero — rearmalo y no perdés nada de lo que ya cargaste.
+  </p>
+
+  <p class="mt-3 text-label font-bold text-subtle-foreground" data-numero>
+    Se van a generar {raffle.totalNumbers} números, del {first} al {last}.
+  </p>
+
+  {
+    error && (
+      <p
+        class="mx-auto mt-4 flex max-w-sm items-start gap-2 rounded-lg bg-primary/8 p-3 text-left text-support font-bold text-primary"
+        role="alert"
+      >
+        <Icon name="lucide:circle-alert" class="mt-0.5 size-5 shrink-0" />
+        <span>{error}</span>
+      </p>
+    )
+  }
+
+  <form method="POST" class="mt-5">
+    <input type="hidden" name="id" value={raffle.id} />
+    <Button
+      type="submit"
+      formaction={actions.raffle.rebuildGrid}
+      variant="outline"
+      size="md"
+      class="w-full sm:w-auto"
+    >
+      <Icon name="lucide:rotate-ccw" aria-hidden="true" />
+      Rearmar el talonario
+    </Button>
+  </form>
+</section>

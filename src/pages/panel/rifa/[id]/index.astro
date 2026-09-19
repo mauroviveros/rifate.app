@@ -1,0 +1,171 @@
+---
+import { actions } from 'astro:actions';
+
+import Actions from '@/components/panel/detail/Actions.astro';
+import Closed from '@/components/panel/detail/Closed.astro';
+import Draft from '@/components/panel/detail/Draft.astro';
+import NoGrid from '@/components/panel/detail/NoGrid.astro';
+import OnSale from '@/components/panel/detail/OnSale.astro';
+import Dashboard from '@/layouts/Dashboard.astro';
+import { ownerGrid } from '@/lib/raffles';
+import { formErrors } from '@/utils/action-result';
+import { codeOf } from '@/utils/errors';
+import { formValue } from '@/utils/forms';
+import {
+  estadoDetalle,
+  flashMessage,
+  publicUrlOf,
+  selectedNumbers,
+  subtitleOf,
+} from '@/utils/frontmatter/detail';
+
+const { id } = Astro.params;
+if (!id) return Astro.rewrite('/404');
+
+/**
+ * PRG: las cinco acciones del detalle vuelven acá con un 303 en el éxito, así
+ * un F5 no reenvía el formulario. Mismo patrón que el alta.
+ *
+ * El `?ok=` se arma ANTES de redirigir y en una sola expresión, en vez de cinco
+ * `if` con su propio `Astro.redirect`. Un helper acá no sirve: cualquier
+ * `const done = …` que sólo se use desde un `return` sale reportado por
+ * `astro check` como «declared but never read» (ts 6133) —el language server no
+ * ve los usos que están después de un `return` en el frontmatter—, y el check
+ * es parte del gate de pre-push. Esto no tiene ese problema porque `ok` se usa
+ * en la línea de abajo, no adentro de un `return`.
+ */
+const publishResult = Astro.getActionResult(actions.raffle.publish);
+const setPhoneResult = Astro.getActionResult(actions.raffle.setPhone);
+const sellResult = Astro.getActionResult(actions.raffle.sell);
+const releaseResult = Astro.getActionResult(actions.raffle.release);
+const rebuildResult = Astro.getActionResult(actions.raffle.rebuildGrid);
+
+const ok =
+  publishResult && !publishResult.error
+    ? 'published'
+    : setPhoneResult && !setPhoneResult.error
+      ? 'phone'
+      : sellResult && !sellResult.error
+        ? `sold-${sellResult.data.sold.length}`
+        : releaseResult && !releaseResult.error
+          ? `freed-${releaseResult.data.length}`
+          : rebuildResult && !rebuildResult.error
+            ? 'rebuilt'
+            : null;
+
+if (ok) return Astro.redirect(`/panel/rifa/${id}?ok=${ok}`, 303);
+
+/**
+ * Una rifa ajena y una inexistente se ven igual: un 404. Que exista o no es
+ * justo el dato que no hay que filtrar — misma idea que `getOwnRaffle`.
+ */
+const loaded = await ownerGrid(Astro.locals.actor, id).catch(
+  (error: unknown) => {
+    const code = codeOf(error);
+    if (code === 'NOT_FOUND' || code === 'FORBIDDEN') return null;
+    throw error;
+  },
+);
+if (!loaded) return Astro.rewrite('/404');
+const { raffle, numbers } = loaded;
+
+/** Lo que se tipeó / eligió, para no perderlo tras un error de validación. */
+let formData: FormData | null = null;
+if (Astro.request.method === 'POST') {
+  try {
+    formData = await Astro.request.clone().formData();
+  } catch {
+    formData = null;
+  }
+}
+
+/**
+ * Cuál de las cuatro pantallas va. Cada una se dibuja entera en su propio
+ * componente: abrís `Draft.astro` y ves la pantalla del borrador de corrido,
+ * sin condiciones adentro.
+ */
+const estado = estadoDetalle(raffle, numbers);
+
+/**
+ * `publish` y `setPhone` comparten el `<form>` de la checklist del borrador:
+ * el error de cualquiera de los dos botones se muestra en el mismo lugar.
+ */
+const phone = formErrors(publishResult, setPhoneResult);
+
+/** Lo mismo para el panel de venta: «vender» y «liberar» comparten `<form>`. */
+const sale = formErrors(sellResult, releaseResult);
+
+/** Rearmar el talonario va solo: un botón, una action. */
+const rebuild = formErrors(rebuildResult);
+
+const subtitle = subtitleOf(raffle);
+const publicUrl = publicUrlOf(raffle, Astro.site);
+const selected = selectedNumbers(formData);
+const phoneValue = formValue(formData, 'contactPhone');
+
+/** El cartel de éxito del PRG. `null` si no venimos de una acción. */
+const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
+---
+
+<Dashboard
+  title={`${raffle.title} · rifate.app`}
+  heading={raffle.title}
+  lead={subtitle}
+>
+  <Actions
+    slot="actions"
+    raffle={raffle}
+    estado={estado}
+    publicUrl={publicUrl}
+  />
+
+  {
+    okMessage && (
+      <p
+        class="mt-6 rounded-lg bg-success/10 p-4 text-support font-bold text-success"
+        role="status"
+      >
+        {okMessage}
+      </p>
+    )
+  }
+
+  {
+    estado === 'sin-grilla' && (
+      <NoGrid raffle={raffle} error={rebuild.message} />
+    )
+  }
+  {
+    estado === 'borrador' && (
+      <Draft
+        raffle={raffle}
+        numbers={numbers}
+        publicUrl={publicUrl}
+        phoneErrors={phone.fields.contactPhone}
+        phoneError={phone.message}
+        phoneValue={phoneValue}
+      />
+    )
+  }
+  {
+    estado === 'en-venta' && (
+      <OnSale
+        raffle={raffle}
+        numbers={numbers}
+        selected={selected}
+        formData={formData}
+        errors={sale.fields}
+        error={sale.message}
+      />
+    )
+  }
+  {estado === 'cerrada' && <Closed raffle={raffle} numbers={numbers} />}
+</Dashboard>
+
+<script>
+  /* El cartel de éxito viaja en `?ok=…` (PRG). Es de un solo uso: sacamos el
+     parámetro para que un F5 no lo vuelva a mostrar. */
+  if (location.search.includes('ok=')) {
+    history.replaceState(null, '', location.pathname);
+  }
+</script>

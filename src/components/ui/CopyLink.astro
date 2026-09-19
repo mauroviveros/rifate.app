@@ -1,4 +1,11 @@
 ---
+/**
+ * Un texto con un botón que lo copia al portapapeles.
+ *
+ * No sabe nada de rifas: recibe qué copiar y qué mostrar. El `<script>` toma
+ * TODAS las instancias del documento, así que poner dos en una pantalla
+ * funciona sin configurar nada.
+ */
 import { Icon } from 'astro-icon/components';
 
 interface Props {
@@ -45,21 +52,25 @@ const shown = label ?? value;
     <span data-copy-label>Copiar</span>
   </button>
 
+  {/* El cambio de ícono es visual: esto es lo que se lo cuenta a un lector. */}
   <span class="sr-only" role="status" data-copy-status></span>
 </div>
 
 <script>
-  const $boxes = document.querySelectorAll<HTMLDivElement>('[data-copy-link]');
-  for (const $box of $boxes) {
+  for (const $box of document.querySelectorAll<HTMLDivElement>(
+    '[data-copy-link]',
+  )) {
     const $button = $box.querySelector<HTMLButtonElement>('[data-copy-button]');
     const $label = $box.querySelector<HTMLSpanElement>('[data-copy-label]');
     const $status = $box.querySelector<HTMLSpanElement>('[data-copy-status]');
     const value = $box.dataset.value ?? '';
+
     if (!$button) continue;
 
     $button.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(value);
+
         $button.dataset.copied = '';
         if ($label) $label.textContent = '¡Copiado!';
         if ($status) $status.textContent = 'Link copiado';
@@ -70,6 +81,8 @@ const shown = label ?? value;
           if ($status) $status.textContent = '';
         }, 2000);
       } catch {
+        /* Sin permiso de portapapeles, o en un contexto no seguro. El link
+           está a la vista igual: se puede seleccionar y copiar a mano. */
         if ($status) $status.textContent = 'No se pudo copiar';
       }
     });

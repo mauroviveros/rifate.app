@@ -1,0 +1,154 @@
+---
+/**
+ * El formulario de la venta: quién compró, teléfono, nota y los dos botones.
+ *
+ * Los números NO están acá: son los checkboxes de la grilla, que viven en la
+ * otra columna y se atan a este `<form>` por su `id`. Por eso el `id` es un
+ * contrato con `OnSale`, que es quien lo pasa y quien se lo da a la grilla.
+ *
+ * Todo lo que cambia mientras se tilda —la frase, el «Cobrás», los textos y el
+ * estado de los botones— lo escribe el `<script>` de `OnSale` con lo que
+ * devuelve `salePanel()`. Acá los valores iniciales son los de «nada elegido».
+ */
+import type { HTMLAttributes } from 'astro/types';
+import { actions } from 'astro:actions';
+import { Icon } from 'astro-icon/components';
+
+import Field from '@/components/form/Field.astro';
+import { button } from '@/components/starwind/button/variants';
+import { formValue } from '@/utils/forms';
+
+interface Props extends HTMLAttributes<'form'> {
+  raffleId: string;
+  /** Precio del número, en centavos: para el «Cobrás» en vivo. */
+  ticketPrice: number;
+  formData: FormData | null;
+  errors: Record<string, string[] | undefined>;
+  error: string | null;
+}
+
+const {
+  raffleId,
+  ticketPrice,
+  formData,
+  errors,
+  error,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const value = (name: string) => formValue(formData, name);
+---
+
+<form
+  method="POST"
+  novalidate
+  data-sale
+  data-price={ticketPrice}
+  class:list={[
+    'rounded-xl bg-card p-6 ring-2 ring-border transition-shadow',
+    'data-[kind=release]:ring-foreground data-[kind=sell]:ring-success',
+    className,
+  ]}
+  {...rest}
+>
+  <input type="hidden" name="id" value={raffleId} />
+
+  <h2 class="text-[1.25rem]">Venta en curso</h2>
+  <p
+    class="mt-0.5 text-support font-bold text-subtle-foreground"
+    data-sale-sentence
+    data-numero
+  >
+    Elegí números de la grilla para vender o liberar.
+  </p>
+
+  <div class="mt-3 flex flex-wrap gap-1.5" data-sale-chips data-numero></div>
+
+  <hr class="my-5 perforado" />
+
+  {
+    error && (
+      <p
+        class="mb-5 flex items-start gap-2.5 rounded-lg bg-error/8 p-4 text-support font-bold text-error"
+        role="alert"
+      >
+        <Icon name="lucide:circle-alert" class="mt-0.5 size-5.5 shrink-0" />
+        <span>{error}</span>
+      </p>
+    )
+  }
+
+  <Field
+    name="name"
+    label="¿Quién los compró?"
+    placeholder="Samira Viveros"
+    value={value('name')}
+    errors={errors.name}
+  />
+
+  <Field
+    class="mt-5"
+    name="phone"
+    label="Teléfono"
+    hint="Para avisarle si gana, y para juntarlo si vuelve a comprar."
+    type="tel"
+    inputmode="tel"
+    placeholder="11 2345-6789"
+    value={value('phone')}
+    errors={errors.phone}
+    optional
+  />
+
+  <Field
+    class="mt-5"
+    name="note"
+    label="Nota"
+    hint="Para vos. Por ejemplo: «pagó por transferencia»."
+    type="textarea"
+    value={value('note')}
+    errors={errors.note}
+    optional
+  />
+
+  <div class="mt-6 hidden items-baseline justify-between" data-sale-cobras>
+    <span class="text-support font-bold text-subtle-foreground">Cobrás</span>
+    <span
+      class="font-display text-2xl font-extrabold tracking-tight text-success"
+      data-sale-total
+      data-numero></span>
+  </div>
+
+  {
+    /* Dos botones, dos actions, un solo `<form>`: `formErrors()` recibe los dos
+      resultados y muestra el primero que falló. */
+  }
+  <div class="mt-6 grid gap-2.5">
+    <button
+      type="submit"
+      formaction={actions.raffle.sell}
+      class={button({ variant: 'success', size: 'md' })}
+      data-sale-sell
+    >
+      <Icon name="lucide:check" aria-hidden="true" />
+      <span data-sale-sell-label>Marcar como vendidos</span>
+    </button>
+
+    <button
+      type="submit"
+      formaction={actions.raffle.release}
+      class={button({ variant: 'outline', size: 'md' })}
+      data-sale-release
+    >
+      Liberar
+    </button>
+  </div>
+
+  <p
+    class="mt-3 text-center text-label text-subtle-foreground"
+    data-sale-hint
+    role="status"
+  >
+    Elegí números de la grilla.
+  </p>
+</form>

@@ -1,40 +1,56 @@
 ---
+/**
+ * Lo que se puede hacer con la rifa, arriba a la derecha del encabezado.
+ *
+ * Vive acá y no adentro de las pantallas por una restricción de Astro: un
+ * `slot="actions"` tiene que ser hijo DIRECTO de `<Dashboard>`. Si lo pusiera
+ * `Draft.astro`, ese slot apuntaría a quien llamó a `Draft` —la página— y no
+ * llegaría nunca al layout. Por eso el encabezado se queda en la página y los
+ * componentes por estado gobiernan el cuerpo.
+ *
+ * Recibe el mismo `EstadoDetalle` que decide el cuerpo, así que el botón de
+ * arriba y la pantalla de abajo no pueden contradecirse.
+ *
+ * El reparto (regla 2 — un solo vermellón por pantalla):
+ *   · borrador  → editar y publicar. Si falta el teléfono, publicar va APAGADO
+ *     diciendo el motivo (regla 7), y el único vermellón activo es el de la
+ *     tarjeta «Antes de publicar». Con todo listo, el vermellón es este, y la
+ *     tarjeta ya no repite el botón: el acto queda a la vista sin scrollear.
+ *   · en venta / cerrada → la acción es compartir el link.
+ *   · sin grilla → NADA. Compartir el link de una rifa sin números manda a la
+ *     gente a una página rota, y publicarla no tendría qué vender.
+ */
+import { actions } from 'astro:actions';
 import { Icon } from 'astro-icon/components';
 
-import CopyLink from '@/components/panel/CopyLink.astro';
 import { Button } from '@/components/starwind/button';
+import CopyLink from '@/components/ui/CopyLink.astro';
 import type { OwnerRaffle } from '@/types/raffle';
+import type { EstadoDetalle } from '@/utils/frontmatter/detail';
 import { publishHint } from '@/utils/frontmatter/detail';
 
 interface Props {
   raffle: OwnerRaffle;
-  /** `actions.raffle.publish`. */
-  publishAction: string;
+  estado: EstadoDetalle;
   /** El link público completo (`https://rifate.app/r/slug`). */
   publicUrl: string;
 }
 
-const { raffle, publishAction, publicUrl } = Astro.props;
+const { raffle, estado, publicUrl } = Astro.props;
 
-/* En borrador el encabezado tiene editar y publicar. Si falta el teléfono,
-   publicar va APAGADO diciendo el motivo (regla 7) y el único vermellón activo
-   es el de la tarjeta «Antes de publicar». Con todo listo, publicar acá arriba
-   es el único vermellón (regla 2) y la tarjeta ya no repite el botón — así el
-   acto queda a la vista sin scrollear, sobre todo en el celular. Publicada, la
-   acción es compartir. */
-const draft = raffle.status === 'DRAFT';
-const publishBlocked = publishHint(raffle);
-const editUrl = `/panel/rifa/${raffle.id}/editar`;
+/** Por qué no se puede publicar todavía, o `null` si se puede. */
+const blocked = publishHint(raffle);
+
 const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
   `${raffle.title} 👉 ${publicUrl}`,
 )}`;
 ---
 
 {
-  draft ? (
+  estado === 'borrador' && (
     <div class="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row sm:items-center">
       <Button
-        href={editUrl}
+        href={`/panel/rifa/${raffle.id}/editar`}
         variant="outline"
         size="md"
         class="w-full sm:w-auto"
@@ -43,7 +59,7 @@ const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
         Editar los datos
       </Button>
 
-      {publishBlocked ? (
+      {blocked ? (
         <Button
           type="button"
           variant="primary"
@@ -52,10 +68,14 @@ const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
           class="w-full sm:w-auto"
         >
           <Icon name="lucide:circle-alert" aria-hidden="true" />
-          {publishBlocked}
+          {blocked}
         </Button>
       ) : (
-        <form method="POST" action={publishAction} class="w-full sm:w-auto">
+        <form
+          method="POST"
+          action={actions.raffle.publish}
+          class="w-full sm:w-auto"
+        >
           <input type="hidden" name="id" value={raffle.id} />
           <Button
             type="submit"
@@ -69,13 +89,18 @@ const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
         </form>
       )}
     </div>
-  ) : (
+  )
+}
+
+{
+  (estado === 'en-venta' || estado === 'cerrada') && (
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
       <CopyLink
         class="w-full sm:w-auto"
         value={publicUrl}
         label={publicUrl.replace(/^https?:\/\//, '')}
       />
+
       <Button
         href={whatsappUrl}
         variant="primary"
