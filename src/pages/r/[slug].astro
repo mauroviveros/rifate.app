@@ -1,11 +1,16 @@
 ---
+import { Icon } from 'astro-icon/components';
+
 import Cell from '@/components/panel/detail/grid/Cell.astro';
 import Meter from '@/components/panel/Meter.astro';
 import Stat from '@/components/panel/Stat.astro';
+import { Button } from '@/components/starwind/button';
 import Public from '@/layouts/Public.astro';
 import { publicGrid } from '@/lib/raffles';
 import { pesos, progress, shortDate } from '@/utils/format';
+import { publicUrlOf } from '@/utils/frontmatter/detail';
 import { numberLabel, numberWidth } from '@/utils/frontmatter/numbers';
+import { localPhone, waLink } from '@/utils/whatsapp';
 
 const { slug } = Astro.params;
 if (!slug) return Astro.rewrite('/404');
@@ -35,6 +40,22 @@ Astro.response.headers.set(
 // caché y el DO es la verdad (mismo criterio que `tally`).
 const sold = numbers.filter(({ status }) => status === 'SOLD').length;
 const width = numberWidth(raffle.numberStart, raffle.totalNumbers);
+
+/**
+ * La compra de una rifa BASIC: un WhatsApp al organizador con el link de la
+ * rifa adentro, para que sepa de cuál le hablan. En una rifa cerrada ya no hay
+ * nada que comprar.
+ */
+const contact =
+  raffle.status !== 'CLOSED' && raffle.contactPhone !== null
+    ? {
+        url: waLink(
+          raffle.contactPhone,
+          `¡Hola! Quiero números de «${raffle.title}» 👉 ${publicUrlOf(raffle, Astro.site)}`,
+        ),
+        phone: localPhone(raffle.contactPhone),
+      }
+    : null;
 ---
 
 <Public
@@ -92,6 +113,27 @@ const width = numberWidth(raffle.numberStart, raffle.totalNumbers);
       class="col-span-2 sm:col-span-1"
     />
   </dl>
+
+  {
+    contact && (
+      <div class="mt-7 flex flex-col items-center gap-2 sm:items-start">
+        <Button
+          href={contact.url}
+          variant="primary"
+          size="lg"
+          target="_blank"
+          rel="noopener"
+          class="w-full sm:w-auto"
+        >
+          <Icon name="lucide:message-circle" aria-hidden="true" />
+          Pedir números por WhatsApp
+        </Button>
+        <p class="text-label text-subtle-foreground">
+          o escribile al <span data-numero>{contact.phone}</span>
+        </p>
+      </div>
+    )
+  }
 
   <section
     class="mt-7 rounded-xl bg-card p-4 ring-2 ring-border sm:p-6"

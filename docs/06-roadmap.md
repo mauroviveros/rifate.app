@@ -453,7 +453,7 @@ pnpm add -D prettier-plugin-tailwindcss
 > | ~~No hay cómo **editar** una rifa~~ | ✅ **hecho** — `/panel/rifa/[id]/editar` |
 > | ~~El panel `Sale` sigue interactivo en `CLOSED` / `CANCELLED`~~ | ✅ **imposible por construcción**: `estadoDetalle()` manda a `Closed.astro`, que no monta el panel. La guarda del DO sigue faltando |
 > | `estadoDe()` muestra `CANCELLED` como «Ya sorteada» en la tarjeta del listado | fase 9 |
-> | Teléfono del comprador en E.164 (`+54…`), no `11 4455-2211` como el canvas | `src/lib/whatsapp/` en la fase 7 |
+> | ~~Teléfono del comprador en E.164 (`+54…`), no `11 4455-2211` como el canvas~~ | ✅ `localPhone()` en `BuyerRow` |
 > | La celda `RESERVED` se rotula «· vendido» en el `sr-only` | fase 8 (ahí aparecen las reservas) |
 > | `buyers.note` quedó vestigial (la nota se lee de `numbers.note`); `upsertBuyer` tampoco la actualiza en un comprador que repite | limpiar si estorba |
 > | La Nota del formulario de venta siempre visible (el canvas no la tiene) | cosmético: plegarla en `<details>` si el form se siente largo |
@@ -634,9 +634,12 @@ pasaron con 244 tests en verde.
 - [ ] `/og/raffle/[id]/[v].png` — route que lee R2 (`og/{id}/{vendidos}.png`) y
       **cae al PNG fijo si no existe**. Se cablea aunque nadie suba nada
       todavía: es el gancho para el OG en vivo sin pasar a Paid (recuadro)
-- [ ] `src/lib/whatsapp/` — teléfono a formato local (`11 4455-2211`) y el `9`
-      de celular para el link `wa.me`. Deuda de la fase 6
-- [ ] Botón de contacto por WhatsApp
+- [x] ~~`src/lib/whatsapp/`~~ → **`src/utils/whatsapp/`**: no tiene dependencias
+      propias, y ese es el criterio de `lib/` vs `utils/` (ver «Transversal»).
+      `localPhone()` (`11 4455-2211`) y `waLink()`, que pone el `9` de celular.
+      El `15` cargado a mano («0341 15 555-1234») queda sin resolver: se arregla
+      en `normalize.phone`, que es lo que se guarda
+- [x] Botón de contacto por WhatsApp — en `/r/[slug]`, oculto en una rifa cerrada
 - [ ] **✅ Checkpoint: el link se ve bien en WhatsApp y el organizador baja una
       imagen del estado para mandar al grupo**
 

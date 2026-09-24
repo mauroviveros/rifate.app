@@ -3,6 +3,7 @@ import { Icon } from 'astro-icon/components';
 
 import { type BuyerGroup, previewNumbers } from '@/utils/frontmatter/detail';
 import { numberLabel } from '@/utils/frontmatter/numbers';
+import { localPhone } from '@/utils/whatsapp';
 
 interface Props {
   buyer: BuyerGroup;
@@ -37,7 +38,7 @@ const stub = shown.map(label).join(' · ');
                   class="shrink-0 text-label text-subtle-foreground"
                   data-numero
                 >
-                  {buyer.phone}
+                  {localPhone(buyer.phone)}
                 </span>
               )}
             </span>
@@ -88,7 +89,7 @@ const stub = shown.map(label).join(' · ');
               class="shrink-0 text-label text-subtle-foreground"
               data-numero
             >
-              {buyer.phone}
+              {localPhone(buyer.phone)}
             </span>
           )}
         </span>
