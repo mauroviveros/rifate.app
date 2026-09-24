@@ -22,6 +22,7 @@ export default defineConfig({
           'clock',
           'copy',
           'house',
+          'image-down',
           'loader-circle',
           'lock',
           'log-out',

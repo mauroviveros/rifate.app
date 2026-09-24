@@ -16,7 +16,8 @@
  *     diciendo el motivo (regla 7), y el único vermellón activo es el de la
  *     tarjeta «Antes de publicar». Con todo listo, el vermellón es este, y la
  *     tarjeta ya no repite el botón: el acto queda a la vista sin scrollear.
- *   · en venta / cerrada → la acción es compartir el link.
+ *   · en venta / cerrada → compartir: el link, y la imagen del estado para el
+ *     grupo. El vermellón es el de WhatsApp; la imagen va con borde.
  *   · sin grilla → NADA. Compartir el link de una rifa sin números manda a la
  *     gente a una página rota, y publicarla no tendría qué vender.
  */
@@ -25,18 +26,22 @@ import { Icon } from 'astro-icon/components';
 
 import { Button } from '@/components/starwind/button';
 import CopyLink from '@/components/ui/CopyLink.astro';
-import type { OwnerRaffle } from '@/types/raffle';
+import type { OwnerRaffle, PublicNumber } from '@/types/raffle';
 import type { EstadoDetalle } from '@/utils/frontmatter/detail';
-import { publishHint } from '@/utils/frontmatter/detail';
+import { publishHint, shareImageInput } from '@/utils/frontmatter/detail';
+
+import ShareImage from './ShareImage.astro';
 
 interface Props {
   raffle: OwnerRaffle;
   estado: EstadoDetalle;
   /** El link público completo (`https://rifate.app/r/slug`). */
   publicUrl: string;
+  /** La grilla, para la imagen del estado. Sólo se usa número y estado. */
+  numbers: PublicNumber[];
 }
 
-const { raffle, estado, publicUrl } = Astro.props;
+const { raffle, estado, publicUrl, numbers } = Astro.props;
 
 /** Por qué no se puede publicar todavía, o `null` si se puede. */
 const blocked = publishHint(raffle);
@@ -99,6 +104,12 @@ const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
         class="w-full sm:w-auto"
         value={publicUrl}
         label={publicUrl.replace(/^https?:\/\//, '')}
+      />
+
+      <ShareImage
+        class="w-full sm:w-auto"
+        input={shareImageInput(raffle, numbers)}
+        filename={raffle.slug}
       />
 
       <Button

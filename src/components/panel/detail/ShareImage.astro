@@ -1,0 +1,154 @@
+---
+/**
+ * El botón que arma la imagen del estado de la rifa para mandar al grupo.
+ *
+ * Todo pasa en el navegador del organizador: `gridSvg()` → `<img>` → canvas →
+ * PNG. El Worker no gasta CPU (docs/06 · fase 7). Si el navegador sabe
+ * compartir archivos —el celular, casi siempre—, la imagen va directo al menú
+ * de compartir, WhatsApp incluido; si no, se descarga.
+ *
+ * La imagen se arma apenas carga la página, en un momento ocioso, y no al
+ * tocar: Safari sólo deja llamar a `navigator.share()` pegado al toque, y
+ * rasterizar en el medio puede hacerle perder ese permiso.
+ */
+import { Icon } from 'astro-icon/components';
+
+import { Button } from '@/components/starwind/button';
+import type { GridSvgInput } from '@/utils/grid-svg';
+
+interface Props {
+  input: GridSvgInput;
+  /** El nombre del archivo, sin extensión. */
+  filename: string;
+  class?: string;
+}
+
+const { input, filename, class: className } = Astro.props;
+---
+
+<div
+  class={className}
+  data-share-image
+  data-grid={JSON.stringify(input)}
+  data-filename={`${filename}.png`}
+>
+  <Button
+    type="button"
+    variant="outline"
+    size="md"
+    class="w-full"
+    data-share-button
+  >
+    <Icon name="lucide:image-down" aria-hidden="true" />
+    <span data-share-label>Bajar la imagen</span>
+  </Button>
+
+  <span class="sr-only" role="status" data-share-status></span>
+</div>
+
+<script>
+  // Directo del módulo y no de un barril: esto va al bundle del navegador.
+  import { gridSvg, type GridSvgInput } from '@/utils/grid-svg';
+
+  /** SVG → `<img>` → canvas → PNG. */
+  const toPng = async (input: GridSvgInput): Promise<Blob> => {
+    const { svg, width, height } = gridSvg(input);
+
+    const $img = new Image();
+    $img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    await $img.decode();
+
+    const $canvas = document.createElement('canvas');
+    $canvas.width = width;
+    $canvas.height = height;
+    $canvas.getContext('2d')?.drawImage($img, 0, 0);
+
+    return new Promise((resolve, reject) => {
+      $canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('toBlob'))),
+        'image/png',
+      );
+    });
+  };
+
+  const download = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const $link = document.createElement('a');
+    $link.href = url;
+    $link.download = file.name;
+    $link.click();
+    // Revocarlo en el mismo tick corta la descarga en algunos navegadores.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const whenIdle = (fn: () => void) => {
+    if ('requestIdleCallback' in window) requestIdleCallback(fn);
+    else setTimeout(fn, 200);
+  };
+
+  for (const $box of document.querySelectorAll<HTMLDivElement>(
+    '[data-share-image]',
+  )) {
+    const $button = $box.querySelector<HTMLButtonElement>(
+      '[data-share-button]',
+    );
+    const $label = $box.querySelector<HTMLSpanElement>('[data-share-label]');
+    const $status = $box.querySelector<HTMLSpanElement>('[data-share-status]');
+    const input = JSON.parse($box.dataset.grid ?? '{}') as GridSvgInput;
+    const name = $box.dataset.filename ?? 'rifa.png';
+
+    if (!$button) continue;
+
+    let pending: Promise<File> | null = null;
+    const prepare = (): Promise<File> => {
+      pending ??= toPng(input).then(
+        (blob) => new File([blob], name, { type: 'image/png' }),
+      );
+      return pending;
+    };
+
+    // Se prueba con un archivo vacío del mismo tipo: `canShare` mira el tipo,
+    // no el contenido, y así la etiqueta queda bien antes de armar nada.
+    const canShareFiles =
+      navigator.canShare?.({
+        files: [new File([''], name, { type: 'image/png' })],
+      }) ?? false;
+
+    if (canShareFiles && $label) $label.textContent = 'Compartir la imagen';
+
+    whenIdle(() => {
+      prepare().catch(() => {
+        pending = null; // que el toque lo reintente
+      });
+    });
+
+    $button.addEventListener('click', async () => {
+      $button.disabled = true;
+
+      try {
+        const png = await prepare();
+
+        if (canShareFiles) {
+          try {
+            await navigator.share({ files: [png] });
+            return;
+          } catch (error) {
+            // Cerró el menú sin elegir nada: no es un error.
+            if (error instanceof DOMException && error.name === 'AbortError')
+              return;
+            // NotAllowedError: el navegador ya no lo cuenta como un toque.
+            // Queda la descarga.
+          }
+        }
+
+        download(png);
+        if ($status) $status.textContent = 'Imagen descargada';
+      } catch {
+        pending = null;
+        if ($status) $status.textContent = 'No se pudo armar la imagen';
+      } finally {
+        $button.disabled = false;
+      }
+    });
+  }
+</script>

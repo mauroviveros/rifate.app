@@ -27,6 +27,7 @@ export {
   publishHint,
 } from './publish';
 export { selectedNumbers } from './selection';
+export { shareImageInput } from './share-image';
 export { subtitleOf } from './subtitle';
 export type { Tally } from './tally';
 export { tally } from './tally';

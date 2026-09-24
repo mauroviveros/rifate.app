@@ -620,14 +620,21 @@ pasaron con 244 tests en verde.
 > estado que el organizador baja y manda al grupo — en WhatsApp una imagen se
 > mira y un link se ignora.
 
-- [ ] `/r/[slug]` con `Cache-Control: s-maxage=30, stale-while-revalidate=300`
-- [ ] Grilla pública (sólo número y estado)
-- [ ] El `<svg>` de la grilla (título · barra de progreso · celdas por estado)
-      en un módulo compartido — alimenta las dos salidas de abajo
-- [ ] **Imagen del estado para compartir** — botón en `/panel/rifa/[id]`: arma
-      el SVG → `canvas.drawImage()` → `toBlob()` → descarga el PNG, **todo en el
-      navegador del organizador**. Cero CPU de Worker. Es el artefacto que más
-      se usa. → artboard pendiente de sumar al canvas
+- [x] `/r/[slug]` con `Cache-Control: s-maxage=30, stale-while-revalidate=300`
+      — **sólo** en PUBLISHED y CLOSED; el borrador que previsualiza el dueño
+      sale `private, no-store`
+- [x] Grilla pública (sólo número y estado) — en HTML con la `Cell` del panel,
+      no con el SVG: a 1080 de ancho, en un celular los números quedarían de
+      11px (regla 1)
+- [x] El `<svg>` de la grilla (título · barra de progreso · celdas por estado)
+      en un módulo compartido — `src/utils/grid-svg.ts`. Alimenta la imagen
+      para compartir y, más adelante, el OG subido a R2
+- [x] **Imagen del estado para compartir** — `ShareImage.astro` en las acciones
+      del detalle: SVG → `canvas.drawImage()` → `toBlob()`, **todo en el
+      navegador del organizador**. Si el navegador comparte archivos, abre el
+      menú nativo (WhatsApp incluido); si no, descarga. → artboard pendiente de
+      sumar al canvas. Sale con la fuente del sistema: un SVG como `<img>` no
+      ve las de la página
 - [ ] **OG fijo** — un PNG de marca versionado en el repo; `SocialMeta.astro` lo
       referencia igual para toda rifa. El `og:title` y la bajada sí son los
       reales de cada una
