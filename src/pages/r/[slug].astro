@@ -1,0 +1,123 @@
+---
+import Cell from '@/components/panel/detail/grid/Cell.astro';
+import Meter from '@/components/panel/Meter.astro';
+import Stat from '@/components/panel/Stat.astro';
+import Public from '@/layouts/Public.astro';
+import { publicGrid } from '@/lib/raffles';
+import { pesos, progress, shortDate } from '@/utils/format';
+import { numberLabel, numberWidth } from '@/utils/frontmatter/numbers';
+
+const { slug } = Astro.params;
+if (!slug) return Astro.rewrite('/404');
+
+/**
+ * Un slug inexistente y un borrador ajeno se ven igual: un 404. La regla de
+ * quién ve qué vive en `getPublicRaffleBySlug`.
+ */
+const loaded = await publicGrid(Astro.locals.actor, slug);
+if (!loaded) return Astro.rewrite('/404');
+const { raffle, numbers } = loaded;
+
+/**
+ * Sólo lo que ve todo el mundo se cachea. El borrador (o la cancelada) que
+ * previsualiza su dueño es una respuesta que depende de la sesión: si un caché
+ * compartido la guardara, se la serviría al próximo que pida el link.
+ */
+const isPublic = raffle.status === 'PUBLISHED' || raffle.status === 'CLOSED';
+Astro.response.headers.set(
+  'Cache-Control',
+  isPublic
+    ? 'public, s-maxage=30, stale-while-revalidate=300'
+    : 'private, no-store',
+);
+
+// Se cuenta sobre la grilla y no sobre `raffle.soldCount`: la fila de D1 es el
+// caché y el DO es la verdad (mismo criterio que `tally`).
+const sold = numbers.filter(({ status }) => status === 'SOLD').length;
+const width = numberWidth(raffle.numberStart, raffle.totalNumbers);
+---
+
+<Public
+  title={`${raffle.title} · rifate.app`}
+  description={raffle.prize ??
+    raffle.description ??
+    'Mirá qué números quedan libres.'}
+>
+  {
+    !isPublic && (
+      <p class="mb-6 rounded-lg bg-warning px-5 py-4 text-support font-bold text-foreground">
+        Borrador · Así la va a ver la gente cuando la publiques. Por ahora sólo
+        la ves vos.
+      </p>
+    )
+  }
+
+  <hgroup>
+    <h1 class="text-[2.25rem] text-balance sm:text-display">{raffle.title}</h1>
+    {
+      raffle.prize && (
+        <p class="mt-2 text-body font-bold text-foreground">
+          Premio: {raffle.prize}
+        </p>
+      )
+    }
+    {
+      raffle.description && (
+        <p class="mt-2 text-body text-pretty text-muted-foreground">
+          {raffle.description}
+        </p>
+      )
+    }
+  </hgroup>
+
+  <!-- TODO: Mostrar el ganador -->
+  {
+    raffle.status === 'CLOSED' && raffle.winnerNumber !== null && (
+      <p class="mt-6 rounded-lg bg-foreground px-5 py-4 text-body font-extrabold text-background">
+        Ganó el número{' '}
+        <span class="text-warning" data-numero>
+          {numberLabel(raffle.winnerNumber, width)}
+        </span>
+        {raffle.winnerName && <> · {raffle.winnerName}</>}
+      </p>
+    )
+  }
+
+  <dl class="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <Stat label="Cada número">{pesos(raffle.ticketPrice)}</Stat>
+    <Stat label="Sortea el">{shortDate(raffle.drawDate)}</Stat>
+    <Meter
+      label={`${sold} de ${numbers.length} vendidos`}
+      value={progress(sold, numbers.length)}
+      class="col-span-2 sm:col-span-1"
+    />
+  </dl>
+
+  <section
+    class="mt-7 rounded-xl bg-card p-4 ring-2 ring-border sm:p-6"
+    aria-labelledby="grid-title"
+  >
+    <h2 id="grid-title" class="text-[1.25rem]">Los números</h2>
+    <p class="mt-0.5 text-label text-subtle-foreground">
+      Los tachados ya se vendieron.
+    </p>
+
+    {
+      numbers.length > 0 ? (
+        <div
+          class="mt-4 grid grid-cols-5 gap-1.5 sm:grid-cols-10 sm:gap-1"
+          role="group"
+          aria-label="Números de la rifa"
+        >
+          {numbers.map(({ number, status }) => (
+            <Cell value={number} status={status} width={width} />
+          ))}
+        </div>
+      ) : (
+        <p class="mt-4 text-support text-muted-foreground">
+          La grilla todavía no está lista. Probá de nuevo en un rato.
+        </p>
+      )
+    }
+  </section>
+</Public>

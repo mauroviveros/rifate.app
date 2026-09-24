@@ -11,6 +11,7 @@ import type { NewRaffle } from '@/types/raffle';
 import {
   createRaffleWithGrid,
   ownerGrid,
+  publicGrid,
   publishRaffle,
   rebuildGrid,
   releaseNumbers,
@@ -197,6 +198,59 @@ describe('ownerGrid', () => {
 
     expect(raffle.title).toBe('Rifa del Club');
     expect(numbers).toEqual([]);
+  });
+});
+
+describe('publicGrid', () => {
+  it('una rifa publicada la ve cualquiera, con número y estado y nada más', async () => {
+    const { id, slug } = await createFor('ana');
+    await publishRaffle(env.DB, env.RAFFLE, organizer('ana'), id);
+
+    const loaded = await publicGrid(env.DB, env.RAFFLE, visitor, slug);
+
+    expect(loaded?.raffle.title).toBe('Rifa del Club');
+    expect(loaded?.numbers).toHaveLength(100);
+    expect(Object.keys(loaded?.numbers[0] ?? {}).sort()).toEqual([
+      'number',
+      'status',
+    ]);
+  });
+
+  it('un borrador no existe para el visitante', async () => {
+    const { slug } = await createFor('ana');
+
+    expect(await publicGrid(env.DB, env.RAFFLE, visitor, slug)).toBeNull();
+  });
+
+  it('ni para otro organizador', async () => {
+    const { slug } = await createFor('ana');
+
+    expect(
+      await publicGrid(env.DB, env.RAFFLE, organizer('beto'), slug),
+    ).toBeNull();
+  });
+
+  it('el dueño previsualiza su borrador', async () => {
+    const { slug } = await createFor('ana');
+
+    const loaded = await publicGrid(env.DB, env.RAFFLE, organizer('ana'), slug);
+
+    expect(loaded?.raffle.status).toBe('DRAFT');
+    expect(loaded?.numbers).toHaveLength(100);
+  });
+
+  it('un slug que no existe es null', async () => {
+    expect(
+      await publicGrid(env.DB, env.RAFFLE, visitor, 'no-existe'),
+    ).toBeNull();
+  });
+
+  it('rifa huérfana: la fila sin grilla devuelve la lista vacía', async () => {
+    const { slug } = await createRaffle(env.DB, organizer('ana'), NEW_RAFFLE);
+
+    const loaded = await publicGrid(env.DB, env.RAFFLE, organizer('ana'), slug);
+
+    expect(loaded?.numbers).toEqual([]);
   });
 });
 

@@ -9,29 +9,31 @@
  * de `@cloudflare/vitest-pool-workers`. El que los resuelve es `./bound.ts`.
  */
 
+// Del repositorio y no del barril de `../db`: este módulo recibe el `db` por
+// parámetro (y también el namespace del DO), así que está del lado de adentro
+// del límite que arma `src/lib/db/index.ts`, no del lado de las páginas.
+import type { Actor } from '@/lib/auth/actor';
+import { userIdOf } from '@/lib/auth/actor';
+import type { RaffleDetailsInput, RaffleRangeInput } from '@/lib/db/raffles';
+import {
+  createRaffle,
+  getOwnRaffle,
+  getPublicRaffleBySlug,
+  markPublished,
+  setContactPhone,
+  updateRaffle,
+} from '@/lib/db/raffles';
 import type {
   BuyerInput,
   NewRaffle,
   OwnerNumber,
   OwnerRaffle,
+  PublicNumber,
+  PublicRaffle,
   RaffleUpdate,
   SellResult,
 } from '@/types/raffle';
 import { AppError, codeOf } from '@/utils/errors';
-
-import type { Actor } from '../auth/actor';
-import { userIdOf } from '../auth/actor';
-import type { RaffleDetailsInput, RaffleRangeInput } from '../db/raffles';
-// Del repositorio y no del barril de `../db`: este módulo recibe el `db` por
-// parámetro (y también el namespace del DO), así que está del lado de adentro
-// del límite que arma `src/lib/db/index.ts`, no del lado de las páginas.
-import {
-  createRaffle,
-  getOwnRaffle,
-  markPublished,
-  setContactPhone,
-  updateRaffle,
-} from '../db/raffles';
 
 type RaffleNamespace = Env['RAFFLE'];
 
@@ -140,6 +142,32 @@ export const ownerGrid = async (
       if (codeOf(error) === 'FORBIDDEN') return [];
       throw error;
     });
+
+  return { raffle, numbers };
+};
+
+/**
+ * La página pública: la fila de D1 más la grilla de sólo número y estado.
+ *
+ * D1 va primero por la misma razón que en `ownerGrid`: un slug inexistente, o
+ * un borrador que mira alguien que no es el dueño, sale acá con `null` y no
+ * despierta el Durable Object. La regla de quién ve qué la pone
+ * `getPublicRaffleBySlug`; este flujo no la repite.
+ *
+ * Una rifa huérfana (fila sin grilla) devuelve la lista vacía: `publicGrid()`
+ * no tiene `assertOwner`, así que un objeto sin `init()` no falla, sólo no
+ * tiene números. La página decide qué mostrar en ese caso.
+ */
+export const publicGrid = async (
+  db: D1Database,
+  raffles: RaffleNamespace,
+  actor: Actor,
+  slug: string,
+): Promise<{ raffle: PublicRaffle; numbers: PublicNumber[] } | null> => {
+  const raffle = await getPublicRaffleBySlug(db, actor, slug);
+  if (raffle === null) return null;
+
+  const numbers = await raffles.getByName(raffle.id).publicGrid();
 
   return { raffle, numbers };
 };

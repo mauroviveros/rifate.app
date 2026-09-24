@@ -32,6 +32,7 @@ export const createRaffleWithGrid = withDbAndRaffles(
 );
 export const publishRaffle = withDbAndRaffles(flows.publishRaffle);
 export const ownerGrid = withDbAndRaffles(flows.ownerGrid);
+export const publicGrid = withDbAndRaffles(flows.publicGrid);
 export const updateRaffleDetails = withDbAndRaffles(flows.updateRaffleDetails);
 export const rebuildGrid = withDbAndRaffles(flows.rebuildGrid);
 

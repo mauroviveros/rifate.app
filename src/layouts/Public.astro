@@ -1,0 +1,31 @@
+---
+import Brand from '@/layouts/components/brand';
+import Layout, { type Props as LayoutProps } from '@/layouts/Layout.astro';
+
+export type Props = LayoutProps;
+const { title, description, class: className, ...props } = Astro.props;
+---
+
+<Layout
+  title={title}
+  description={description}
+  class:list={['min-h-dvh trama', className]}
+  {...props}
+>
+  <header class="mx-auto flex max-w-3xl items-center px-5 py-5 sm:px-8">
+    <Brand size="md" href="/" />
+  </header>
+
+  <main class="mx-auto max-w-3xl px-5 pb-10 sm:px-8">
+    <slot />
+  </main>
+
+  <footer class="mx-auto max-w-3xl px-5 pb-11 sm:px-8">
+    <p
+      class="border-t-2 border-border pt-7 text-center text-support text-subtle-foreground"
+    >
+      Hecha con <a href="/" class="font-extrabold text-foreground">rifate.app</a
+      > · armá la tuya gratis
+    </p>
+  </footer>
+</Layout>
