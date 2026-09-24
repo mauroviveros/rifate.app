@@ -635,9 +635,10 @@ pasaron con 244 tests en verde.
       menú nativo (WhatsApp incluido); si no, descarga. → artboard pendiente de
       sumar al canvas. Sale con la fuente del sistema: un SVG como `<img>` no
       ve las de la página
-- [ ] **OG fijo** — un PNG de marca versionado en el repo; `SocialMeta.astro` lo
-      referencia igual para toda rifa. El `og:title` y la bajada sí son los
-      reales de cada una
+- [x] **OG fijo** — `public/og/default.png` (la «OG E · Fija» del canvas; la
+      fuente editable es `docs/assets/og-default.svg`). `SocialMeta.astro`, montado
+      en `Layout`, la pone en toda página; el `og:title` y la bajada sí son los
+      de cada una. En `/r/[slug]` la bajada es premio · precio · fecha
 - [ ] `/og/raffle/[id]/[v].png` — route que lee R2 (`og/{id}/{vendidos}.png`) y
       **cae al PNG fijo si no existe**. Se cablea aunque nadie suba nada
       todavía: es el gancho para el OG en vivo sin pasar a Paid (recuadro)

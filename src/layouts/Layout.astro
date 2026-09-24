@@ -4,6 +4,8 @@ import '@/styles/global.css';
 import type { HTMLAttributes } from 'astro/types';
 import { Font } from 'astro:assets';
 
+import Social from './components/Social.astro';
+
 export interface Props extends HTMLAttributes<'body'> {
   title: string;
   description?: string;
@@ -23,6 +25,7 @@ const { title, description, class: className, ...props } = Astro.props;
 
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
+    <Social title={title} description={description} />
 
     <Font cssVariable="--googlefont-bricolage" />
     <Font cssVariable="--googlefont-figtree" preload />

@@ -1,0 +1,40 @@
+---
+/**
+ * Las etiquetas que leen WhatsApp, Telegram y compañía para armar la vista
+ * previa de un link.
+ *
+ * La imagen es la MISMA para todas las páginas: `public/og/default.png`, la
+ * «OG E · Fija» del canvas. Lo que cambia por página es el título y la bajada,
+ * que el crawler muestra debajo de la imagen. Por qué todavía no es una por
+ * rifa: docs/06 · fase 7.
+ *
+ * Las URLs van absolutas y contra `Astro.site`: el crawler no resuelve rutas
+ * relativas, y no ejecuta JavaScript, así que lo que no esté acá no existe.
+ */
+interface Props {
+  title: string;
+  description?: string | undefined;
+}
+
+const { title, description } = Astro.props;
+
+const base = Astro.site ?? Astro.url;
+const url = new URL(Astro.url.pathname, base).href;
+const image = new URL('/og/default.png', base).href;
+---
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="rifate.app" />
+<meta property="og:locale" content="es_AR" />
+<meta property="og:url" content={url} />
+<meta property="og:title" content={title} />
+{description && <meta property="og:description" content={description} />}
+<meta property="og:image" content={image} />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta
+  property="og:image:alt"
+  content="rifate.app · Mirá qué números quedan libres"
+/>
+<meta name="twitter:card" content="summary_large_image" />

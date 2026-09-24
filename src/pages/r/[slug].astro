@@ -56,14 +56,21 @@ const contact =
         phone: localPhone(raffle.contactPhone),
       }
     : null;
+
+/**
+ * La bajada de la vista previa en WhatsApp: lo que la imagen fija no puede
+ * decir de ESTA rifa. El premio primero, porque es lo que hace tocar el link.
+ */
+const summary = [
+  raffle.prize && `Premio: ${raffle.prize}`,
+  `Cada número ${pesos(raffle.ticketPrice)}`,
+  `Sortea el ${shortDate(raffle.drawDate)}`,
+]
+  .filter(Boolean)
+  .join(' · ');
 ---
 
-<Public
-  title={`${raffle.title} · rifate.app`}
-  description={raffle.prize ??
-    raffle.description ??
-    'Mirá qué números quedan libres.'}
->
+<Public title={`${raffle.title} · rifate.app`} description={summary}>
   {
     !isPublic && (
       <p class="mb-6 rounded-lg bg-warning px-5 py-4 text-support font-bold text-foreground">
