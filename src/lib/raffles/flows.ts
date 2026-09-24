@@ -9,12 +9,12 @@
  * de `@cloudflare/vitest-pool-workers`. El que los resuelve es `./bound.ts`.
  */
 
-// Del repositorio y no del barril de `../db`: este módulo recibe el `db` por
-// parámetro (y también el namespace del DO), así que está del lado de adentro
-// del límite que arma `src/lib/db/index.ts`, no del lado de las páginas.
 import type { Actor } from '@/lib/auth/actor';
 import { userIdOf } from '@/lib/auth/actor';
 import type { RaffleDetailsInput, RaffleRangeInput } from '@/lib/db/raffles';
+// Del repositorio y no del barril de `../db`: este módulo recibe el `db` por
+// parámetro (y también el namespace del DO), así que está del lado de adentro
+// del límite que arma `src/lib/db/index.ts`, no del lado de las páginas.
 import {
   createRaffle,
   getOwnRaffle,
