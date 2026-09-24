@@ -42,13 +42,11 @@ interface Props {
 }
 
 const { raffle, estado, publicUrl, numbers } = Astro.props;
-
 /** Por qué no se puede publicar todavía, o `null` si se puede. */
 const blocked = publishHint(raffle);
-
-const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
-  `${raffle.title} 👉 ${publicUrl}`,
-)}`;
+/** Lo que acompaña al link y a la imagen cuando se comparten. */
+const shareText = `${raffle.title} 👉 ${publicUrl}`;
+const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 ---
 
 {

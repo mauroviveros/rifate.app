@@ -1,10 +1,10 @@
 /**
- * La grilla de una rifa dibujada como SVG: título, barra de avance y una celda
- * por número.
+ * La grilla de una rifa dibujada como SVG: título, barra de avance, una celda
+ * por número y, si se la pide, una franja al pie con precio, fecha y contacto.
  *
  * Existe porque la grilla tiene DOS salidas que tienen que verse igual: la
- * página pública (`/r/[slug]`) y la imagen que el organizador baja para
- * mandar al grupo (SVG → canvas → PNG, todo en su navegador). Si cada una la
+ * imagen que el organizador baja para mandar al grupo (SVG → canvas → PNG,
+ * va todo en su navegador) y, más adelante, el OG en vivo. Si cada una la
  * dibujara por su cuenta se irían separando; acá vive el único dibujo.
  *
  * Los colores van en hex y no como `var(--…)`: la imagen se rasteriza desde un
@@ -34,6 +34,7 @@ const COLOR = {
     text: '#A7A192',
     slash: '#BEB5A2',
   },
+  footer: { price: '#F5C544', muted: '#BFBAAC', text: '#F5EEE0' },
 } as const;
 
 /** 64 + 10 × 88 + 9 × 8 + 64 = 1080: el ancho que WhatsApp no recomprime. */
@@ -51,10 +52,29 @@ const GRID_TOP = 260;
 /** Lo que entra en una línea a 52px sin salirse de los 952 de ancho útil. */
 const TITLE_MAX = 30;
 
+/** El alto de la franja del pie: dos renglones con teléfono, uno sin. */
+const FOOTER_WITH_CONTACT = 150;
+const FOOTER_WITHOUT_CONTACT = 100;
+
+/**
+ * Lo que dice la franja del pie, YA formateado: esta función dibuja, no
+ * formatea. Lo arma `shareImageInput`, que corre en el servidor.
+ */
+export type GridSvgFooter = {
+  /** El precio de un número: `$2.500`. */
+  price: string;
+  /** La fecha del sorteo: `20 dic`. */
+  drawDate: string;
+  /** El teléfono del organizador como se lee (`11 4455-2211`), o `null`. */
+  contact: string | null;
+};
+
 export type GridSvgInput = {
   title: string;
   numberStart: number;
   numbers: PublicNumber[];
+  /** La franja del pie, para la imagen que circula sola. Sin ella no se dibuja. */
+  footer?: GridSvgFooter;
 };
 
 export type GridSvg = {
@@ -102,10 +122,37 @@ const cell = (item: PublicNumber, index: number, width: number): string => {
   return box + slash + label;
 };
 
+const footerHeight = (footer: GridSvgFooter | undefined): number =>
+  footer === undefined
+    ? 0
+    : footer.contact === null
+      ? FOOTER_WITHOUT_CONTACT
+      : FOOTER_WITH_CONTACT;
+
+/**
+ * La franja de tinta del pie, como la «OG D · Mínimo» del canvas: el precio en
+ * amarillo, y abajo a quién pedírselo. El teléfono va dibujado y no el link
+ * porque un link en una imagen no se toca; el link lo manda el botón
+ * «Compartir por WhatsApp», que está al lado.
+ */
+const footerBand = (footer: GridSvgFooter, y: number): string => {
+  const band = `<rect x="0" y="${y}" width="${WIDTH}" height="${footerHeight(footer)}" fill="${COLOR.ink}"/>`;
+
+  const terms = `<text x="${PAD}" y="${y + 62}" font-size="32" font-weight="600" fill="${COLOR.footer.muted}"><tspan font-weight="800" fill="${COLOR.footer.price}">${escapeXml(footer.price)}</tspan> por número · Sortea el ${escapeXml(footer.drawDate)}</text>`;
+
+  const contact =
+    footer.contact === null
+      ? ''
+      : `<text x="${PAD}" y="${y + 112}" font-size="30" font-weight="700" fill="${COLOR.footer.text}">Pedí el tuyo por WhatsApp al ${escapeXml(footer.contact)}</text>`;
+
+  return band + terms + contact;
+};
+
 export const gridSvg = ({
   title,
   numberStart,
   numbers,
+  footer,
 }: GridSvgInput): GridSvg => {
   const total = numbers.length;
   const sold = numbers.filter(({ status }) => status === 'SOLD').length;
@@ -113,7 +160,8 @@ export const gridSvg = ({
   const width = numberWidth(numberStart, total);
 
   const rows = Math.ceil(total / COLS);
-  const height = GRID_TOP + rows * CELL + Math.max(0, rows - 1) * GAP + PAD;
+  const gridBottom = GRID_TOP + rows * CELL + Math.max(0, rows - 1) * GAP;
+  const height = gridBottom + PAD + footerHeight(footer);
 
   const barFill =
     pct > 0
@@ -128,6 +176,7 @@ export const gridSvg = ({
     `<rect x="${PAD}" y="${BAR_Y}" width="${INNER_WIDTH}" height="${BAR_HEIGHT}" rx="10" fill="${COLOR.track}"/>`,
     barFill,
     ...numbers.map((item, index) => cell(item, index, width)),
+    footer ? footerBand(footer, gridBottom + PAD) : '',
     '</svg>',
   ].join('');
 

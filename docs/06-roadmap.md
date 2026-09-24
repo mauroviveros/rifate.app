@@ -635,6 +635,11 @@ pasaron con 244 tests en verde.
       menú nativo (WhatsApp incluido); si no, descarga. → artboard pendiente de
       sumar al canvas. Sale con la fuente del sistema: un SVG como `<img>` no
       ve las de la página
+- [x] **Pie de la imagen** — precio, fecha del sorteo y el WhatsApp del
+      organizador en una franja de tinta: la imagen circula sola, y un link
+      dibujado no se puede tocar. ~~El link viaja como texto al compartir~~ →
+      compartir `{ files, text }` duplicaba la imagen al usar «Copiar»; se
+      comparte sólo el archivo, y el link va por «Compartir por WhatsApp»
 - [x] **OG fijo** — `public/og/default.png` (la «OG E · Fija» del canvas; la
       fuente editable es `docs/assets/og-default.svg`). `SocialMeta.astro`, montado
       en `Layout`, la pone en toda página; el `og:title` y la bajada sí son los

@@ -101,3 +101,59 @@ describe('gridSvg', () => {
     expect(svg).not.toContain('fill="#1B6E45"');
   });
 });
+
+describe('gridSvg · la franja del pie', () => {
+  const footer = {
+    price: '$2.500',
+    drawDate: '20 dic',
+    contact: '11 4455-2211',
+  };
+
+  it('sin franja, la imagen queda como antes', () => {
+    const { svg, height } = gridSvg({
+      title: 'Club',
+      numberStart: 1,
+      numbers: numbersOf(100),
+    });
+
+    expect(height).toBe(1276);
+    expect(svg).not.toContain('por número');
+  });
+
+  it('con teléfono suma dos renglones: 150 más de alto', () => {
+    const { svg, height } = gridSvg({
+      title: 'Club',
+      numberStart: 1,
+      numbers: numbersOf(100),
+      footer,
+    });
+
+    expect(height).toBe(1276 + 150);
+    expect(svg).toContain('$2.500');
+    expect(svg).toContain('por número · Sortea el 20 dic');
+    expect(svg).toContain('Pedí el tuyo por WhatsApp al 11 4455-2211');
+  });
+
+  it('sin teléfono es más baja y no invita a escribir', () => {
+    const { svg, height } = gridSvg({
+      title: 'Club',
+      numberStart: 1,
+      numbers: numbersOf(100),
+      footer: { ...footer, contact: null },
+    });
+
+    expect(height).toBe(1276 + 100);
+    expect(svg).not.toContain('Pedí el tuyo');
+  });
+
+  it('el pie también se escapa', () => {
+    const { svg } = gridSvg({
+      title: 'Club',
+      numberStart: 1,
+      numbers: numbersOf(5),
+      footer: { ...footer, drawDate: '<b>' },
+    });
+
+    expect(svg).toContain('Sortea el &lt;b&gt;');
+  });
+});
