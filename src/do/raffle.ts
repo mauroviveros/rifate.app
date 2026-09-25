@@ -28,6 +28,24 @@ const MAX_NUMEROS_POR_OPERACION = 50;
 const PUBLICO = 'public';
 
 /**
+ * Cuántos pueden mirar una rifa a la vez. Una rifa real, compartida en grupos
+ * de WhatsApp, tiene decenas mirando; mil es holgura, no un número de diseño.
+ *
+ * El tope no es por plata —una conexión quieta hibernada no factura—, es por
+ * el organizador: cada venta le manda la grilla a todos los que miran, y con
+ * decenas de miles de sockets truchos su venta tardaría más. El que queda
+ * afuera no pierde la página, sólo el vivo: ve la grilla del HTML y
+ * `liveGrid` reintenta más tarde.
+ */
+export const MAX_ESPECTADORES = 1000;
+
+/**
+ * El código con el que se corta a un socket que habla. Es el 1008 del
+ * protocolo: violación de política.
+ */
+export const SOLO_ESCUCHA = 1008;
+
+/**
  * LA CONVENCIÓN QUE HAY QUE SOSTENER EN ESTE ARCHIVO
  *
  *   Todo método que empieza con `owner`, o que escribe, recibe `userId` como
@@ -153,6 +171,13 @@ export class Raffle extends DurableObject<Env> {
       return new Response('No existe', { status: 404 });
     }
 
+    if (this.ctx.getWebSockets(PUBLICO).length >= MAX_ESPECTADORES) {
+      return new Response('Hay demasiada gente mirando', {
+        status: 503,
+        headers: { 'Retry-After': '30' },
+      });
+    }
+
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server, [PUBLICO]);
     server.send(this.gridMessage());
@@ -162,12 +187,19 @@ export class Raffle extends DurableObject<Env> {
 
   /**
    * Los visitantes sólo escuchan. El `ping` lo contesta el runtime sin llegar
-   * acá (ver el constructor), y cualquier otra cosa se ignora.
+   * acá (ver el constructor), así que si algo llega a este método no lo mandó
+   * `liveGrid`: se lo corta.
+   *
+   * Ignorarlo no alcanzaba. Cada mensaje que llega acá despierta al objeto, y
+   * eso es duración facturada y un request cada 20 mensajes: un script que
+   * manda basura todo el día lo tendría despierto todo el día.
    *
    * El cierre no necesita handler: desde la compatibility_date 2026-04-07
    * (`web_socket_auto_reply_to_close`) el runtime contesta el Close solo.
    */
-  webSocketMessage(): void {}
+  webSocketMessage(ws: WebSocket): void {
+    ws.close(SOLO_ESCUCHA, 'Este canal sólo se escucha');
+  }
 
   // ══ SUPERFICIE DEL ORGANIZADOR ══════════════════════════════════════════
   // Todas exigen userId y todas empiezan con assertOwner.

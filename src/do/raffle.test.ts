@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { LiveMessage, RaffleInit } from '@/types/raffle';
 import { LIVE_GONE } from '@/utils/live';
 
-import type { Raffle } from './raffle';
+import { MAX_ESPECTADORES, type Raffle, SOLO_ESCUCHA } from './raffle';
 
 /**
  * ⚠️ POR QUÉ LAS LLAMADAS QUE ESPERAN UN RECHAZO VAN POR `runInDurableObject`
@@ -440,6 +440,41 @@ describe('Raffle · en vivo', () => {
     expect(crudo).toContain('SOLD'); // control positivo: sí llegó la venta
     expect(crudo).not.toContain('Carla');
     expect(crudo).not.toContain('3411234567');
+  });
+
+  it('el que habla en vez de escuchar queda afuera', async () => {
+    const rifa = await rifaDeAna();
+    const { ws, siguiente, cerrado } = await mirar(rifa);
+    await siguiente();
+
+    ws.send('hola');
+
+    expect(await cerrado).toBe(SOLO_ESCUCHA);
+  });
+
+  it(`pasados ${MAX_ESPECTADORES} mirando, el siguiente recibe un 503`, async () => {
+    const rifa = await rifaDeAna();
+    const conectar = () =>
+      rifa.fetch('https://rifate.test/live', {
+        headers: { Upgrade: 'websocket' },
+      });
+
+    // De a uno y no con Promise.all: el objeto los atiende de a uno igual, y
+    // así el tope se mide contra una cuenta que ya está al día.
+    const abiertos: WebSocket[] = [];
+    for (let i = 0; i < MAX_ESPECTADORES; i++) {
+      const { webSocket } = await conectar();
+      if (webSocket === null) throw new Error(`se cortó en el ${i}`);
+      webSocket.accept();
+      abiertos.push(webSocket);
+    }
+
+    const sobrante = await conectar();
+
+    expect(sobrante.status).toBe(503);
+    expect(sobrante.headers.get('Retry-After')).toBe('30');
+
+    for (const ws of abiertos) ws.close();
   });
 
   it('el ping lo contesta el runtime', async () => {
