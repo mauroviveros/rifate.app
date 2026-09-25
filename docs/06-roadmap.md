@@ -650,8 +650,9 @@ pasaron con 244 tests en verde.
 - [x] ~~`src/lib/whatsapp/`~~ → **`src/utils/whatsapp/`**: no tiene dependencias
       propias, y ese es el criterio de `lib/` vs `utils/` (ver «Transversal»).
       `localPhone()` (`11 4455-2211`) y `waLink()`, que pone el `9` de celular.
-      El `15` cargado a mano («0341 15 555-1234») queda sin resolver: se arregla
-      en `normalize.phone`, que es lo que se guarda
+      El `15` cargado a mano («0341 15 555-1234») ~~queda sin resolver~~ →
+      `normalize.phone` lo cambia por el `9` al guardar (el 15 prueba que es
+      un celular). Los guardados antes siguen con 12 dígitos
 - [x] Botón de contacto por WhatsApp — en `/r/[slug]`, oculto en una rifa cerrada
 - [ ] **✅ Checkpoint: el link se ve bien en WhatsApp y el organizador baja una
       imagen del estado para mandar al grupo**
@@ -687,6 +688,9 @@ pasaron con 244 tests en verde.
 - [ ] `/r/[slug]/pedido?t=` — el visitante consulta con su token
 - [ ] Bandeja de pedidos en el dashboard: confirmar / cancelar
 - [ ] `alarm()` que vence las reservas
+- [ ] La imagen para compartir (`gridSvg`) tacha los `RESERVED` pero no los
+      cuenta en «X de Y vendidos». En BASIC no hay reservas; con los pedidos
+      PRO hay que decidir cómo se leen
 - [ ] WebSocket con **`acceptWebSocket()`** ← nunca `accept()`
 - [ ] **✅ Checkpoint: dos navegadores abiertos; vendés en uno y el otro se actualiza solo**
 

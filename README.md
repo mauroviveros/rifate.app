@@ -93,18 +93,18 @@ pnpm dev
 
 All commands are run from the root of the project, from a terminal:
 
-| Command                         | Action                                           |
-| :------------------------------ | :----------------------------------------------- |
-| `pnpm install`                  | Installs dependencies and sets up the git hooks  |
-| `pnpm dev`                      | Starts local dev server at `localhost:4321`      |
-| `pnpm build`                    | Build your production site to `./dist/`          |
-| `pnpm preview`                  | Preview the build on the Workers runtime         |
-| `pnpm deploy`                   | `build` + `wrangler deploy`                      |
-| `pnpm generate-types`           | Regenerates the binding types (`wrangler types`) |
-| `pnpm check`                    | Astro and TypeScript type checking               |
-| `pnpm test` / `pnpm test:watch` | Tests with Vitest on the Workers pool            |
-| `pnpm lint` / `pnpm lint:fix`   | ESLint                                           |
-| `pnpm format`                   | Prettier across the repo                         |
+| Command                         | Action                                                                     |
+| :------------------------------ | :------------------------------------------------------------------------- |
+| `pnpm install`                  | Installs dependencies and sets up the git hooks                            |
+| `pnpm dev`                      | Starts local dev server at `localhost:4321`                                |
+| `pnpm build`                    | Build your production site to `./dist/`                                    |
+| `pnpm preview`                  | Preview the build on the Workers runtime                                   |
+| `pnpm run deploy`               | `build` + `wrangler deploy`. Needs `run`: `pnpm deploy` is a pnpm built-in |
+| `pnpm generate-types`           | Regenerates the binding types (`wrangler types`)                           |
+| `pnpm check`                    | Astro and TypeScript type checking                                         |
+| `pnpm test` / `pnpm test:watch` | Tests with Vitest on the Workers pool                                      |
+| `pnpm lint` / `pnpm lint:fix`   | ESLint                                                                     |
+| `pnpm format`                   | Prettier across the repo                                                   |
 
 ## 🧱 Infrastructure
 
