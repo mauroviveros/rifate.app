@@ -748,26 +748,47 @@ en pausa hasta definir el PRO.
 
 ## Fase 9 — Sorteo, vouchers y admin
 
-- [ ] `drawWinner()` — sortea entre los **vendidos**, o número manual
-- [ ] **Diálogo de sorteo** contra `DetailDraw` / `DetailDrawMobile` — las dos
-      opciones (al azar entre los vendidos, o número a mano) y la confirmación
-      de que cierra la rifa. Es un modal → Starwind `Dialog` (pasa la puerta 1
-      de [11](./11-sistema-visual.md#la-regla-de-las-tres-puertas)), nunca
-      `dialog.showModal()` a mano ni `:target`
-- [ ] **Estado `CLOSED` del detalle** contra `DetailClosed` /
-      `DetailClosedMobile` — grilla congelada, tarjeta del ganador en la
-      columna derecha
-- [ ] Anuncio del ganador + OG con el ganador destacado
+Sin los vouchers: son la puerta al PRO, que sigue sin definir (ver la fase 8).
+Todo lo demás salió junto.
+
+- [x] `drawWinner()` — sortea entre los **vendidos** con
+      `crypto.getRandomValues` y sin sesgo de módulo, o toma el número a mano.
+      **Idempotente**: el DO registra el ganador (`meta.winner_number`) antes
+      de que D1 lo copie, y el reintento devuelve el mismo. El número a mano
+      puede ser uno sin vender: la rifa se cierra sin ganador, y se dice así
+- [x] El DO se cierra solo: `sell()` / `release()` niegan una rifa sorteada o
+      cancelada (`RAFFLE_FINISHED`), `syncConfig()` no la reabre, y sortear o
+      cancelar cortan el vivo con `4404`
+- [x] **Diálogo de sorteo** contra `DetailDraw` — Starwind `Dialog`
+      (`npx starwind add dialog`, textos pasados a castellano). Tarjeta con
+      borde en la columna derecha; se reabre sola con el error tras el PRG
+- [x] **Estado `CLOSED` del detalle** contra `DetailClosed` — grilla de
+      registro con la celda ganadora en tinta, tarjeta del ganador con «Avisarle
+      por WhatsApp», «Compartir quién ganó» en el encabezado
+- [x] Anuncio del ganador en `/r/[slug]` — «Ganó el número 34 · Ana Ríos», o
+      «Salió el 34, que no se había vendido»
+- [ ] OG con el ganador destacado — el OG es fijo desde la fase 7; va con la
+      ruta de R2 (`/og/raffle/[id]/[v].png`), cuando se haga
 - [ ] `redeemVoucher()` con `UPDATE ... WHERE used_count < max_uses` + guarda
-- [ ] `/admin/vouchers` — emisión, sólo `ADMIN`
-- [ ] Cancelar rifa (no borrar, si tiene ventas) — **`raffle.cancel`** con
-      guarda de tipeo, contra `DetailCancelConfirm` / `DetailCancelConfirmMobile`
-      (modal → Starwind `Dialog`; el botón arranca apagado diciendo por qué)
-- [ ] **Estado `CANCELLED` del detalle** contra `DetailCancelled` /
-      `DetailCancelledMobile` — badge en tinta llena (arreglar `estadoDe()`,
-      que hoy lo muestra como «Ya sorteada»), el texto habla de a quién
-      devolverle la plata, no del sorteo
-- [ ] Borrado seguro: **`destroy()` del DO primero, D1 después**
+      — en pausa con el PRO
+- [ ] `/admin/vouchers` — emisión, sólo `ADMIN` — en pausa con el PRO
+- [x] Cancelar rifa — **`raffle.cancel`** con guarda de tipeo (ANULAR, sin
+      importar mayúsculas), contra `DetailCancelConfirm`. El botón arranca
+      apagado diciendo por qué. Primero el DO, después D1; los dos aguantan el
+      reintento
+- [x] **Estado `CANCELLED` del detalle** contra `DetailCancelled` — badge
+      «Cancelada» en tinta llena (`estadoDe()` ya no la dice «Ya sorteada»),
+      cuánto devolver, un «Avisar» por comprador con el mensaje escrito y el
+      sello ANULADA. Sin el «Avisarles a todos» del canvas: abrir N chats de un
+      toque lo bloquea el navegador
+- [x] Borrado seguro: **`discard()` del DO primero, D1 después**. El «¿vendió?»
+      lo pregunta el objeto adentro, no el Worker. Sólo sin ventas y nunca una
+      sorteada. La franja del pie ofrece borrar o anular según haya ventas,
+      nunca las dos
+- [ ] **✅ Checkpoint: cierre del ciclo completo** — crear, publicar, vender,
+      sortear y ver al ganador en el link público. Verificado por partes en una
+      copia local con un middleware que entraba como el dueño; falta de punta a
+      punta con tu sesión
 
 ---
 
