@@ -6,9 +6,12 @@ import type { NewRaffle } from '@/types/raffle';
 
 import {
   createRaffle,
+  deleteRaffleRow,
   getOwnRaffle,
   getPublicRaffleBySlug,
   listOwnRaffles,
+  markCancelled,
+  markClosed,
   markPublished,
   setContactPhone,
 } from './raffles';
@@ -215,6 +218,67 @@ describe('setContactPhone', () => {
 
     await expect(
       setContactPhone(env.DB, organizador('beto'), id, '341 555 9999'),
+    ).rejects.toThrow('FORBIDDEN');
+  });
+});
+
+describe('raffles · cierre', () => {
+  // El flujo ya mira el estado antes de llegar acá. Estos prueban el segundo
+  // cerrojo: el WHERE, para cuando el flujo se equivoque.
+  const GANADOR = { number: 7, buyerName: 'Carla', buyerPhone: null };
+
+  const sorteada = async () => {
+    const { id } = await createRaffle(env.DB, organizador('ana'), RIFA);
+    await markPublished(env.DB, organizador('ana'), id);
+    await markClosed(env.DB, organizador('ana'), id, GANADOR);
+    return id;
+  };
+
+  it('un borrador no se cierra con ganador', async () => {
+    const { id } = await createRaffle(env.DB, organizador('ana'), RIFA);
+
+    await expect(
+      markClosed(env.DB, organizador('ana'), id, GANADOR),
+    ).rejects.toThrow('FORBIDDEN');
+  });
+
+  it('cerrar deja el ganador y la fecha, y el reintento conserva la fecha', async () => {
+    const id = await sorteada();
+    const antes = await getOwnRaffle(env.DB, organizador('ana'), id);
+
+    await markClosed(env.DB, organizador('ana'), id, GANADOR);
+    const despues = await getOwnRaffle(env.DB, organizador('ana'), id);
+
+    expect(antes.winnerNumber).toBe(7);
+    expect(antes.winnerName).toBe('Carla');
+    expect(despues.closedAt).toBe(antes.closedAt);
+  });
+
+  it('una sorteada no se anula', async () => {
+    const id = await sorteada();
+
+    await expect(markCancelled(env.DB, organizador('ana'), id)).rejects.toThrow(
+      'FORBIDDEN',
+    );
+  });
+
+  it('una sorteada no se borra', async () => {
+    const id = await sorteada();
+
+    await expect(
+      deleteRaffleRow(env.DB, organizador('ana'), id),
+    ).rejects.toThrow('FORBIDDEN');
+  });
+
+  it('una ajena no se toca', async () => {
+    const { id } = await createRaffle(env.DB, organizador('ana'), RIFA);
+    await markPublished(env.DB, organizador('ana'), id);
+
+    await expect(
+      markCancelled(env.DB, organizador('beto'), id),
+    ).rejects.toThrow('FORBIDDEN');
+    await expect(
+      deleteRaffleRow(env.DB, organizador('beto'), id),
     ).rejects.toThrow('FORBIDDEN');
   });
 });

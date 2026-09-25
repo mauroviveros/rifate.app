@@ -36,6 +36,9 @@ export const publicGrid = withDbAndRaffles(flows.publicGrid);
 export const watchPublicGrid = withDbAndRaffles(flows.watchPublicGrid);
 export const updateRaffleDetails = withDbAndRaffles(flows.updateRaffleDetails);
 export const rebuildGrid = withDbAndRaffles(flows.rebuildGrid);
+export const drawRaffle = withDbAndRaffles(flows.drawRaffle);
+export const cancelRaffle = withDbAndRaffles(flows.cancelRaffle);
+export const deleteRaffle = withDbAndRaffles(flows.deleteRaffle);
 
 export const sellNumbers = withRaffles(flows.sellNumbers);
 export const releaseNumbers = withRaffles(flows.releaseNumbers);

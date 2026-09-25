@@ -1,5 +1,6 @@
 import { type Actor, isAdmin, userIdOf } from '@/lib/auth/actor';
 import type {
+  DrawResult,
   NewRaffle,
   OwnerRaffle,
   PublicRaffle,
@@ -33,6 +34,7 @@ type RaffleRow = {
   winner_name: string | null;
   synced_at: number | null;
   published_at: number | null;
+  closed_at: number | null;
   created_at: number;
   updated_at: number;
 };
@@ -40,7 +42,8 @@ type RaffleRow = {
 const COLUMNAS = `id, slug, title, description, prize, tier, status, unlock_method,
                   ticket_price, currency, total_numbers, number_start, draw_date,
                   contact_phone, sold_count, reserved_count, winner_number,
-                  winner_name, synced_at, published_at, created_at, updated_at`;
+                  winner_name, synced_at, published_at, closed_at, created_at,
+                  updated_at`;
 
 const toCard = (r: RaffleRow): RaffleCard => ({
   id: r.id,
@@ -79,6 +82,7 @@ const toOwner = (r: RaffleRow): OwnerRaffle => ({
   winnerName: r.winner_name,
   syncedAt: r.synced_at,
   publishedAt: r.published_at,
+  closedAt: r.closed_at,
   updatedAt: r.updated_at,
 });
 
@@ -237,6 +241,92 @@ export const markPublished = async (
 
   // Un UPDATE que no tocó nada es exactamente el modo de falla que describe
   // docs/04: permite de más y no dice nada. Acá se convierte en un error.
+  if (res.meta.changes === 0) throw new AppError('FORBIDDEN');
+};
+
+/**
+ * Cierra la fila con el resultado del sorteo. Sólo la fila: el sorteo lo hace
+ * y lo registra el Durable Object, y esto es la copia (`drawRaffle()`).
+ *
+ * `CLOSED` entra en el WHERE a propósito: es el reintento. Si el DO ya cerró y
+ * la escritura anterior falló a mitad de camino, el DO devuelve el mismo
+ * ganador y esto lo vuelve a escribir igual. El `COALESCE` conserva la fecha
+ * del primer cierre.
+ */
+export const markClosed = async (
+  db: D1Database,
+  actor: Actor,
+  id: string,
+  winner: DrawResult,
+): Promise<void> => {
+  const userId = userIdOf(actor);
+  if (userId === null) throw new AppError('FORBIDDEN');
+
+  const ts = now();
+  const res = await db
+    .prepare(
+      `UPDATE raffles
+          SET status = 'CLOSED', winner_number = ?1, winner_name = ?2,
+              closed_at = COALESCE(closed_at, ?3), updated_at = ?3
+        WHERE id = ?4 AND owner_id = ?5 AND status IN ('PUBLISHED', 'CLOSED')`,
+    )
+    .bind(winner.number, winner.buyerName, ts, id, userId)
+    .run();
+
+  if (res.meta.changes === 0) throw new AppError('FORBIDDEN');
+};
+
+/**
+ * Anula la fila. Como `markClosed`, es la copia de lo que ya decidió el DO, y
+ * `CANCELLED` entra en el WHERE para que el reintento no falle. Una sorteada
+ * no: el WHERE la deja afuera aunque el flujo se equivoque.
+ */
+export const markCancelled = async (
+  db: D1Database,
+  actor: Actor,
+  id: string,
+): Promise<void> => {
+  const userId = userIdOf(actor);
+  if (userId === null) throw new AppError('FORBIDDEN');
+
+  const ts = now();
+  const res = await db
+    .prepare(
+      `UPDATE raffles
+          SET status = 'CANCELLED', closed_at = COALESCE(closed_at, ?1),
+              updated_at = ?1
+        WHERE id = ?2 AND owner_id = ?3
+          AND status IN ('DRAFT', 'PUBLISHED', 'CANCELLED')`,
+    )
+    .bind(ts, id, userId)
+    .run();
+
+  if (res.meta.changes === 0) throw new AppError('FORBIDDEN');
+};
+
+/**
+ * Borra la fila. Va SEGUNDO, después de vaciar el Durable Object
+ * (`deleteRaffle()`): al revés, si el objeto fallara quedaría cobrando storage
+ * sin que nadie tenga ya su id para llegar a él (docs/09).
+ *
+ * Una sorteada no se borra ni aunque el flujo se equivoque: es el registro de
+ * a quién le tocó el premio.
+ */
+export const deleteRaffleRow = async (
+  db: D1Database,
+  actor: Actor,
+  id: string,
+): Promise<void> => {
+  const userId = userIdOf(actor);
+  if (userId === null) throw new AppError('FORBIDDEN');
+
+  const res = await db
+    .prepare(
+      `DELETE FROM raffles WHERE id = ? AND owner_id = ? AND status <> 'CLOSED'`,
+    )
+    .bind(id, userId)
+    .run();
+
   if (res.meta.changes === 0) throw new AppError('FORBIDDEN');
 };
 

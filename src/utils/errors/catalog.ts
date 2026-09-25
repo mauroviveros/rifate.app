@@ -52,7 +52,15 @@ export const ERRORS: Record<ErrorCode, ErrorDescription> = {
     status: 409,
   },
   RAFFLE_HAS_SALES: {
-    message: 'Tiene números vendidos: cancelala en lugar de borrarla.',
+    message: 'Tiene números vendidos: anulala en lugar de borrarla.',
+    status: 409,
+  },
+  RAFFLE_FINISHED: {
+    message: 'Esta rifa ya terminó: no se puede vender, liberar ni cambiar.',
+    status: 409,
+  },
+  NOTHING_SOLD: {
+    message: 'Todavía no vendiste ningún número: no hay entre quiénes sortear.',
     status: 409,
   },
   RAFFLE_ALREADY_UNLOCKED: {

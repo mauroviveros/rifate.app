@@ -9,7 +9,10 @@ import { createRaffle } from '@/lib/db/raffles';
 import type { NewRaffle } from '@/types/raffle';
 
 import {
+  cancelRaffle,
   createRaffleWithGrid,
+  deleteRaffle,
+  drawRaffle,
   ownerGrid,
   publicGrid,
   publishRaffle,
@@ -439,5 +442,209 @@ describe('updateRaffleDetails', () => {
         NEW_RAFFLE,
       ),
     ).rejects.toThrow('FORBIDDEN');
+  });
+});
+
+/** Una rifa de Ana publicada, con el 7 vendido a Carla. */
+const onSale = async () => {
+  const { id, slug } = await createFor('ana');
+  await publishRaffle(env.DB, env.RAFFLE, organizer('ana'), id);
+  await sellNumbers(env.RAFFLE, organizer('ana'), id, [7], {
+    name: 'Carla',
+    phone: '+543411234567',
+  });
+  return { id, slug };
+};
+
+type ClosedRow = {
+  status: string;
+  winner_number: number | null;
+  winner_name: string | null;
+  closed_at: number | null;
+};
+
+const rowOf = (id: string) =>
+  env.DB.prepare(
+    `SELECT status, winner_number, winner_name, closed_at
+       FROM raffles WHERE id = ?`,
+  )
+    .bind(id)
+    .first<ClosedRow>();
+
+describe('drawRaffle', () => {
+  it('sortea en el objeto y copia el ganador a la fila', async () => {
+    const { id, slug } = await onSale();
+
+    const winner = await drawRaffle(
+      env.DB,
+      env.RAFFLE,
+      organizer('ana'),
+      id,
+      null,
+    );
+
+    expect(winner).toEqual({
+      number: 7,
+      buyerName: 'Carla',
+      buyerPhone: '+543411234567',
+    });
+    const row = await rowOf(id);
+    expect(row?.status).toBe('CLOSED');
+    expect(row?.winner_number).toBe(7);
+    expect(row?.winner_name).toBe('Carla');
+    expect(row?.closed_at).not.toBeNull();
+    expect(await metaOf(id, 'status')).toBe('CLOSED');
+
+    // El link viejo sigue abriendo: tiene que mostrar quién ganó.
+    const pub = await publicGrid(env.DB, env.RAFFLE, visitor, slug);
+    expect(pub?.raffle.winnerNumber).toBe(7);
+  });
+
+  it('el reintento con la fila ya cerrada deja todo igual', async () => {
+    const { id } = await onSale();
+    const ana = organizer('ana');
+
+    const primero = await drawRaffle(env.DB, env.RAFFLE, ana, id, null);
+    const antes = await rowOf(id);
+    const segundo = await drawRaffle(env.DB, env.RAFFLE, ana, id, 50);
+
+    expect(segundo).toEqual(primero);
+    expect(await rowOf(id)).toEqual(antes);
+  });
+
+  it('a mano, un número sin vender cierra la rifa sin ganador', async () => {
+    const { id } = await onSale();
+
+    await drawRaffle(env.DB, env.RAFFLE, organizer('ana'), id, 34);
+
+    const row = await rowOf(id);
+    expect(row?.status).toBe('CLOSED');
+    expect(row?.winner_number).toBe(34);
+    expect(row?.winner_name).toBeNull();
+  });
+
+  it('un borrador no se sortea, y el objeto ni se entera', async () => {
+    const { id } = await createFor('ana');
+
+    await expect(
+      drawRaffle(env.DB, env.RAFFLE, organizer('ana'), id, null),
+    ).rejects.toThrow('RAFFLE_NOT_PUBLISHED');
+    expect(await metaOf(id, 'winner_number')).toBeNull();
+  });
+
+  it('una rifa ajena se niega en D1', async () => {
+    const { id } = await onSale();
+
+    await expect(
+      drawRaffle(env.DB, env.RAFFLE, organizer('beto'), id, null),
+    ).rejects.toThrow('FORBIDDEN');
+    expect(await metaOf(id, 'winner_number')).toBeNull();
+  });
+});
+
+describe('cancelRaffle', () => {
+  it('anula en el objeto y en la fila, y el link deja de abrir', async () => {
+    const { id, slug } = await onSale();
+
+    await cancelRaffle(env.DB, env.RAFFLE, organizer('ana'), id);
+
+    const row = await rowOf(id);
+    expect(row?.status).toBe('CANCELLED');
+    expect(row?.closed_at).not.toBeNull();
+    expect(await metaOf(id, 'status')).toBe('CANCELLED');
+    expect(await publicGrid(env.DB, env.RAFFLE, visitor, slug)).toBeNull();
+  });
+
+  it('el dueño la sigue viendo, con lo que había vendido', async () => {
+    const { id } = await onSale();
+
+    await cancelRaffle(env.DB, env.RAFFLE, organizer('ana'), id);
+
+    const { numbers } = await ownerGrid(
+      env.DB,
+      env.RAFFLE,
+      organizer('ana'),
+      id,
+    );
+    expect(numbers.find((n) => n.number === 7)?.buyerName).toBe('Carla');
+  });
+
+  it('anular dos veces es el reintento, no un error', async () => {
+    const { id } = await onSale();
+    const ana = organizer('ana');
+
+    await cancelRaffle(env.DB, env.RAFFLE, ana, id);
+    await cancelRaffle(env.DB, env.RAFFLE, ana, id);
+
+    expect((await rowOf(id))?.status).toBe('CANCELLED');
+  });
+
+  it('una sorteada no se anula', async () => {
+    const { id } = await onSale();
+    const ana = organizer('ana');
+    await drawRaffle(env.DB, env.RAFFLE, ana, id, null);
+
+    await expect(cancelRaffle(env.DB, env.RAFFLE, ana, id)).rejects.toThrow(
+      'RAFFLE_FINISHED',
+    );
+    expect((await rowOf(id))?.status).toBe('CLOSED');
+  });
+
+  it('una rifa ajena se niega en D1', async () => {
+    const { id } = await onSale();
+
+    await expect(
+      cancelRaffle(env.DB, env.RAFFLE, organizer('beto'), id),
+    ).rejects.toThrow('FORBIDDEN');
+    expect(await metaOf(id, 'status')).toBe('PUBLISHED');
+  });
+});
+
+describe('deleteRaffle', () => {
+  it('sin ventas: primero se vacía el objeto, después la fila', async () => {
+    const { id } = await createFor('ana');
+
+    await deleteRaffle(env.DB, env.RAFFLE, organizer('ana'), id);
+
+    expect(await rowOf(id)).toBeNull();
+    expect(await env.RAFFLE.getByName(id).publicGrid()).toEqual([]);
+    expect(await metaOf(id, 'owner_id')).toBeNull();
+  });
+
+  it('una publicada que no vendió también se borra', async () => {
+    const { id } = await createFor('ana');
+    await publishRaffle(env.DB, env.RAFFLE, organizer('ana'), id);
+
+    await deleteRaffle(env.DB, env.RAFFLE, organizer('ana'), id);
+
+    expect(await rowOf(id)).toBeNull();
+  });
+
+  it('una huérfana se borra sin tocar el objeto, que no tiene dueño', async () => {
+    const { id } = await createRaffle(env.DB, organizer('ana'), NEW_RAFFLE);
+
+    await deleteRaffle(env.DB, env.RAFFLE, organizer('ana'), id);
+
+    expect(await rowOf(id)).toBeNull();
+  });
+
+  it('una sorteada no se borra', async () => {
+    const { id } = await onSale();
+    const ana = organizer('ana');
+    await drawRaffle(env.DB, env.RAFFLE, ana, id, null);
+
+    await expect(deleteRaffle(env.DB, env.RAFFLE, ana, id)).rejects.toThrow(
+      'RAFFLE_FINISHED',
+    );
+    expect(await rowOf(id)).not.toBeNull();
+  });
+
+  it('una rifa ajena se niega en D1, sin tocar el objeto', async () => {
+    const { id } = await createFor('ana');
+
+    await expect(
+      deleteRaffle(env.DB, env.RAFFLE, organizer('beto'), id),
+    ).rejects.toThrow('FORBIDDEN');
+    expect(await metaOf(id, 'owner_id')).toBe('ana');
   });
 });

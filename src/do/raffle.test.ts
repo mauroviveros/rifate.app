@@ -495,5 +495,234 @@ describe('Raffle · en vivo', () => {
     await rifa.destroy('ana');
 
     expect(await cerrado).toBe(LIVE_GONE);
+
+    // ⚠️ No es relleno. El cierre del socket todavía viaja de vuelta al objeto,
+    // y si el test termina acá, el `reset()` del siguiente borra el objeto con
+    // ese evento en el aire y se lleva puesto el worker de los tests (se cae
+    // todo el archivo, no sólo este). Una llamada más deja que el evento se
+    // procese antes. Pasa sólo con `destroy()`: `deleteAll()` y el cierre en
+    // vuelo son la combinación. En producción no hay `reset()`; el objeto
+    // sigue atendiendo normal después de esto.
+    await rifa.publicGrid();
+  });
+});
+
+describe('Raffle · sorteo', () => {
+  it('sale uno de los vendidos, con su comprador', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7, 23, 42], CARLA);
+
+    const ganador = await rifa.drawWinner('ana', null);
+
+    expect([7, 23, 42]).toContain(ganador.number);
+    expect(ganador.buyerName).toBe('Carla');
+    expect(ganador.buyerPhone).toBe('+543411234567');
+  });
+
+  it('nunca sale uno que no se vendió', async () => {
+    // Un solo vendido entre cien: si el sorteo mirara la grilla entera, en
+    // veinte vueltas saldría otro casi seguro.
+    for (let i = 0; i < 20; i++) {
+      const rifa = env.RAFFLE.getByName(`rifa-${i}`);
+      await rifa.init({ ...RIFA_DE_ANA, raffleId: `rifa-${i}` });
+      await rifa.sell('ana', [58], CARLA);
+
+      expect((await rifa.drawWinner('ana', null)).number).toBe(58);
+    }
+  });
+
+  it('el reintento devuelve el mismo ganador, no vuelve a tirar', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], CARLA);
+
+    const primero = await rifa.drawWinner('ana', null);
+    const reintentos = await Promise.all(
+      Array.from({ length: 5 }, () => rifa.drawWinner('ana', null)),
+    );
+
+    for (const r of reintentos) expect(r).toEqual(primero);
+  });
+
+  it('un número a mano que otro pide después no cambia al ganador', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+
+    await rifa.drawWinner('ana', 7);
+    const otra = await rifa.drawWinner('ana', 50);
+
+    expect(otra.number).toBe(7);
+  });
+
+  it('a mano puede salir uno sin vender: se cierra sin ganador', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+
+    const resultado = await rifa.drawWinner('ana', 34);
+
+    expect(resultado).toEqual({
+      number: 34,
+      buyerName: null,
+      buyerPhone: null,
+    });
+  });
+
+  it('a mano, un número fuera del talonario no existe', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+
+    await expect(
+      enElObjeto(rifa, (r) => r.drawWinner('ana', 101)),
+    ).rejects.toThrow('INVALID_NUMBERS');
+  });
+
+  it('sin vendidos no hay entre quiénes sortear', async () => {
+    const rifa = await rifaDeAna();
+
+    await expect(
+      enElObjeto(rifa, (r) => r.drawWinner('ana', null)),
+    ).rejects.toThrow('NOTHING_SOLD');
+  });
+
+  it('un usuario ajeno no sortea', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+
+    await expect(
+      enElObjeto(rifa, (r) => r.drawWinner('beto', null)),
+    ).rejects.toThrow('FORBIDDEN');
+  });
+
+  it('sorteada, no se vende ni se libera más', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+    await rifa.drawWinner('ana', null);
+
+    await expect(
+      enElObjeto(rifa, (r) => r.sell('ana', [8], CARLA)),
+    ).rejects.toThrow('RAFFLE_FINISHED');
+    await expect(
+      enElObjeto(rifa, (r) => r.release('ana', [7])),
+    ).rejects.toThrow('RAFFLE_FINISHED');
+  });
+
+  it('sorteada, no vuelve a venta ni a borrador', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+    await rifa.drawWinner('ana', null);
+
+    await expect(
+      enElObjeto(rifa, (r) => r.syncConfig('ana', { status: 'PUBLISHED' })),
+    ).rejects.toThrow('RAFFLE_FINISHED');
+  });
+
+  it('sortear corta a los que miran con el código de «no vuelvas»', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+    const { siguiente, cerrado } = await mirar(rifa);
+    await siguiente();
+
+    await rifa.drawWinner('ana', null);
+
+    expect(await cerrado).toBe(LIVE_GONE);
+  });
+});
+
+describe('Raffle · anular', () => {
+  it('anulada, no se vende ni se libera más', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+
+    await rifa.cancel('ana');
+
+    await expect(
+      enElObjeto(rifa, (r) => r.sell('ana', [8], CARLA)),
+    ).rejects.toThrow('RAFFLE_FINISHED');
+    await expect(
+      enElObjeto(rifa, (r) => r.release('ana', [7])),
+    ).rejects.toThrow('RAFFLE_FINISHED');
+  });
+
+  it('la grilla queda como registro: lo vendido sigue vendido', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+
+    await rifa.cancel('ana');
+
+    const siete = (await rifa.ownerGrid('ana')).find((n) => n.number === 7);
+    expect(siete?.status).toBe('SOLD');
+    expect(siete?.buyerName).toBe('Carla');
+  });
+
+  it('anular dos veces es el reintento, no un error', async () => {
+    const rifa = await rifaDeAna();
+
+    await rifa.cancel('ana');
+    await rifa.cancel('ana');
+  });
+
+  it('una sorteada no se anula', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+    await rifa.drawWinner('ana', null);
+
+    await expect(enElObjeto(rifa, (r) => r.cancel('ana'))).rejects.toThrow(
+      'RAFFLE_FINISHED',
+    );
+  });
+
+  it('una anulada no se sortea', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+    await rifa.cancel('ana');
+
+    await expect(
+      enElObjeto(rifa, (r) => r.drawWinner('ana', null)),
+    ).rejects.toThrow('RAFFLE_FINISHED');
+  });
+
+  it('un usuario ajeno no anula', async () => {
+    const rifa = await rifaDeAna();
+
+    await expect(enElObjeto(rifa, (r) => r.cancel('beto'))).rejects.toThrow(
+      'FORBIDDEN',
+    );
+  });
+
+  it('anular corta a los que miran con el código de «no vuelvas»', async () => {
+    const rifa = await rifaDeAna();
+    const { siguiente, cerrado } = await mirar(rifa);
+    await siguiente();
+
+    await rifa.cancel('ana');
+
+    expect(await cerrado).toBe(LIVE_GONE);
+  });
+});
+
+describe('Raffle · borrar', () => {
+  it('sin ventas, se vacía entero', async () => {
+    const rifa = await rifaDeAna();
+
+    await rifa.discard('ana');
+
+    expect(await rifa.publicGrid()).toEqual([]);
+  });
+
+  it('con una venta, no se borra nada', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+
+    await expect(enElObjeto(rifa, (r) => r.discard('ana'))).rejects.toThrow(
+      'RAFFLE_HAS_SALES',
+    );
+    expect(await rifa.publicGrid()).toHaveLength(100);
+  });
+
+  it('un usuario ajeno no borra', async () => {
+    const rifa = await rifaDeAna();
+
+    await expect(enElObjeto(rifa, (r) => r.discard('beto'))).rejects.toThrow(
+      'FORBIDDEN',
+    );
   });
 });

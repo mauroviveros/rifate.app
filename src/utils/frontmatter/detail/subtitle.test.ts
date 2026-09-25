@@ -26,6 +26,7 @@ const raffle = (over: Partial<OwnerRaffle> = {}): OwnerRaffle => ({
   winnerName: null,
   syncedAt: null,
   publishedAt: null,
+  closedAt: null,
   updatedAt: 0,
   ...over,
 });
@@ -41,13 +42,26 @@ describe('subtitleOf', () => {
     );
   });
 
-  /** Sólo CLOSED cambia el verbo: una CANCELLED nunca llegó a sortearse. */
-  it('una rifa cerrada ya se sorteó', () => {
+  it('una sorteada cuenta cuándo se sorteó, no cuándo estaba previsto', () => {
+    // 20 de septiembre, 23:30 en Argentina: ya es el 21 en UTC.
+    const closedAt = Date.parse('2026-09-21T02:30:00Z');
+
+    expect(subtitleOf(raffle({ status: 'CLOSED', closedAt }))).toBe(
+      'Se sorteó el 20 de septiembre',
+    );
+  });
+
+  it('una cancelada no se sorteó: se canceló', () => {
+    const closedAt = Date.parse('2026-09-12T15:00:00Z');
+
+    expect(subtitleOf(raffle({ status: 'CANCELLED', closedAt }))).toBe(
+      'Se canceló el 12 de septiembre',
+    );
+  });
+
+  it('cerrada por fuera de la app, sin fecha de cierre, cae en la prevista', () => {
     expect(subtitleOf(raffle({ status: 'CLOSED' }))).toBe(
       'Se sorteó el 24 de diciembre',
-    );
-    expect(subtitleOf(raffle({ status: 'CANCELLED' }))).toBe(
-      'Se sortea el 24 de diciembre',
     );
   });
 });

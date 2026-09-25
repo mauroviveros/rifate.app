@@ -1,8 +1,11 @@
 import {
+  cancel,
   create,
+  draw,
   publish,
   rebuildGrid,
   release,
+  remove,
   sell,
   setPhone,
   update,
@@ -17,5 +20,8 @@ export const server = {
     update,
     setPhone,
     rebuildGrid,
+    draw,
+    cancel,
+    remove,
   },
 };

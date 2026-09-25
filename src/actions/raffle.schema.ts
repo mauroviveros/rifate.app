@@ -1,6 +1,7 @@
 import { z } from 'astro/zod';
 
 import type { NewRaffle, RaffleUpdate } from '@/types/raffle';
+import { CANCEL_WORD } from '@/utils/cancel-word';
 import { pesos, today } from '@/utils/format';
 import { phone } from '@/utils/normalize';
 
@@ -177,6 +178,56 @@ export const sellNumbersSchema = z.object({
   phone: optionalPhone,
   note: optionalText(200, 'La nota no puede superar las 200 letras.'),
 });
+
+/**
+ * Sortear: al azar entre los vendidos, o el número que ya salió por fuera.
+ *
+ * NO es un `z.discriminatedUnion` sobre `mode`, aunque sea la forma natural:
+ * el conversor de Astro elige la opción de la unión leyendo `mode` del
+ * formulario, y si el campo no llega le pasa la unión entera a una función que
+ * espera un objeto y la página responde 500. Un objeto con `.refine()` —que en
+ * zod v4 sigue siendo un `ZodObject`— se convierte siempre, y si `mode` falta
+ * sale un error de campo como cualquier otro.
+ *
+ * Sale `manual: number | null`, que es lo que pide `drawRaffle()`: el `mode`
+ * es cosa del formulario.
+ */
+export const drawRaffleSchema = z
+  .object({
+    id: raffleId,
+    mode: z.enum(['random', 'manual'], { error: 'Elegí cómo se sortea.' }),
+    number: z
+      .number({ error: 'Poné el número que salió.' })
+      .int('Tiene que ser un número entero.')
+      .nonnegative('Tiene que ser un número del talonario.')
+      .nullable(),
+  })
+  .refine((v) => v.mode === 'random' || v.number !== null, {
+    path: ['number'],
+    message: 'Poné el número que salió.',
+  })
+  .transform(({ id, mode, number }) => ({
+    id,
+    manual: mode === 'manual' ? number : null,
+  }));
+
+const CANCEL_HINT = `Escribí ${CANCEL_WORD} para confirmar.`;
+
+/**
+ * Anular pide escribir la palabra: es irreversible y hay plata de otros en el
+ * medio. Se acepta en minúscula y con espacios alrededor —«anular » es el
+ * mismo gesto—; lo que se busca es que no pase sin querer, no un examen.
+ */
+export const cancelRaffleSchema = z.object({
+  id: raffleId,
+  confirm: z
+    .string({ error: CANCEL_HINT })
+    .trim()
+    .refine((s) => s.toUpperCase() === CANCEL_WORD, CANCEL_HINT),
+});
+
+/** Borrar una rifa sin ventas: sólo hace falta el id. */
+export const deleteRaffleSchema = z.object({ id: raffleId });
 
 type Assert<T extends true> = T;
 type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;

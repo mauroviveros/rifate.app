@@ -66,6 +66,20 @@ export type SellResult = {
   sold: number[];
 };
 
+/**
+ * El resultado del sorteo. Es del organizador —lleva el teléfono del ganador,
+ * para avisarle—, así que sólo lo devuelve un método con `userId`.
+ *
+ * `buyerName` y `buyerPhone` en `null` no es un error: el número cargado a
+ * mano puede ser uno que no se vendió (salió en la quiniela y nadie lo tenía).
+ * La rifa se cierra igual, sin ganador, y el organizador resuelve por fuera.
+ */
+export type DrawResult = {
+  number: number;
+  buyerName: string | null;
+  buyerPhone: string | null;
+};
+
 export type RaffleStats = {
   total: number;
   available: number;
@@ -136,6 +150,8 @@ export type OwnerRaffle = RaffleCard & {
   winnerName: string | null;
   syncedAt: number | null;
   publishedAt: number | null;
+  /** Cuándo se sorteó o se anuló. `null` mientras la rifa sigue abierta. */
+  closedAt: number | null;
   updatedAt: number;
 };
 

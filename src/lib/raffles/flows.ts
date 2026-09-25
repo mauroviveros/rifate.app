@@ -17,14 +17,18 @@ import type { RaffleDetailsInput, RaffleRangeInput } from '@/lib/db/raffles';
 // del límite que arma `src/lib/db/index.ts`, no del lado de las páginas.
 import {
   createRaffle,
+  deleteRaffleRow,
   getOwnRaffle,
   getPublicRaffleBySlug,
+  markCancelled,
+  markClosed,
   markPublished,
   setContactPhone,
   updateRaffle,
 } from '@/lib/db/raffles';
 import type {
   BuyerInput,
+  DrawResult,
   NewRaffle,
   OwnerNumber,
   OwnerRaffle,
@@ -306,4 +310,84 @@ export const updateRaffleDetails = async (
     numberStart: range.numberStart,
     totalNumbers: range.totalNumbers,
   });
+};
+
+/**
+ * Sortea y cierra. El orden es el inverso de `publishRaffle`, y a propósito:
+ * acá el que decide es el Durable Object —elige el número y lo registra—, y D1
+ * copia el resultado. Si D1 falla, el reintento vuelve a entrar por acá, el
+ * objeto devuelve el MISMO ganador (`drawWinner()` es idempotente) y la
+ * escritura se repite igual.
+ *
+ * D1 va primero sólo para leer: una rifa ajena o inexistente se niega antes
+ * de despertar el objeto, y el estado de la fila dice si hay algo que sortear.
+ * `CLOSED` deja pasar porque es el reintento.
+ */
+export const drawRaffle = async (
+  db: D1Database,
+  raffles: RaffleNamespace,
+  actor: Actor,
+  raffleId: string,
+  manual: number | null,
+): Promise<DrawResult> => {
+  const userId = requireUser(actor);
+  const raffle = await getOwnRaffle(db, actor, raffleId);
+
+  if (raffle.status === 'DRAFT') throw new AppError('RAFFLE_NOT_PUBLISHED');
+  if (raffle.status === 'CANCELLED') throw new AppError('RAFFLE_FINISHED');
+
+  const winner = await raffles.getByName(raffleId).drawWinner(userId, manual);
+
+  await markClosed(db, actor, raffleId, winner);
+
+  return winner;
+};
+
+/**
+ * Anula. Mismo orden que el sorteo: el objeto deja de vender y corta el vivo,
+ * y después la fila pasa a `CANCELLED` —con lo cual el link público deja de
+ * abrir—. Los dos pasos aguantan el reintento.
+ */
+export const cancelRaffle = async (
+  db: D1Database,
+  raffles: RaffleNamespace,
+  actor: Actor,
+  raffleId: string,
+): Promise<void> => {
+  const userId = requireUser(actor);
+  const raffle = await getOwnRaffle(db, actor, raffleId);
+
+  if (raffle.status === 'CLOSED') throw new AppError('RAFFLE_FINISHED');
+
+  await raffles.getByName(raffleId).cancel(userId);
+  await markCancelled(db, actor, raffleId);
+};
+
+/**
+ * Borra una rifa que no vendió nada. **El objeto primero, D1 después** (docs/09):
+ * si el objeto fallara con la fila ya borrada, quedaría cobrando storage sin
+ * que nadie tenga su id para volver a él. Al revés, lo peor que pasa es una
+ * rifa vacía en el panel, que se puede volver a borrar.
+ *
+ * La pregunta de si vendió la hace el objeto adentro de `discard()`, no esto:
+ * una venta cargada desde otra pestaña entre la pregunta y el borrado se
+ * perdería. Lo que sí se mira acá es si hay grilla: una rifa huérfana (el
+ * `init()` nunca corrió) no tiene nada que vaciar, y su objeto sin dueño
+ * contestaría FORBIDDEN a cualquiera.
+ */
+export const deleteRaffle = async (
+  db: D1Database,
+  raffles: RaffleNamespace,
+  actor: Actor,
+  raffleId: string,
+): Promise<void> => {
+  const userId = requireUser(actor);
+  const raffle = await getOwnRaffle(db, actor, raffleId);
+
+  if (raffle.status === 'CLOSED') throw new AppError('RAFFLE_FINISHED');
+
+  const stub = raffles.getByName(raffleId);
+  if ((await stub.stats()).total > 0) await stub.discard(userId);
+
+  await deleteRaffleRow(db, actor, raffleId);
 };

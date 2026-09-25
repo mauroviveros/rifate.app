@@ -200,7 +200,10 @@ export type MetaKey =
   | 'tier' // BASIC | PRO           → habilita pedidos
   | 'status' // DRAFT | PUBLISHED | … → habilita pedidos
   | 'number_start'
-  | 'total_numbers';
+  | 'total_numbers'
+  // El número que salió. Existe para que el sorteo no se repita: un segundo
+  // drawWinner() —el reintento después de que falló D1— devuelve este.
+  | 'winner_number';
 
 export const getMeta = (sql: SqlStorage, key: MetaKey): string | null =>
   sql.exec<{ v: string }>('SELECT v FROM meta WHERE k = ?', key).toArray()[0]

@@ -2,6 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 
 import type {
   BuyerInput,
+  DrawResult,
   LiveMessage,
   OwnerNumber,
   PublicNumber,
@@ -44,6 +45,27 @@ export const MAX_ESPECTADORES = 1000;
  * protocolo: violación de política.
  */
 export const SOLO_ESCUCHA = 1008;
+
+/**
+ * Un índice al azar en `[0, n)`, sin sesgo.
+ *
+ * `Math.random()` no va: no es criptográfico, y en un sorteo con plata de por
+ * medio «parece al azar» no alcanza. Y `valor % n` tampoco: si 2³² no es
+ * múltiplo de `n`, los primeros índices salen un poquito más seguido. Por eso
+ * se descartan los valores de la franja que no llega a completar una vuelta
+ * entera y se vuelve a tirar; en la práctica casi nunca pasa.
+ */
+const randomIndex = (n: number): number => {
+  const RANGE = 2 ** 32;
+  const limit = RANGE - (RANGE % n);
+  const buffer = new Uint32Array(1);
+
+  for (;;) {
+    crypto.getRandomValues(buffer);
+    const value = buffer[0] as number;
+    if (value < limit) return value % n;
+  }
+};
 
 /**
  * LA CONVENCIÓN QUE HAY QUE SOSTENER EN ESTE ARCHIVO
@@ -91,6 +113,26 @@ export class Raffle extends DurableObject<Env> {
     if (owner === null || userId === null || userId !== owner) {
       throw new AppError('FORBIDDEN');
     }
+  }
+
+  /** Sorteada o anulada: la grilla quedó como registro y no se toca más. */
+  private isFinished(): boolean {
+    const status = getMeta(this.ctx.storage.sql, 'status');
+    return status === 'CLOSED' || status === 'CANCELLED';
+  }
+
+  /**
+   * Una rifa terminada no se vende ni se libera. Se chequea contra la copia
+   * local del estado y no contra D1, por la misma razón que `assertOwner`: el
+   * Worker ya lo miró, pero el objeto no confía.
+   *
+   * Se niega lo terminado y no se exige `PUBLISHED`: una rifa publicada cuyo
+   * `syncConfig` no llegó sigue en DRAFT acá, y exigir PUBLISHED la dejaría
+   * sin poder vender por un aviso perdido. Vender en borrador ya lo impide la
+   * pantalla, que no muestra el panel de venta.
+   */
+  private assertOpen(): void {
+    if (this.isFinished()) throw new AppError('RAFFLE_FINISHED');
   }
 
   /**
@@ -237,6 +279,7 @@ export class Raffle extends DurableObject<Env> {
    */
   sell(userId: string, numeros: number[], buyer: BuyerInput): SellResult {
     this.assertOwner(userId);
+    this.assertOpen();
 
     const unicos = [...new Set(numeros)];
     if (unicos.length === 0) throw new AppError('INVALID_NUMBERS');
@@ -316,6 +359,7 @@ export class Raffle extends DurableObject<Env> {
    */
   release(userId: string, numeros: number[]): number[] {
     this.assertOwner(userId);
+    this.assertOpen();
 
     const unicos = [...new Set(numeros)];
     if (unicos.length === 0) throw new AppError('INVALID_NUMBERS');
@@ -371,9 +415,92 @@ export class Raffle extends DurableObject<Env> {
   syncConfig(userId: string, patch: RaffleConfigPatch): void {
     this.assertOwner(userId);
 
+    // Sorteada o anulada no vuelve atrás: ni a venta ni a borrador. Las dos
+    // salidas son `drawWinner()` y `cancel()`, que además cortan el vivo.
+    if (patch.status !== undefined) this.assertOpen();
+
     const sql = this.ctx.storage.sql;
     if (patch.tier !== undefined) setMeta(sql, 'tier', patch.tier);
     if (patch.status !== undefined) setMeta(sql, 'status', patch.status);
+  }
+
+  /**
+   * Sortea y cierra la rifa. Con `manual` es el número que ya salió por fuera
+   * (la quiniela, un bolillero delante de todos); sin él, lo elige el objeto
+   * entre los VENDIDOS.
+   *
+   * Entre los vendidos y no entre todos: sortear sobre la grilla completa
+   * puede dar un número que nadie compró, y entonces no hay a quién avisarle.
+   * El número a mano sí puede caer en uno sin vender, y se acepta igual: es lo
+   * que salió, y rechazarlo obligaría a cargar otro, que sería mentir.
+   *
+   * ⚠️ ES IDEMPOTENTE, y es lo más importante de este método. El flujo cierra
+   * primero acá y después escribe D1; si D1 falla y se reintenta, el segundo
+   * llamado tiene que devolver EL MISMO ganador. Si volviera a tirar, un error
+   * de red cambiaría quién ganó. Por eso lo primero es mirar si ya hay uno.
+   */
+  drawWinner(userId: string, manual: number | null): DrawResult {
+    this.assertOwner(userId);
+
+    const sql = this.ctx.storage.sql;
+    const drawn = getMeta(sql, 'winner_number');
+    if (drawn !== null) return this.winnerOf(Number(drawn));
+
+    // Terminada sin ganador es una anulada: ésa no se sortea.
+    this.assertOpen();
+
+    const winner = manual ?? this.drawAmongSold();
+
+    const fila = sql
+      .exec<{ n: number }>(
+        'SELECT 1 AS n FROM numbers WHERE number = ?',
+        winner,
+      )
+      .toArray()[0];
+    if (fila === undefined) throw new AppError('INVALID_NUMBERS');
+
+    setMeta(sql, 'winner_number', String(winner));
+    setMeta(sql, 'status', 'CLOSED');
+
+    // El vivo termina acá: la página pública pasa a mostrar quién ganó, y eso
+    // se ve recargándola, no con otra grilla por el cable.
+    this.closeViewers();
+
+    return this.winnerOf(winner);
+  }
+
+  /**
+   * Anula la rifa: la grilla queda como registro, sin vender ni liberar más,
+   * y el link público deja de abrir. No devuelve plata: rifate no la toca.
+   *
+   * Una sorteada no se anula —ya tiene ganador, y anularla le borraría el
+   * premio a alguien—. Anular dos veces no es un error: es el reintento de un
+   * flujo que ya pasó por acá y falló en D1.
+   */
+  cancel(userId: string): void {
+    this.assertOwner(userId);
+
+    const sql = this.ctx.storage.sql;
+    const status = getMeta(sql, 'status');
+    if (status === 'CANCELLED') return;
+    if (status === 'CLOSED') throw new AppError('RAFFLE_FINISHED');
+
+    setMeta(sql, 'status', 'CANCELLED');
+    this.closeViewers();
+  }
+
+  /**
+   * Borra la rifa si no vendió nada. Es `destroy()` con la pregunta adentro:
+   * si el «¿vendió?» se hiciera en el Worker y el borrado acá, una venta
+   * cargada en el medio desde otra pestaña se borraría sin que nadie se
+   * entere. Dentro del objeto no hay «en el medio».
+   */
+  async discard(userId: string): Promise<void> {
+    this.assertOwner(userId);
+
+    if (this.stats().sold > 0) throw new AppError('RAFFLE_HAS_SALES');
+
+    await this.destroy(userId);
   }
 
   /**
@@ -404,11 +531,7 @@ export class Raffle extends DurableObject<Env> {
   async destroy(userId: string): Promise<void> {
     this.assertOwner(userId);
 
-    // Primero se cierra a los que están mirando, con un código que les dice
-    // que no vuelvan a intentar: la rifa no va a volver.
-    for (const ws of this.ctx.getWebSockets(PUBLICO)) {
-      ws.close(LIVE_GONE, 'La rifa ya no existe');
-    }
+    this.closeViewers();
 
     await this.ctx.storage.deleteAll();
 
@@ -425,6 +548,49 @@ export class Raffle extends DurableObject<Env> {
   }
 
   // ══ PRIVADO ═════════════════════════════════════════════════════════════
+
+  /**
+   * Corta a los que están mirando con un código que les dice que no vuelvan a
+   * intentar: la rifa se borró, se sorteó o se anuló, y en ninguno de los
+   * tres casos hay más grilla que cambie.
+   */
+  private closeViewers(): void {
+    for (const ws of this.ctx.getWebSockets(PUBLICO)) {
+      ws.close(LIVE_GONE, 'La rifa ya no cambia');
+    }
+  }
+
+  /** Uno al azar entre los vendidos. Sin vendidos no hay sorteo. */
+  private drawAmongSold(): number {
+    const sold = this.ctx.storage.sql
+      .exec<{
+        number: number;
+      }>("SELECT number FROM numbers WHERE status = 'SOLD' ORDER BY number")
+      .toArray();
+
+    if (sold.length === 0) throw new AppError('NOTHING_SOLD');
+
+    return (sold[randomIndex(sold.length)] as { number: number }).number;
+  }
+
+  /** El número y, si se vendió, a quién. */
+  private winnerOf(number: number): DrawResult {
+    const buyer = this.ctx.storage.sql
+      .exec<{ name: string; phone: string | null }>(
+        `SELECT b.name, b.phone
+           FROM numbers n
+           JOIN buyers b ON b.id = n.buyer_id
+          WHERE n.number = ? AND n.status = 'SOLD'`,
+        number,
+      )
+      .toArray()[0];
+
+    return {
+      number,
+      buyerName: buyer?.name ?? null,
+      buyerPhone: buyer?.phone ?? null,
+    };
+  }
 
   private gridMessage(): string {
     const message: LiveMessage = { type: 'grid', numbers: this.publicGrid() };

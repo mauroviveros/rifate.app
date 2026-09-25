@@ -2,7 +2,10 @@ import { defineAction } from 'astro:actions';
 
 import { setContactPhone } from '@/lib/db';
 import {
+  cancelRaffle,
   createRaffleWithGrid,
+  deleteRaffle,
+  drawRaffle,
   publishRaffle,
   rebuildGrid as rebuildRaffleGrid,
   releaseNumbers,
@@ -12,6 +15,9 @@ import {
 
 import { asActionError } from './errors';
 import {
+  cancelRaffleSchema,
+  deleteRaffleSchema,
+  drawRaffleSchema,
   newRaffleSchema,
   publishRaffleSchema,
   raffleUpdateSchema,
@@ -93,6 +99,37 @@ export const rebuildGrid = defineAction({
   handler: ({ id }, { locals }) =>
     translatingErrors(async () => {
       await rebuildRaffleGrid(locals.actor, id);
+      return { id };
+    }),
+});
+
+export const draw = defineAction({
+  accept: 'form',
+  input: drawRaffleSchema,
+  handler: ({ id, manual }, { locals }) =>
+    translatingErrors(async () => {
+      const { number } = await drawRaffle(locals.actor, id, manual);
+      return { id, number };
+    }),
+});
+
+export const cancel = defineAction({
+  accept: 'form',
+  input: cancelRaffleSchema,
+  handler: ({ id }, { locals }) =>
+    translatingErrors(async () => {
+      await cancelRaffle(locals.actor, id);
+      return { id };
+    }),
+});
+
+/** `delete` es palabra reservada: no puede ser el nombre de un export. */
+export const remove = defineAction({
+  accept: 'form',
+  input: deleteRaffleSchema,
+  handler: ({ id }, { locals }) =>
+    translatingErrors(async () => {
+      await deleteRaffle(locals.actor, id);
       return { id };
     }),
 });

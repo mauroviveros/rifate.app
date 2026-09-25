@@ -26,6 +26,7 @@ const raffle = (over: Partial<OwnerRaffle> = {}): OwnerRaffle => ({
   winnerName: null,
   syncedAt: null,
   publishedAt: null,
+  closedAt: null,
   updatedAt: 0,
   ...over,
 });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  cancelRaffleSchema,
+  drawRaffleSchema,
   newRaffleSchema,
   publishRaffleSchema,
   raffleUpdateSchema,
@@ -163,5 +165,55 @@ describe('sellNumbersSchema', () => {
     const r = sellNumbersSchema.safeParse({ ...VENTA, id: 'la-del-club' });
 
     expect(r.error?.issues[0]?.message).toBe('Esa rifa no existe.');
+  });
+});
+
+const ID = '6f1c2a4e-8b3d-4f5a-9c7e-1d2b3a4c5e6f';
+
+describe('drawRaffleSchema', () => {
+  it('al azar sale sin número, aunque se haya escrito uno', () => {
+    expect(
+      drawRaffleSchema.parse({ id: ID, mode: 'random', number: 34 }),
+    ).toEqual({ id: ID, manual: null });
+  });
+
+  it('a mano sale el número', () => {
+    expect(
+      drawRaffleSchema.parse({ id: ID, mode: 'manual', number: 34 }),
+    ).toEqual({ id: ID, manual: 34 });
+  });
+
+  it('a mano sin número es un error del campo número', () => {
+    const r = drawRaffleSchema.safeParse({
+      id: ID,
+      mode: 'manual',
+      number: null,
+    });
+
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.path).toEqual(['number']);
+    expect(r.error?.issues[0]?.message).toBe('Poné el número que salió.');
+  });
+
+  it('sin modo es un error de campo, no un 500', () => {
+    const r = drawRaffleSchema.safeParse({ id: ID, mode: null, number: null });
+
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.path).toEqual(['mode']);
+  });
+});
+
+describe('cancelRaffleSchema', () => {
+  it.each(['ANULAR', 'anular', '  Anular '])('«%s» confirma', (confirm) => {
+    expect(cancelRaffleSchema.safeParse({ id: ID, confirm }).success).toBe(
+      true,
+    );
+  });
+
+  it.each([null, '', 'ANULA', 'si'])('«%s» no confirma', (confirm) => {
+    const r = cancelRaffleSchema.safeParse({ id: ID, confirm });
+
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toBe('Escribí ANULAR para confirmar.');
   });
 });
