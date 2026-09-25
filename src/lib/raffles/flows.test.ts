@@ -17,6 +17,7 @@ import {
   releaseNumbers,
   sellNumbers,
   updateRaffleDetails,
+  watchPublicGrid,
 } from './flows';
 
 /**
@@ -254,6 +255,59 @@ describe('publicGrid', () => {
   });
 });
 
+/** Lo que manda el navegador para abrir el WebSocket. */
+const upgrade = () =>
+  new Request('https://rifate.test/r/rifa/live', {
+    headers: { Upgrade: 'websocket' },
+  });
+
+/**
+ * Mira con `watchPublicGrid` y cierra enseguida si se conectó. El socket que
+ * se queda abierto al terminar el test es uno más que el DO sigue contando.
+ */
+const watch = async (actor: Actor, slug: string) => {
+  const res = await watchPublicGrid(env.DB, env.RAFFLE, actor, slug, upgrade());
+  if (res?.webSocket) {
+    res.webSocket.accept();
+    res.webSocket.close();
+  }
+  return res;
+};
+
+describe('watchPublicGrid', () => {
+  it('una rifa publicada la mira cualquiera', async () => {
+    const { id, slug } = await createFor('ana');
+    await publishRaffle(env.DB, env.RAFFLE, organizer('ana'), id);
+
+    const res = await watch(visitor, slug);
+
+    expect(res?.status).toBe(101);
+  });
+
+  it('un borrador no existe para el visitante, y el objeto ni se entera', async () => {
+    const { slug } = await createFor('ana');
+
+    expect(await watch(visitor, slug)).toBeNull();
+  });
+
+  it('el dueño mira su borrador', async () => {
+    const { slug } = await createFor('ana');
+
+    expect((await watch(organizer('ana'), slug))?.status).toBe(101);
+  });
+
+  it('un slug que no existe es null', async () => {
+    expect(await watch(visitor, 'no-existe')).toBeNull();
+  });
+
+  it('rifa huérfana: D1 la deja pasar y el objeto contesta 404', async () => {
+    // A diferencia de `publicGrid`, acá no hay lista vacía que devolver: un
+    // objeto sin init() no acepta a nadie (ver `fetch` en el DO).
+    const { slug } = await createRaffle(env.DB, organizer('ana'), NEW_RAFFLE);
+
+    expect((await watch(organizer('ana'), slug))?.status).toBe(404);
+  });
+});
 describe('rebuildGrid', () => {
   it('rearma una rifa huérfana sin tocar D1', async () => {
     const { id } = await createRaffle(env.DB, organizer('ana'), NEW_RAFFLE);

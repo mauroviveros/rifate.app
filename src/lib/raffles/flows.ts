@@ -173,6 +173,31 @@ export const publicGrid = async (
 };
 
 /**
+ * Conecta al visitante con el Durable Object para mirar la grilla en vivo.
+ *
+ * Es `publicGrid` para el que se queda mirando: la misma regla de quién ve qué
+ * (`getPublicRaffleBySlug`), la misma pregunta a D1 antes de despertar el
+ * objeto, y del otro lado la misma superficie pública. Un borrador ajeno o un
+ * slug inexistente salen con `null` y el DO ni se entera.
+ *
+ * El `request` viaja entero porque el DO necesita ver el `Upgrade`, y lo que
+ * vuelve es su respuesta tal cual: un 101 que lleva el WebSocket adentro.
+ * Reconstruirla (`new Response(body, res)`) perdería el socket.
+ */
+export const watchPublicGrid = async (
+  db: D1Database,
+  raffles: RaffleNamespace,
+  actor: Actor,
+  slug: string,
+  request: Request,
+): Promise<Response | null> => {
+  const raffle = await getPublicRaffleBySlug(db, actor, slug);
+  if (raffle === null) return null;
+
+  return raffles.getByName(raffle.id).fetch(request);
+};
+
+/**
  * Reintenta `init()` sobre una rifa huérfana: el alta escribió la fila en D1
  * pero la llamada al DO que arma la grilla no llegó a buen puerto (ver el
  * comentario de `createRaffleWithGrid`). `init()` es un no-op si el objeto ya
