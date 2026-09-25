@@ -15,11 +15,14 @@ export const panelSummary = (raffles: RaffleListItem[]): string => {
   const onSale = raffles.filter((r) => r.status === 'PUBLISHED').length;
   const drafts = raffles.filter((r) => r.status === 'DRAFT').length;
   const drawn = raffles.filter((r) => r.status === 'CLOSED').length;
+  const cancelled = raffles.filter((r) => r.status === 'CANCELLED').length;
 
   const parts = [
     onSale > 0 && `${onSale} ${onSale === 1 ? 'rifa' : 'rifas'} en venta`,
     drafts > 0 && `${drafts} sin publicar`,
     drawn > 0 && `${drawn} ya ${drawn === 1 ? 'sorteada' : 'sorteadas'}`,
+    cancelled > 0 &&
+      `${cancelled} ${cancelled === 1 ? 'cancelada' : 'canceladas'}`,
   ].filter((part): part is string => typeof part === 'string');
 
   return parts.length > 0

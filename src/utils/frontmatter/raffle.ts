@@ -12,13 +12,14 @@ import { progress } from '@/utils/format';
 /**
  * El estado que ve el organizador, que NO es `rifa.status`.
  *
- * `CANCELLED` y `CLOSED` se dicen igual —la rifa terminó, no hay nada que
- * hacerle—, y «últimos días» es una capa encima de `PUBLISHED` que depende de
- * la fecha y no de la columna. Un solo discriminante para las tres funciones de
- * abajo, así el badge, el botón y la bajada no pueden contradecirse.
+ * «Últimos días» es una capa encima de `PUBLISHED` que depende de la fecha y
+ * no de la columna. Y `CANCELLED` no se dice como `CLOSED`: hasta la fase 9
+ * compartían «Ya sorteada», y una rifa anulada no se sorteó. Un solo
+ * discriminante para las tres funciones de abajo, así el badge, el botón y la
+ * bajada no pueden contradecirse.
  */
 export type EstadoTarjeta =
-  'cerrada' | 'borrador' | 'ultimos-dias' | 'en-venta';
+  'cerrada' | 'cancelada' | 'borrador' | 'ultimos-dias' | 'en-venta';
 
 /**
  * `limite` es un día del calendario en ISO (`inDays(7)`), no un `Date`: el ISO
@@ -29,7 +30,8 @@ export const estadoDe = (
   rifa: RaffleListItem,
   limite: string,
 ): EstadoTarjeta => {
-  if (rifa.status === 'CLOSED' || rifa.status === 'CANCELLED') return 'cerrada';
+  if (rifa.status === 'CLOSED') return 'cerrada';
+  if (rifa.status === 'CANCELLED') return 'cancelada';
   if (rifa.status === 'DRAFT') return 'borrador';
 
   return rifa.drawDate <= limite ? 'ultimos-dias' : 'en-venta';
@@ -48,6 +50,9 @@ export const estadoDe = (
 // prettier-ignore
 export const BADGE: Record<EstadoTarjeta, { texto: string; clase: string }> = {
   'cerrada':      { texto: 'Ya sorteada',  clase: 'bg-muted text-subtle-foreground' },
+  // En tinta llena y no en la píldora apagada de la sorteada: son dos cosas
+  // distintas, y la cancelada tiene plata que devolver.
+  'cancelada':    { texto: 'Cancelada',    clase: 'bg-foreground text-background' },
   'borrador':     { texto: 'Sin publicar', clase: 'bg-warning/35 text-foreground' },
   'ultimos-dias': { texto: 'Últimos días', clase: 'bg-primary/10 text-primary' },
   'en-venta':     { texto: 'En venta',     clase: 'bg-success/12 text-success' },
@@ -66,6 +71,7 @@ export const ACCION: Record<
   { texto: string; variante: 'default' | 'outline' }
 > = {
   'cerrada':      { texto: 'Ver el detalle',      variante: 'outline' },
+  'cancelada':    { texto: 'Ver el detalle',      variante: 'outline' },
   'borrador':     { texto: 'Terminar de armarla', variante: 'default' },
   'ultimos-dias': { texto: 'Ver y vender',        variante: 'default' },
   'en-venta':     { texto: 'Ver y vender',        variante: 'default' },

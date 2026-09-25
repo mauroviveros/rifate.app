@@ -15,6 +15,15 @@
 
 export type { BuyerGroup } from './buyers';
 export { buyersOf, previewNumbers } from './buyers';
+export type { Refund } from './closing';
+export {
+  phonesSentence,
+  refundNotice,
+  refundSentence,
+  refundsOf,
+  winnerNotice,
+  winnerShareText,
+} from './closing';
 export { toEditInitial } from './edit';
 export type { EstadoDetalle } from './estado';
 export { estadoDetalle } from './estado';

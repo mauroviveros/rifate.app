@@ -40,9 +40,9 @@ describe('panelSummary', () => {
       panelSummary([raffle('PUBLISHED'), raffle('DRAFT'), raffle('CLOSED')]),
     ).toBe('Tenés 1 rifa en venta, 1 sin publicar y 1 ya sorteada.');
   });
-  it('CANCELLED no cuenta como sorteada', () => {
-    expect(panelSummary([raffle('CANCELLED')])).toBe(
-      'Acá van a estar todas tus rifas.',
+  it('CANCELLED no cuenta como sorteada: se dice aparte', () => {
+    expect(panelSummary([raffle('CLOSED'), raffle('CANCELLED')])).toBe(
+      'Tenés 1 ya sorteada y 1 cancelada.',
     );
   });
 });

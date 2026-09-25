@@ -26,6 +26,7 @@ const raffle = (over: Partial<OwnerRaffle> = {}): OwnerRaffle => ({
   winnerName: null,
   syncedAt: null,
   publishedAt: null,
+  closedAt: null,
   updatedAt: 0,
   ...over,
 });
@@ -48,15 +49,16 @@ describe('estadoDetalle', () => {
   });
 
   /**
-   * Los dos estados terminales se dicen igual: la rifa terminó y no hay nada
-   * que hacerle. Mismo criterio que `estadoDe` en `raffle.ts`.
+   * Hasta la fase 9 eran la misma pantalla y una anulada decía «Ya sorteada».
+   * Son dos cosas distintas: en una se cuenta quién ganó, en la otra a quién
+   * hay que devolverle la plata.
    */
-  it('CLOSED y CANCELLED son la misma pantalla', () => {
+  it('CLOSED y CANCELLED son pantallas distintas', () => {
     expect(estadoDetalle(raffle({ status: 'CLOSED' }), gridOf(100))).toBe(
       'cerrada',
     );
     expect(estadoDetalle(raffle({ status: 'CANCELLED' }), gridOf(100))).toBe(
-      'cerrada',
+      'cancelada',
     );
   });
 

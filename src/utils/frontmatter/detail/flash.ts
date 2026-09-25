@@ -12,6 +12,9 @@ const FLASH: Record<string, (count: number) => string> = {
   sold: (count) => `Vendiste ${count} número${count === 1 ? '' : 's'}.`,
   freed: (count) => `Liberaste ${count} número${count === 1 ? '' : 's'}.`,
   rebuilt: () => 'Listo: rearmamos el talonario.',
+  drawn: () => 'Listo: la rifa quedó sorteada.',
+  cancelled: () => 'La rifa quedó cancelada.',
+  deleted: () => 'Listo: borramos la rifa.',
 };
 
 export const flashMessage = (ok: string | null): string | null => {

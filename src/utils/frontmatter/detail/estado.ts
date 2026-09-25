@@ -1,11 +1,13 @@
 import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
 
 /**
- * Cuál de las cuatro pantallas del detalle hay que dibujar.
+ * Cuál de las cinco pantallas del detalle hay que dibujar.
  *
- * NO es `raffle.status`, por dos motivos. `CLOSED` y `CANCELLED` se muestran
- * igual —la rifa terminó, no hay nada que hacerle—, y una grilla vacía es una
- * pantalla propia que ningún status describe.
+ * NO es `raffle.status`: una grilla vacía es una pantalla propia que ningún
+ * status describe. `CLOSED` y `CANCELLED` sí van cada uno a la suya —hasta la
+ * fase 9 se mostraban igual, y una anulada decía «Ya sorteada»—: en la
+ * sorteada lo que importa es quién ganó, y en la anulada, a quién hay que
+ * devolverle la plata.
  *
  * Es el mismo recurso que `EstadoTarjeta` en `raffle.ts`: un solo discriminante
  * en vez de tres booleanos sueltos. Con `isDraft` / `isPublished` / `isEmpty`
@@ -13,7 +15,8 @@ import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
  * escribir una rama para un estado que no puede existir — ni avisa cuando falta
  * una que sí.
  */
-export type EstadoDetalle = 'sin-grilla' | 'borrador' | 'en-venta' | 'cerrada';
+export type EstadoDetalle =
+  'sin-grilla' | 'borrador' | 'en-venta' | 'cerrada' | 'cancelada';
 
 /**
  * ⚠️ `sin-grilla` gana sobre todo lo demás, y eso es un cambio respecto de la
@@ -32,6 +35,7 @@ export const estadoDetalle = (
   if (numbers.length === 0) return 'sin-grilla';
   if (raffle.status === 'DRAFT') return 'borrador';
   if (raffle.status === 'PUBLISHED') return 'en-venta';
+  if (raffle.status === 'CANCELLED') return 'cancelada';
 
   return 'cerrada';
 };

@@ -29,7 +29,7 @@ const LIMITE = '2026-09-11'; // el `enDias(7)` de un 4 de septiembre
 describe('estadoDe', () => {
   it.each([
     ['CLOSED', '2026-12-24', 'cerrada'],
-    ['CANCELLED', '2026-12-24', 'cerrada'], // se dice igual que CLOSED
+    ['CANCELLED', '2026-12-24', 'cancelada'], // anulada no es sorteada
     ['DRAFT', '2026-09-05', 'borrador'], // aunque sortee mañana: no está publicada
     ['PUBLISHED', '2026-09-10', 'ultimos-dias'],
     ['PUBLISHED', '2026-09-11', 'ultimos-dias'], // el límite entra
@@ -51,8 +51,9 @@ describe('BADGE y ACCION', () => {
     }
   });
 
-  it('sólo la rifa cerrada ofrece la acción terciaria', () => {
+  it('sólo las rifas terminadas ofrecen la acción terciaria', () => {
     expect(ACCION['cerrada'].variante).toBe('outline');
+    expect(ACCION['cancelada'].variante).toBe('outline');
     expect(ACCION['borrador'].variante).toBe('default');
     expect(ACCION['en-venta'].variante).toBe('default');
   });
