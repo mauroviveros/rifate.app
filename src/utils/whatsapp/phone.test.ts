@@ -17,7 +17,8 @@ describe('localPhone', () => {
   });
 
   it('un argentino con el 15 adentro no se adivina: queda como vino', () => {
-    // «0341 15 555-1234» guardado por normalize.phone: 12 dígitos nacionales.
+    // Guardado antes de que normalize.phone sacara el 15: 12 dígitos
+    // nacionales. Los nuevos ya llegan como +549…
     expect(localPhone('+54341155551234')).toBe('+54341155551234');
   });
 });
