@@ -10,10 +10,10 @@
  */
 import type { HTMLAttributes } from 'astro/types';
 
+import Cell from '@/components/raffle/Cell.astro';
 import type { OwnerNumber } from '@/types/raffle';
 import { numberWidth } from '@/utils/frontmatter/numbers';
 
-import Cell from './Cell.astro';
 import SellCell from './SellCell.astro';
 
 interface Props extends HTMLAttributes<'section'> {

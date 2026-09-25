@@ -1,10 +1,11 @@
 ---
 /**
- * Un número del talonario, de sólo lectura.
+ * Un número del talonario, de sólo lectura: mirar, no tocar.
  *
- * Todavía no existe la versión tildable: la va a necesitar la pantalla de venta
- * (`OnSale`), que es la única donde se puede anotar algo. Mientras tanto esto
- * es lo que ven el borrador y la rifa cerrada — mirar, no tocar.
+ * Vive fuera de `panel/` porque la usan dos lados: la grilla del panel cuando
+ * no se puede anotar (el borrador y la rifa cerrada) y la página pública
+ * `/r/[slug]`. La versión tildable es `SellCell`, y ésa sí es del panel: es la
+ * única pantalla donde se anota una venta.
  */
 import type { NumberStatus } from '@/types/raffle';
 import { numberLabel } from '@/utils/frontmatter/numbers';
