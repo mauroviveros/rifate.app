@@ -17,7 +17,7 @@
 | 5 | Capa de datos y autorización | ✅ los tests de denegación pasan | **Alto** |
 | 6 | Dashboard | ✅ crear, publicar, vender y liberar desde la pantalla | Bajo |
 | 7 | Página pública + compartir | El link se ve bien en WhatsApp | Medio |
-| 8 | Plan PRO: pedidos y vivo | Dos navegadores ven la grilla actualizarse | Medio |
+| 8 | Plan PRO: pedidos y vivo | ✅ vivo: dos navegadores ven la grilla actualizarse · pedidos en pausa | Medio |
 | 9 | Sorteo, vouchers, admin | Cierre del ciclo completo | Bajo |
 | 10 | Deuda y futuro | — | — |
 
@@ -683,16 +683,66 @@ pasaron con 244 tests en verde.
 
 ## Fase 8 — Plan PRO: pedidos y estado en vivo
 
+La fase se partió en dos. El estado en vivo no depende del plan —el checkpoint
+es una venta manual, que existe en BASIC— y salió primero. Los pedidos quedan
+en pausa hasta definir el PRO.
+
+### Estado en vivo — BASIC y PRO
+
+- [x] WebSocket con **`acceptWebSocket()`** ← nunca `accept()`. El DO manda la
+      grilla pública entera al conectarse y después de cada `sell()` /
+      `release()` (`broadcast()`, sólo a los sockets con la etiqueta
+      `public`). El `ping` lo contesta `setWebSocketAutoResponse` sin
+      despertar al objeto. `destroy()` corta con `4404` (`LIVE_GONE`) para
+      que el cliente no reintente
+- [x] `/r/[slug]/live` — `watchPublicGrid`, con la misma regla de quién ve qué
+      que la página. Mira el `Upgrade` antes de ir a D1 y devuelve el 101 del
+      DO sin tocarlo. Probado en `astro dev` y en el build bajo `wrangler dev`:
+      el adapter no lo rompe, no hizo falta rutear en `src/worker.ts`
+- [x] Cliente en `/r/[slug]` — `liveGrid` en `src/utils/live.ts`: reintenta
+      con espera creciente y azar (1 s → 30 s), se rinde con `4404`, `ping`
+      cada 30 s y corta con la pestaña oculta. Sólo en rifas `PUBLISHED`.
+      `Cell` pasó a pintarse con `data-taken`: el cliente prende un atributo en
+      vez de repetir clases. La grilla de entrada corrige el HTML que llega
+      viejo por el caché de 30 s
+- [x] Defensas en el DO — tope de 1.000 mirando por rifa (`503` +
+      `Retry-After`; el que queda afuera ve la página estática) y `1008` al
+      socket que manda algo que no sea `ping`, que si no despierta al objeto
+- [ ] Rate limiting del WAF para `/r/*/live` por IP (20 cada 10 s) y alertas
+      de facturación de Workers y DO. Es dashboard, no código. ⚠️ No cubre
+      `*.workers.dev` ni los preview URLs, que siguen prendidos en
+      `wrangler.jsonc`
+- [x] **✅ Checkpoint: dos navegadores abiertos; vendés en uno y el otro se
+      actualiza solo** — en local, 2026-09-24
+- [ ] Lo mismo en producción: `wss://rifate.app/r/{slug}/live` responde 101
+
+### Pedidos — sólo PRO, en pausa
+
+> Antes que nada: **hoy no hay forma de llegar a una rifa PRO.**
+> `redeemVoucher` no tiene action ni pantalla, y escribe sólo en D1: no llama
+> a `syncConfig`, así que el DO seguiría viendo la rifa como BASIC y
+> rechazaría todo pedido. Es el primer paso cuando se retome.
+>
+> El esquema del DO ya está listo (`orders`, `numbers.order_id`,
+> `reserved_until`): no hace falta una migración v2.
+
 - [ ] `createOrder()` en el DO — valida tier, estado y máximo 50 números
 - [ ] Selección de números en la página pública + mensaje de WhatsApp armado
+      (artboards «Rifa pública · celular / escritorio», ya interactivos)
 - [ ] `/r/[slug]/pedido?t=` — el visitante consulta con su token
 - [ ] Bandeja de pedidos en el dashboard: confirmar / cancelar
 - [ ] `alarm()` que vence las reservas
+- [ ] `sell()` y `release()` hoy pisan un número `RESERVED` por un pedido
+      vivo, y el pedido queda `PENDING` con un número que ya no es suyo.
+      Recomendado: rechazarlo con `NUMBERS_UNAVAILABLE` y que el organizador
+      confirme o cancele el pedido primero
+- [ ] Límite contra el que reserva todo: `createOrder` es público y sin
+      cuenta. Binding `ratelimits` por IP, o la regla del WAF
 - [ ] La imagen para compartir (`gridSvg`) tacha los `RESERVED` pero no los
       cuenta en «X de Y vendidos». En BASIC no hay reservas; con los pedidos
-      PRO hay que decidir cómo se leen
-- [ ] WebSocket con **`acceptWebSocket()`** ← nunca `accept()`
-- [ ] **✅ Checkpoint: dos navegadores abiertos; vendés en uno y el otro se actualiza solo**
+      PRO hay que decidir cómo se leen (`soldSummary` tiene el mismo criterio)
+- [ ] Diseño en el canvas de lo que falta: el paso de nombre y teléfono,
+      `/r/[slug]/pedido` y la bandeja
 
 ---
 
