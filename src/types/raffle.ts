@@ -42,6 +42,19 @@ export type _OwnerNumberEsUnPublicNumber = Assert<
   OwnerNumber extends PublicNumber ? true : false
 >;
 
+/**
+ * Lo que el DO le manda por el WebSocket a quien está mirando la página
+ * pública. Lleva `PublicNumber[]` y nada más: por ese cable pasa lo mismo que
+ * ya se ve en `/r/{slug}`, así que no hay nada nuevo que se pueda filtrar.
+ *
+ * Es la grilla entera y no el cambio. Así el que se conecta tarde, o se
+ * reconecta después de un corte, no tiene que reconstruir nada.
+ */
+export type LiveMessage = {
+  type: 'grid';
+  numbers: PublicNumber[];
+};
+
 export type BuyerInput = {
   name: string;
   phone: string | null;

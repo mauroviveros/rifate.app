@@ -2,7 +2,8 @@ import { runInDurableObject } from 'cloudflare:test';
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
-import type { RaffleInit } from '@/types/raffle';
+import type { LiveMessage, RaffleInit } from '@/types/raffle';
+import { LIVE_GONE } from '@/utils/live';
 
 import type { Raffle } from './raffle';
 
@@ -319,5 +320,145 @@ describe('Raffle · proyección a D1', () => {
     // El 42 inventado se pisa con lo que dice el DO.
     expect(fila?.sold_count).toBe(2);
     expect(fila?.synced_at).not.toBeNull();
+  });
+});
+
+/**
+ * Se conecta como lo haría el navegador y junta lo que va llegando.
+ *
+ * Los mensajes se encolan desde el `accept()`: la grilla de entrada sale antes
+ * de que el test pida nada, y si recién ahí se escuchara, se perdería.
+ */
+const mirar = async (stub: DurableObjectStub<Raffle>) => {
+  const res = await stub.fetch('https://rifate.test/live', {
+    headers: { Upgrade: 'websocket' },
+  });
+  const ws = res.webSocket;
+  if (ws === null) throw new Error(`sin WebSocket: ${res.status}`);
+
+  const llegados: string[] = [];
+  const esperando: ((m: string) => void)[] = [];
+
+  ws.addEventListener('message', ({ data }) => {
+    const m = String(data);
+    const alguien = esperando.shift();
+    if (alguien === undefined) llegados.push(m);
+    else alguien(m);
+  });
+
+  const cerrado = new Promise<number>((resolve) => {
+    ws.addEventListener('close', ({ code }) => resolve(code));
+  });
+
+  ws.accept();
+
+  /** El próximo mensaje, crudo. */
+  const siguienteCrudo = (): Promise<string> => {
+    const m = llegados.shift();
+    if (m !== undefined) return Promise.resolve(m);
+    return new Promise((resolve) => esperando.push(resolve));
+  };
+
+  /** El próximo mensaje de grilla, ya parseado. */
+  const siguiente = async (): Promise<LiveMessage> =>
+    JSON.parse(await siguienteCrudo()) as LiveMessage;
+
+  return { ws, siguiente, siguienteCrudo, cerrado };
+};
+
+const estadoDe = (m: LiveMessage, numero: number) =>
+  m.numbers.find((n) => n.number === numero)?.status;
+
+describe('Raffle · en vivo', () => {
+  it('un pedido que no es WebSocket no entra', async () => {
+    const rifa = await rifaDeAna();
+
+    const res = await rifa.fetch('https://rifate.test/live');
+
+    expect(res.status).toBe(426);
+  });
+
+  it('una rifa sin init no tiene nada que mirar', async () => {
+    const rifa = env.RAFFLE.getByName('rifa-sin-init');
+
+    const res = await rifa.fetch('https://rifate.test/live', {
+      headers: { Upgrade: 'websocket' },
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('el que se conecta recibe la grilla de entrada', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+
+    const { siguiente } = await mirar(rifa);
+    const entrada = await siguiente();
+
+    expect(entrada.type).toBe('grid');
+    expect(entrada.numbers).toHaveLength(100);
+    expect(estadoDe(entrada, 7)).toBe('SOLD');
+  });
+
+  it('una venta les llega a todos los que miran', async () => {
+    const rifa = await rifaDeAna();
+    const uno = await mirar(rifa);
+    const otro = await mirar(rifa);
+    await uno.siguiente(); // la grilla de entrada
+    await otro.siguiente();
+
+    await rifa.sell('ana', [7, 8], CARLA);
+
+    for (const visitante of [uno, otro]) {
+      const m = await visitante.siguiente();
+      expect(estadoDe(m, 7)).toBe('SOLD');
+      expect(estadoDe(m, 8)).toBe('SOLD');
+    }
+  });
+
+  it('liberar también se avisa', async () => {
+    const rifa = await rifaDeAna();
+    await rifa.sell('ana', [7], CARLA);
+    const { siguiente } = await mirar(rifa);
+    await siguiente();
+
+    await rifa.release('ana', [7]);
+
+    expect(estadoDe(await siguiente(), 7)).toBe('AVAILABLE');
+  });
+
+  it('por el cable nunca viaja el comprador', async () => {
+    // Mismo criterio que el test de la grilla pública: buscar en el string es
+    // lo único que atrapa un campo nuevo que se coló sin que nadie lo piense.
+    const rifa = await rifaDeAna();
+    const { siguienteCrudo } = await mirar(rifa);
+    await siguienteCrudo();
+
+    await rifa.sell('ana', [7], CARLA);
+    const crudo = await siguienteCrudo();
+
+    expect(crudo).toContain('SOLD'); // control positivo: sí llegó la venta
+    expect(crudo).not.toContain('Carla');
+    expect(crudo).not.toContain('3411234567');
+  });
+
+  it('el ping lo contesta el runtime', async () => {
+    const rifa = await rifaDeAna();
+    const { ws, siguienteCrudo } = await mirar(rifa);
+    await siguienteCrudo();
+
+    ws.send('ping');
+
+    expect(await siguienteCrudo()).toBe('pong');
+  });
+
+  it('borrar la rifa corta a los que miran con el código de «no vuelvas»', async () => {
+    const rifa = await rifaDeAna();
+    const { siguiente, cerrado } = await mirar(rifa);
+    await siguiente();
+
+    await rifa.destroy('ana');
+
+    expect(await cerrado).toBe(LIVE_GONE);
   });
 });

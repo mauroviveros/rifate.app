@@ -2,6 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 
 import type {
   BuyerInput,
+  LiveMessage,
   OwnerNumber,
   PublicNumber,
   RaffleConfigPatch,
@@ -10,12 +11,21 @@ import type {
   SellResult,
 } from '@/types/raffle';
 import { AppError } from '@/utils/errors';
+import { LIVE_GONE } from '@/utils/live';
 import { now, phone } from '@/utils/normalize';
 
 import { getMeta, migrate, seedNumbers, setMeta } from './schema';
 
 /** Tope por operación. Mismo número que el máximo de un pedido del visitante. */
 const MAX_NUMEROS_POR_OPERACION = 50;
+
+/**
+ * La etiqueta de los WebSockets de la página pública. Cuando exista otra
+ * audiencia (el panel en vivo, con compradores) va a tener la suya, y
+ * `broadcast()` no le puede mandar la grilla del organizador a un visitante
+ * por equivocación: cada uno se busca por su etiqueta.
+ */
+const PUBLICO = 'public';
 
 /**
  * LA CONVENCIÓN QUE HAY QUE SOSTENER EN ESTE ARCHIVO
@@ -37,6 +47,13 @@ export class Raffle extends DurableObject<Env> {
     ctx.blockConcurrencyWhile(async () => {
       migrate(ctx.storage.sql);
     });
+
+    // El runtime contesta el `ping` del cliente sin despertar al objeto. Sin
+    // esto cada latido de cada visitante sería un request facturado y un
+    // objeto despierto. No es de esquema: no va en el blockConcurrencyWhile.
+    ctx.setWebSocketAutoResponse(
+      new WebSocketRequestResponsePair('ping', 'pong'),
+    );
   }
 
   // ══ AUTORIZACIÓN ════════════════════════════════════════════════════════
@@ -109,6 +126,48 @@ export class Raffle extends DurableObject<Env> {
       )
       .one();
   }
+
+  // ══ EN VIVO ═════════════════════════════════════════════════════════════
+  // Quien mira la página pública se queda escuchando. Es superficie pública:
+  // no recibe actor y lo único que viaja es `PublicNumber[]`.
+
+  /**
+   * Acepta el WebSocket de un visitante y le manda la grilla de entrada.
+   *
+   * ⚠️ `acceptWebSocket()`, NUNCA `server.accept()`. Con el primero el objeto
+   * hiberna con las conexiones abiertas y no factura mientras nadie vende. Con
+   * el segundo queda en memoria todo lo que dure la conexión: es la única
+   * línea de este archivo que puede hacer explotar la factura (docs/09).
+   *
+   * La grilla de entrada no es un detalle: la página pública se cachea 30 s en
+   * la CDN, así que el HTML puede llegar viejo. Lo que manda este método la
+   * corrige apenas se conecta.
+   */
+  override fetch(request: Request): Response {
+    if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
+      return new Response('Se espera un WebSocket', { status: 426 });
+    }
+
+    // Una rifa sin init() no tiene grilla que mirar.
+    if (this.ownerId() === null) {
+      return new Response('No existe', { status: 404 });
+    }
+
+    const [client, server] = Object.values(new WebSocketPair());
+    this.ctx.acceptWebSocket(server, [PUBLICO]);
+    server.send(this.gridMessage());
+
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /**
+   * Los visitantes sólo escuchan. El `ping` lo contesta el runtime sin llegar
+   * acá (ver el constructor), y cualquier otra cosa se ignora.
+   *
+   * El cierre no necesita handler: desde la compatibility_date 2026-04-07
+   * (`web_socket_auto_reply_to_close`) el runtime contesta el Close solo.
+   */
+  webSocketMessage(): void {}
 
   // ══ SUPERFICIE DEL ORGANIZADOR ══════════════════════════════════════════
   // Todas exigen userId y todas empiezan con assertOwner.
@@ -200,6 +259,7 @@ export class Raffle extends DurableObject<Env> {
     });
 
     this.proyectar();
+    this.broadcast();
     return resultado;
   }
 
@@ -266,6 +326,7 @@ export class Raffle extends DurableObject<Env> {
     });
 
     this.proyectar();
+    this.broadcast();
     return liberados;
   }
 
@@ -311,6 +372,12 @@ export class Raffle extends DurableObject<Env> {
   async destroy(userId: string): Promise<void> {
     this.assertOwner(userId);
 
+    // Primero se cierra a los que están mirando, con un código que les dice
+    // que no vuelvan a intentar: la rifa no va a volver.
+    for (const ws of this.ctx.getWebSockets(PUBLICO)) {
+      ws.close(LIVE_GONE, 'La rifa ya no existe');
+    }
+
     await this.ctx.storage.deleteAll();
 
     // `deleteAll()` borra TAMBIÉN el esquema, y `migrate()` sólo corre en el
@@ -326,6 +393,33 @@ export class Raffle extends DurableObject<Env> {
   }
 
   // ══ PRIVADO ═════════════════════════════════════════════════════════════
+
+  private gridMessage(): string {
+    const message: LiveMessage = { type: 'grid', numbers: this.publicGrid() };
+    return JSON.stringify(message);
+  }
+
+  /**
+   * Le manda la grilla nueva a todos los que están mirando. Va después de cada
+   * escritura que cambia un estado, y después de `proyectar()`: primero queda
+   * registrado, después se avisa.
+   *
+   * Se arma el mensaje una sola vez, no una por conexión. Y un socket que ya
+   * se estaba cerrando no puede tirar abajo la venta: la venta ya pasó.
+   */
+  private broadcast(): void {
+    const sockets = this.ctx.getWebSockets(PUBLICO);
+    if (sockets.length === 0) return;
+
+    const message = this.gridMessage();
+    for (const ws of sockets) {
+      try {
+        ws.send(message);
+      } catch {
+        // Se estaba cerrando. El runtime lo saca de getWebSockets() solo.
+      }
+    }
+  }
 
   /**
    * Un teléfono es una persona dentro de la rifa: si ya compró, es el mismo
