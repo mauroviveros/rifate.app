@@ -7,9 +7,10 @@ import Cell from '@/components/raffle/Cell.astro';
 import { Button } from '@/components/starwind/button';
 import Public from '@/layouts/Public.astro';
 import { publicGrid } from '@/lib/raffles';
-import { pesos, progress, shortDate } from '@/utils/format';
+import { pesos, shortDate } from '@/utils/format';
 import { publicUrlOf } from '@/utils/frontmatter/detail';
 import { numberLabel, numberWidth } from '@/utils/frontmatter/numbers';
+import { soldSummary } from '@/utils/live';
 import { localPhone, waLink } from '@/utils/whatsapp';
 
 const { slug } = Astro.params;
@@ -36,9 +37,17 @@ Astro.response.headers.set(
     : 'private, no-store',
 );
 
+/**
+ * Sólo se escucha lo que puede cambiar. En un borrador no se vende y una rifa
+ * cerrada ya no se mueve: abrir un WebSocket ahí sería una conexión de más
+ * mirando algo quieto.
+ */
+const isLive = raffle.status === 'PUBLISHED';
+
 // Se cuenta sobre la grilla y no sobre `raffle.soldCount`: la fila de D1 es el
-// caché y el DO es la verdad (mismo criterio que `tally`).
-const sold = numbers.filter(({ status }) => status === 'SOLD').length;
+// caché y el DO es la verdad (mismo criterio que `tally`). Es la misma cuenta
+// que hace el `<script>` con cada grilla que llega en vivo.
+const avance = soldSummary(numbers);
 const width = numberWidth(raffle.numberStart, raffle.totalNumbers);
 
 /**
@@ -115,8 +124,8 @@ const summary = [
     <Stat label="Cada número">{pesos(raffle.ticketPrice)}</Stat>
     <Stat label="Sortea el">{shortDate(raffle.drawDate)}</Stat>
     <Meter
-      label={`${sold} de ${numbers.length} vendidos`}
-      value={progress(sold, numbers.length)}
+      label={avance.label}
+      value={avance.value}
       class="col-span-2 sm:col-span-1"
     />
   </dl>
@@ -145,6 +154,7 @@ const summary = [
   <section
     class="mt-7 rounded-xl bg-card p-4 ring-2 ring-border sm:p-6"
     aria-labelledby="grid-title"
+    data-live={isLive ? `/r/${raffle.slug}/live` : undefined}
   >
     <h2 id="grid-title" class="text-[1.25rem]">Los números</h2>
     <p class="mt-0.5 text-label text-subtle-foreground">
@@ -170,3 +180,48 @@ const summary = [
     }
   </section>
 </Public>
+
+<script>
+  // Directo del módulo y no de un barril: esto va al bundle del navegador.
+  import type { PublicNumber } from '@/types/raffle';
+  import { isTaken, liveGrid, soldSummary } from '@/utils/live';
+
+  const $grid = document.querySelector<HTMLElement>('[data-live]');
+
+  if ($grid?.dataset.live) {
+    const $cells = new Map(
+      Array.from($grid.querySelectorAll<HTMLElement>('[data-number]'), ($c) => [
+        Number($c.dataset.number),
+        $c,
+      ]),
+    );
+    const $label = document.querySelector('[data-meter-label]');
+    const $bar = document.querySelector<HTMLElement>('[data-meter-bar]');
+    const $value = document.querySelector('[data-meter-value]');
+
+    /** Repinta los números y el avance con la grilla que mandó el DO. */
+    const paint = (numbers: PublicNumber[]) => {
+      for (const { number, status } of numbers) {
+        $cells.get(number)?.toggleAttribute('data-taken', isTaken(status));
+      }
+
+      const { label, value } = soldSummary(numbers);
+      if ($label) $label.textContent = label;
+      if ($bar) $bar.style.width = `${value}%`;
+      if ($value) $value.textContent = `${value}%`;
+    };
+
+    const url = new URL($grid.dataset.live, location.href);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+
+    const live = liveGrid({ url: url.href, onGrid: paint });
+
+    // Con la pestaña oculta no hay nadie mirando: se corta, y al volver se
+    // reconecta y la grilla de entrada la pone al día.
+    const sync = () =>
+      document.visibilityState === 'visible' ? live.start() : live.stop();
+
+    document.addEventListener('visibilitychange', sync);
+    sync();
+  }
+</script>

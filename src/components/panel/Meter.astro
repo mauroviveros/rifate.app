@@ -3,6 +3,10 @@ import type { HTMLAttributes } from 'astro/types';
 
 import { Card } from '@/components/starwind/card';
 
+/**
+ * Los `data-meter-*` son para quien lo actualiza en el cliente (la página
+ * pública en vivo): marcan qué pedazo es cuál sin atarse a las clases.
+ */
 interface Props extends HTMLAttributes<'div'> {
   label: string;
   /** 0-100, entero. */
@@ -13,7 +17,10 @@ const { label, value, class: className, ...rest } = Astro.props;
 ---
 
 <Card size="sm" class:list={['gap-0 px-5 sm:px-6', className]} {...rest}>
-  <dt class="mb-2.5 text-label font-bold text-subtle-foreground">
+  <dt
+    class="mb-2.5 text-label font-bold text-subtle-foreground"
+    data-meter-label
+  >
     {label}
   </dt>
   <dd class="flex h-full items-center gap-3">
@@ -21,12 +28,17 @@ const { label, value, class: className, ...rest } = Astro.props;
       class="h-3.5 flex-1 overflow-hidden rounded-full bg-border"
       aria-hidden="true"
     >
-      <div class="h-full rounded-full bg-success" style={`width: ${value}%`}>
+      <div
+        class="h-full rounded-full bg-success"
+        style={`width: ${value}%`}
+        data-meter-bar
+      >
       </div>
     </div>
     <span
       class="font-display text-2xl font-extrabold tracking-tight text-success"
       data-numero
+      data-meter-value
     >
       {value}%
     </span>

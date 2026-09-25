@@ -6,9 +6,15 @@
  * no se puede anotar (el borrador y la rifa cerrada) y la página pública
  * `/r/[slug]`. La versión tildable es `SellCell`, y ésa sí es del panel: es la
  * única pantalla donde se anota una venta.
+ *
+ * El estado se pinta con `data-taken` y no con clases elegidas acá, para que
+ * la página pública lo pueda cambiar en vivo prendiendo y apagando un atributo
+ * (ver su `<script>`). Si el tachado dependiera de clases armadas en el
+ * frontmatter, el cliente tendría que saber cuáles son y repetirlas.
  */
 import type { NumberStatus } from '@/types/raffle';
 import { numberLabel } from '@/utils/frontmatter/numbers';
+import { isTaken } from '@/utils/live';
 
 interface Props {
   status: NumberStatus;
@@ -18,20 +24,18 @@ interface Props {
 }
 
 const { status, value, width } = Astro.props;
-
-/** Vendido o reservado: para el que mira, las dos cosas son «ya no está». */
-const taken = status === 'SOLD' || status === 'RESERVED';
 ---
 
 <div
   class:list={[
-    'flex aspect-square items-center justify-center',
+    'group flex aspect-square items-center justify-center',
     'rounded-md border-2 text-support font-extrabold select-none',
-    taken
-      ? 'border-border bg-muted tachado text-disabled-foreground'
-      : 'border-input bg-card text-foreground',
+    'border-input bg-card text-foreground',
+    'data-taken:border-border data-taken:bg-muted data-taken:tachado data-taken:text-disabled-foreground',
   ]}
+  data-number={value}
+  data-taken={isTaken(status) ? '' : undefined}
 >
   <span data-numero>{numberLabel(value, width)}</span>
-  {taken && <span class="sr-only"> · vendido</span>}
+  <span class="sr-only hidden group-data-taken:inline"> · vendido</span>
 </div>
