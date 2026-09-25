@@ -13,11 +13,15 @@
  * nodos.
  */
 
+import type { ComponentProps } from 'astro/types';
+
 import { button } from '@/components/starwind/button/variants';
 import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
 import { numberWidth } from '@/utils/frontmatter/numbers';
 
 import Buyers from './buyers/Buyers.astro';
+import DangerZone from './danger/DangerZone.astro';
+import DrawCard from './draw/DrawCard.astro';
 import EditLink from './EditLink.astro';
 import Grid from './grid/Grid.astro';
 import Panel from './sale/Panel.astro';
@@ -31,9 +35,17 @@ interface Props {
   formData: FormData | null;
   errors: Record<string, string[] | undefined>;
   error: string | null;
+  /** El diálogo de sorteo: lo que dejó el intento anterior, si falló. */
+  draw: Omit<ComponentProps<typeof DrawCard>, 'raffle' | 'sold'>;
+  /** La franja de anular: lo mismo. */
+  danger: Omit<ComponentProps<typeof DangerZone>, 'raffle' | 'numbers'>;
 }
 
-const { raffle, numbers, selected, formData, errors, error } = Astro.props;
+const { raffle, numbers, selected, formData, errors, error, draw, danger } =
+  Astro.props;
+
+/** Los que entran en el sorteo al azar. */
+const sold = numbers.filter(({ status }) => status === 'SOLD').length;
 
 /**
  * El `id` que ata los checkboxes de la grilla al `<form>` del panel, aunque
@@ -83,9 +95,12 @@ const width = numberWidth(raffle.numberStart, raffle.totalNumbers);
       errors={errors}
       error={error}
     />
+    <DrawCard raffle={raffle} sold={sold} {...draw} />
     <EditLink raffleId={raffle.id} />
   </div>
 </div>
+
+<DangerZone raffle={raffle} numbers={numbers} {...danger} />
 
 <div
   class:list={[

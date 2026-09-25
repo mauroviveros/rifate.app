@@ -1,0 +1,311 @@
+---
+/**
+ * La franja del pie: la única acción destructiva de la pantalla, la que
+ * corresponde (artboard «Anular · escritorio»).
+ *
+ *   · con ventas → ANULAR. Hay plata de otros en el medio: la rifa queda como
+ *     registro, el link deja de abrir y la devolución la arregla el
+ *     organizador. Pide escribir ANULAR.
+ *   · sin ventas → BORRAR. No hay nada que registrar ni a quién devolverle:
+ *     se va entera. Pide confirmar, sin palabra.
+ *
+ * Nunca las dos a la vez: ofrecer «borrar» con ventas sería ofrecer algo que
+ * el objeto va a rechazar (`RAFFLE_HAS_SALES`), y «anular» sin ventas deja un
+ * registro vacío que nadie necesita.
+ *
+ * Abajo y callada, en gris y con borde: lo destructivo no se mezcla con lo
+ * que se usa todos los días. El vermellón aparece recién adentro del diálogo,
+ * y en el de anular arranca apagado diciendo por qué (regla 7).
+ */
+import { actions } from 'astro:actions';
+import { Icon } from 'astro-icon/components';
+
+import { Button } from '@/components/starwind/button';
+import { button } from '@/components/starwind/button/variants';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/starwind/dialog';
+import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
+import {
+  buyersOf,
+  refundSentence,
+  refundsOf,
+} from '@/utils/frontmatter/detail';
+
+interface Props {
+  raffle: OwnerRaffle;
+  numbers: OwnerNumber[];
+  /** El intento anterior de anular, si falló. */
+  cancel: {
+    errors: Record<string, string[] | undefined>;
+    error: string | null;
+  };
+  /** El intento anterior de borrar, si falló. */
+  remove: { error: string | null };
+  /** Lo que se había escrito en el campo de confirmación. */
+  confirmValue: string;
+}
+
+const { raffle, numbers, cancel, remove, confirmValue } = Astro.props;
+
+const summary = refundsOf(buyersOf(numbers), raffle.ticketPrice);
+const hasSales = summary.sold > 0;
+
+/**
+ * El error de borrar se muestra en el diálogo de anular cuando la rifa tiene
+ * ventas: es el caso de una venta cargada desde otra pestaña mientras este
+ * diálogo estaba abierto. El mensaje —«tiene números vendidos: anulala»— es
+ * justo el camino que queda.
+ */
+const cancelError = cancel.error ?? (hasSales ? remove.error : null);
+const cancelOpen =
+  cancelError !== null || Object.values(cancel.errors).some(Boolean);
+const confirmError = cancel.errors.confirm?.[0];
+
+const trigger = button({
+  variant: 'outline',
+  size: 'md',
+  class: 'w-full shrink-0 sm:w-auto',
+});
+const content =
+  'max-h-[calc(100dvh-2rem)] max-w-[580px] overflow-y-auto rounded-3xl border-2 border-border bg-card p-6 sm:p-8';
+const alert =
+  'mb-5 flex items-start gap-2.5 rounded-lg bg-error/8 p-4 text-support font-bold text-error';
+---
+
+<section
+  class="mt-10 flex flex-col gap-4 rounded-xl border-2 border-border bg-muted/40 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+  aria-labelledby="danger-title"
+>
+  <div>
+    <h2 id="danger-title" class="text-support font-extrabold">
+      {hasSales ? 'Anular la rifa' : 'Borrar la rifa'}
+    </h2>
+    <p class="mt-0.5 text-support text-subtle-foreground">
+      {
+        hasSales
+          ? 'Si se suspendió: queda como registro y el link deja de abrir.'
+          : 'Todavía no vendiste nada, así que la podés borrar entera.'
+      }
+    </p>
+  </div>
+
+  {
+    hasSales ? (
+      <Dialog defaultOpen={cancelOpen}>
+        <DialogTrigger class={trigger}>
+          <Icon name="lucide:ban" class="size-5" aria-hidden="true" />
+          Anular la rifa
+        </DialogTrigger>
+
+        <DialogContent class={content}>
+          <div class="text-center">
+            <span
+              class="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-warning"
+              aria-hidden="true"
+            >
+              <Icon name="lucide:triangle-alert" class="size-8" />
+            </span>
+            <DialogTitle class="font-display text-[1.625rem] leading-tight font-extrabold text-balance sm:text-[2rem]">
+              ¿Anular {raffle.title}?
+            </DialogTitle>
+          </div>
+
+          <DialogDescription class="mt-5 rounded-xl border-2 border-warning bg-warning/20 p-4 text-body text-foreground">
+            <span data-numero>{refundSentence(summary)}</span> Anular no les
+            devuelve la plata: eso lo arreglás vos con cada uno.
+          </DialogDescription>
+
+          <p class="mt-5 text-support font-extrabold">Después de anular:</p>
+          <ul class="mt-1.5 flex flex-col gap-1.5 text-support">
+            <li class="flex items-center gap-2">
+              <Icon
+                name="lucide:circle-x"
+                class="size-5 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+              el link público deja de abrir
+            </li>
+            <li class="flex items-center gap-2">
+              <Icon
+                name="lucide:circle-x"
+                class="size-5 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+              no se puede vender ni liberar más números
+            </li>
+            <li class="flex items-center gap-2">
+              <Icon
+                name="lucide:circle-x"
+                class="size-5 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+              <strong>no se puede volver atrás</strong>
+            </li>
+          </ul>
+
+          <hr class="my-6 perforado" />
+
+          <form
+            method="POST"
+            action={actions.raffle.cancel}
+            novalidate
+            data-cancel
+          >
+            <input type="hidden" name="id" value={raffle.id} />
+
+            {cancelError && (
+              <p class={alert} role="alert">
+                <Icon
+                  name="lucide:circle-alert"
+                  class="mt-0.5 size-5.5 shrink-0"
+                />
+                <span>{cancelError}</span>
+              </p>
+            )}
+
+            <label for="cancel-confirm" class="block text-body font-extrabold">
+              Escribí ANULAR para confirmar
+            </label>
+            <p
+              id="cancel-confirm-hint"
+              class="mt-0.5 text-support text-subtle-foreground"
+            >
+              Es a propósito: no queremos que se anule sin querer.
+            </p>
+            <input
+              id="cancel-confirm"
+              name="confirm"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              placeholder="ANULAR"
+              value={confirmValue}
+              aria-describedby={
+                confirmError
+                  ? 'cancel-confirm-hint cancel-confirm-error'
+                  : 'cancel-confirm-hint'
+              }
+              aria-invalid={confirmError ? 'true' : undefined}
+              class="mt-2.5 h-13 w-full rounded-lg border-2 border-input bg-background px-4 text-body font-bold tracking-[0.08em] uppercase aria-invalid:border-error"
+              data-cancel-confirm
+            />
+            {confirmError && (
+              <p
+                id="cancel-confirm-error"
+                class="mt-1.5 text-label font-bold text-error"
+              >
+                {confirmError}
+              </p>
+            )}
+
+            {/* Un `<button>` y no el `Button` de Starwind: el primitivo marca
+                el apagado con `data-disabled`, y el script de abajo prende el
+                botón cambiando `disabled`. Con el `Button`, quedaría habilitado
+                pero pintado de apagado. */}
+            <button
+              type="submit"
+              class={button({
+                variant: 'primary',
+                size: 'lg',
+                class: 'mt-5 w-full',
+              })}
+              disabled
+              data-cancel-submit
+            >
+              <span data-cancel-label>Escribí ANULAR para poder seguir</span>
+            </button>
+          </form>
+
+          <DialogClose class="mt-3 w-full rounded-lg py-2 text-support font-bold text-foreground hover:underline">
+            No, volver a la rifa
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
+    ) : (
+      <Dialog defaultOpen={remove.error !== null}>
+        <DialogTrigger class={trigger}>
+          <Icon name="lucide:trash-2" class="size-5" aria-hidden="true" />
+          Borrar la rifa
+        </DialogTrigger>
+
+        <DialogContent class={content}>
+          <div class="text-center">
+            <span
+              class="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-warning"
+              aria-hidden="true"
+            >
+              <Icon name="lucide:trash-2" class="size-8" />
+            </span>
+            <DialogTitle class="font-display text-[1.625rem] leading-tight font-extrabold text-balance sm:text-[2rem]">
+              ¿Borrar {raffle.title}?
+            </DialogTitle>
+            <DialogDescription class="mt-2 text-body text-muted-foreground">
+              Se borran los datos, el talonario y el link. Como no vendiste
+              ningún número, no hay nada que devolver.{' '}
+              <strong class="text-foreground">No se puede volver atrás.</strong>
+            </DialogDescription>
+          </div>
+
+          <form method="POST" action={actions.raffle.remove} class="mt-6">
+            <input type="hidden" name="id" value={raffle.id} />
+
+            {remove.error && (
+              <p class={alert} role="alert">
+                <Icon
+                  name="lucide:circle-alert"
+                  class="mt-0.5 size-5.5 shrink-0"
+                />
+                <span>{remove.error}</span>
+              </p>
+            )}
+
+            <Button type="submit" variant="primary" size="lg" class="w-full">
+              <Icon name="lucide:trash-2" aria-hidden="true" />
+              Borrar la rifa
+            </Button>
+          </form>
+
+          <DialogClose class="mt-3 w-full rounded-lg py-2 text-support font-bold text-foreground hover:underline">
+            No, volver a la rifa
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+</section>
+
+<script>
+  import { CANCEL_WORD } from '@/utils/cancel-word';
+
+  /* El botón de anular arranca apagado y dice qué falta (regla 7). Se prende
+     recién con la palabra escrita; el esquema la vuelve a chequear igual, por
+     si el script no corrió. */
+  for (const form of document.querySelectorAll<HTMLFormElement>(
+    '[data-cancel]',
+  )) {
+    const input = form.querySelector<HTMLInputElement>('[data-cancel-confirm]');
+    const submit = form.querySelector<HTMLButtonElement>(
+      '[data-cancel-submit]',
+    );
+    const label = form.querySelector<HTMLElement>('[data-cancel-label]');
+
+    const sync = () => {
+      const ok = input?.value.trim().toUpperCase() === CANCEL_WORD;
+      if (submit) submit.disabled = !ok;
+      if (label) {
+        label.textContent = ok
+          ? 'Anular la rifa'
+          : `Escribí ${CANCEL_WORD} para poder seguir`;
+      }
+    };
+
+    input?.addEventListener('input', sync);
+    sync();
+  }
+</script>

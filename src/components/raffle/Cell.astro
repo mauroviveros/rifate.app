@@ -21,9 +21,15 @@ interface Props {
   value: number;
   /** Ancho de padding de la etiqueta (de `numberWidth`). */
   width: number;
+  /**
+   * El número que salió en el sorteo. Le gana a `data-taken`: no se tacha,
+   * se marca en tinta, que es lo que se busca primero en una rifa cerrada.
+   * Puede ser un número que no se vendió, y se marca igual: es el que salió.
+   */
+  winner?: boolean;
 }
 
-const { status, value, width } = Astro.props;
+const { status, value, width, winner = false } = Astro.props;
 ---
 
 <div
@@ -32,10 +38,13 @@ const { status, value, width } = Astro.props;
     'rounded-md border-2 text-support font-extrabold select-none',
     'border-input bg-card text-foreground',
     'data-taken:border-border data-taken:bg-muted data-taken:tachado data-taken:text-disabled-foreground',
+    'data-winner:border-foreground data-winner:bg-foreground data-winner:text-warning',
   ]}
   data-number={value}
-  data-taken={isTaken(status) ? '' : undefined}
+  data-taken={!winner && isTaken(status) ? '' : undefined}
+  data-winner={winner ? '' : undefined}
 >
   <span data-numero>{numberLabel(value, width)}</span>
   <span class="sr-only hidden group-data-taken:inline"> · vendido</span>
+  <span class="sr-only hidden group-data-winner:inline"> · ganador</span>
 </div>

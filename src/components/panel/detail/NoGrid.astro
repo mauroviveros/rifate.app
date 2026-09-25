@@ -14,19 +14,28 @@
  * Rearmar no pierde nada de lo cargado: `init()` es un no-op si el objeto ya
  * tiene dueño, así que apretar de más nunca pisa una grilla que sí prendió.
  */
+import type { ComponentProps } from 'astro/types';
 import { actions } from 'astro:actions';
 import { Icon } from 'astro-icon/components';
 
 import { Button } from '@/components/starwind/button';
 import type { OwnerRaffle } from '@/types/raffle';
 
+import DangerZone from './danger/DangerZone.astro';
+
 interface Props {
   raffle: OwnerRaffle;
   /** Error de dominio de un intento anterior de rearmar. */
   error?: string | null;
+  /**
+   * La franja de borrar. Sin grilla no hay ventas, así que siempre es la de
+   * borrar: una rifa que no se terminó de armar y no se quiere reintentar se
+   * saca del panel.
+   */
+  danger: Omit<ComponentProps<typeof DangerZone>, 'raffle' | 'numbers'>;
 }
 
-const { raffle, error = null } = Astro.props;
+const { raffle, error = null, danger } = Astro.props;
 
 /** Lo que el botón va a generar, para que se sepa antes de apretarlo. */
 const first = raffle.numberStart;
@@ -83,3 +92,5 @@ const last = raffle.numberStart + raffle.totalNumbers - 1;
     </Button>
   </form>
 </section>
+
+<DangerZone raffle={raffle} numbers={[]} {...danger} />

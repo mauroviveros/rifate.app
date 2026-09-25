@@ -1,19 +1,14 @@
 ---
 /**
- * La rifa que terminó: `CLOSED` o `CANCELLED`. Es una pantalla de consulta —
+ * La rifa sorteada (artboard «Ya sorteada»). Es una pantalla de consulta —
  * quién ganó, cuánto entró, quién compró qué—, sin nada que apretar salvo
- * corregir un dato.
+ * avisarle al ganador o corregir un dato.
  *
- * ⚠️ Hoy no se llega acá desde la app: no hay action ni flujo que ponga
- * `CLOSED` ni que escriba `winner_number`. Las columnas existen desde la
- * migración 0003 y la tarjeta del listado ya las muestra, pero el sorteo es
- * fase 9. La pantalla existe porque `estadoDetalle` despacha a ella, y una
- * rifa puede quedar cerrada por fuera de la app.
+ * La grilla pasa a ser registro y el ganador se come la columna derecha: es
+ * lo que se busca primero. En la grilla, el número que salió va en tinta.
  *
- * No agrega ninguna pieza propia salvo el ganador: `Stats`, `Grid`, `Buyers` y
- * `EditLink` son las mismas de `OnSale`. Si para escribir esto hubiera habido
- * que tocar alguna de ellas, sería la señal de que el recorte de los pasos
- * anteriores quedó mal hecho.
+ * La cancelada NO pasa por acá desde la fase 9: tiene su propia pantalla,
+ * `Cancelled.astro`, porque lo que importa ahí es a quién devolverle la plata.
  */
 import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
 
@@ -30,25 +25,17 @@ interface Props {
 
 const { raffle, numbers } = Astro.props;
 
-/** Una cancelada nunca llegó a sortearse: no tiene ganador que mostrar. */
-const cancelled = raffle.status === 'CANCELLED';
+/** El comprador del número que salió, si se había vendido. */
+const sold = numbers.find(
+  (n) => n.number === raffle.winnerNumber && n.status === 'SOLD',
+);
+const buyer =
+  sold?.buyerName != null
+    ? { name: sold.buyerName, phone: sold.buyerPhone }
+    : null;
 ---
 
 <Stats class="mt-7" numbers={numbers} ticketPrice={raffle.ticketPrice} />
-
-{
-  raffle.winnerNumber !== null && (
-    <Winner raffle={raffle} winnerNumber={raffle.winnerNumber} />
-  )
-}
-
-{
-  cancelled && (
-    <p class="mt-7 rounded-xl border-2 border-dashed border-border p-6 text-support text-subtle-foreground">
-      Esta rifa se canceló. Queda acá para consultar lo que se había vendido.
-    </p>
-  )
-}
 
 <div
   class:list={[
@@ -56,24 +43,32 @@ const cancelled = raffle.status === 'CANCELLED';
     'lg:grid-cols-[1fr_380px] lg:items-start lg:gap-7.5',
   ]}
 >
-  <div class="flex flex-col gap-7">
-    <Grid
-      title="Los números"
-      hint="La rifa está cerrada: la grilla quedó como terminó."
-      numbers={numbers}
-      numberStart={raffle.numberStart}
-      totalNumbers={raffle.totalNumbers}
-      dimmed
-    />
+  <Grid
+    title="El talonario, como quedó"
+    hint="Ya no se puede vender ni liberar. Queda de registro."
+    numbers={numbers}
+    numberStart={raffle.numberStart}
+    totalNumbers={raffle.totalNumbers}
+    winnerNumber={raffle.winnerNumber}
+  />
+
+  <div class="order-first flex flex-col gap-6 lg:sticky lg:top-24 lg:order-0">
+    {
+      raffle.winnerNumber !== null && (
+        <Winner
+          raffle={raffle}
+          winnerNumber={raffle.winnerNumber}
+          buyer={buyer}
+        />
+      )
+    }
 
     <Buyers
       numbers={numbers}
       numberStart={raffle.numberStart}
       totalNumbers={raffle.totalNumbers}
     />
-  </div>
 
-  <div class="lg:sticky lg:top-24">
     <EditLink raffleId={raffle.id} />
   </div>
 </div>

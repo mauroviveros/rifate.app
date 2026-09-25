@@ -2,6 +2,7 @@
 import { actions } from 'astro:actions';
 
 import Actions from '@/components/panel/detail/Actions.astro';
+import Cancelled from '@/components/panel/detail/Cancelled.astro';
 import Closed from '@/components/panel/detail/Closed.astro';
 import Draft from '@/components/panel/detail/Draft.astro';
 import NoGrid from '@/components/panel/detail/NoGrid.astro';
@@ -23,7 +24,7 @@ const { id } = Astro.params;
 if (!id) return Astro.rewrite('/404');
 
 /**
- * PRG: las cinco acciones del detalle vuelven acá con un 303 en el éxito, así
+ * PRG: las acciones del detalle vuelven acá con un 303 en el éxito, así
  * un F5 no reenvía el formulario. Mismo patrón que el alta.
  *
  * El `?ok=` se arma ANTES de redirigir y en una sola expresión, en vez de cinco
@@ -39,6 +40,14 @@ const setPhoneResult = Astro.getActionResult(actions.raffle.setPhone);
 const sellResult = Astro.getActionResult(actions.raffle.sell);
 const releaseResult = Astro.getActionResult(actions.raffle.release);
 const rebuildResult = Astro.getActionResult(actions.raffle.rebuildGrid);
+const drawResult = Astro.getActionResult(actions.raffle.draw);
+const cancelResult = Astro.getActionResult(actions.raffle.cancel);
+const removeResult = Astro.getActionResult(actions.raffle.remove);
+
+/** Borrada, la rifa ya no tiene detalle: el cartel va en el listado. */
+if (removeResult && !removeResult.error) {
+  return Astro.redirect('/panel?ok=deleted', 303);
+}
 
 const ok =
   publishResult && !publishResult.error
@@ -51,7 +60,11 @@ const ok =
           ? `freed-${releaseResult.data.length}`
           : rebuildResult && !rebuildResult.error
             ? 'rebuilt'
-            : null;
+            : drawResult && !drawResult.error
+              ? 'drawn'
+              : cancelResult && !cancelResult.error
+                ? 'cancelled'
+                : null;
 
 if (ok) return Astro.redirect(`/panel/rifa/${id}?ok=${ok}`, 303);
 
@@ -80,7 +93,7 @@ if (Astro.request.method === 'POST') {
 }
 
 /**
- * Cuál de las cuatro pantallas va. Cada una se dibuja entera en su propio
+ * Cuál de las cinco pantallas va. Cada una se dibuja entera en su propio
  * componente: abrís `Draft.astro` y ves la pantalla del borrador de corrido,
  * sin condiciones adentro.
  */
@@ -97,6 +110,25 @@ const sale = formErrors(sellResult, releaseResult);
 
 /** Rearmar el talonario va solo: un botón, una action. */
 const rebuild = formErrors(rebuildResult);
+
+/**
+ * Sortear, anular y borrar viven en diálogos: si el intento falló, el diálogo
+ * se vuelve a abrir con el error y con lo que se había elegido o escrito.
+ */
+const drawErrors = formErrors(drawResult);
+const draw = {
+  errors: drawErrors.fields,
+  error: drawErrors.message,
+  mode: formValue(formData, 'mode'),
+  number: formValue(formData, 'number'),
+};
+
+const cancelErrors = formErrors(cancelResult);
+const danger = {
+  cancel: { errors: cancelErrors.fields, error: cancelErrors.message },
+  remove: { error: formErrors(removeResult).message },
+  confirmValue: formValue(formData, 'confirm'),
+};
 
 const subtitle = subtitleOf(raffle);
 const publicUrl = publicUrlOf(raffle, Astro.site);
@@ -133,7 +165,7 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
 
   {
     estado === 'sin-grilla' && (
-      <NoGrid raffle={raffle} error={rebuild.message} />
+      <NoGrid raffle={raffle} error={rebuild.message} danger={danger} />
     )
   }
   {
@@ -145,6 +177,7 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
         phoneErrors={phone.fields.contactPhone}
         phoneError={phone.message}
         phoneValue={phoneValue}
+        danger={danger}
       />
     )
   }
@@ -157,10 +190,13 @@ const okMessage = flashMessage(Astro.url.searchParams.get('ok'));
         formData={formData}
         errors={sale.fields}
         error={sale.message}
+        draw={draw}
+        danger={danger}
       />
     )
   }
   {estado === 'cerrada' && <Closed raffle={raffle} numbers={numbers} />}
+  {estado === 'cancelada' && <Cancelled raffle={raffle} numbers={numbers} />}
 </Dashboard>
 
 <script>

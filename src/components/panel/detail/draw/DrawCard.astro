@@ -1,0 +1,256 @@
+---
+/**
+ * «Sortear el ganador»: la tarjeta de la columna derecha y su diálogo
+ * (artboard «Sortear · escritorio»).
+ *
+ * La tarjeta está siempre y no grita nunca: va con borde, no en vermellón. El
+ * vermellón de esta pantalla es el de compartir, arriba (regla 2), y el del
+ * diálogo aparece recién adentro, cuando ya se eligió sortear.
+ *
+ * Es un diálogo y no una pantalla porque son dos opciones y una confirmación,
+ * y porque cierra la rifa: tiene que interrumpir. Es un modal de verdad —foco
+ * atrapado, Escape, foco de vuelta al cerrar—, así que es el `Dialog` de
+ * Starwind (docs/11, la regla de las tres puertas).
+ *
+ * Tras un error (el PRG vuelve con el formulario rechazado) se abre solo, con
+ * lo que se había elegido: el error se lee donde se cometió.
+ */
+import { actions } from 'astro:actions';
+import { Icon } from 'astro-icon/components';
+
+import { Button } from '@/components/starwind/button';
+import { button } from '@/components/starwind/button/variants';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/starwind/dialog';
+import type { OwnerRaffle } from '@/types/raffle';
+
+interface Props {
+  raffle: OwnerRaffle;
+  /** Cuántos vendidos entran en el sorteo al azar. */
+  sold: number;
+  errors: Record<string, string[] | undefined>;
+  error: string | null;
+  /** Lo que se había elegido antes de un error. */
+  mode: string;
+  number: string;
+}
+
+const { raffle, sold, errors, error, mode, number } = Astro.props;
+
+/** Se reabre si el intento anterior falló, del lado que sea. */
+const open = error !== null || Object.values(errors).some(Boolean);
+
+/**
+ * Sin vendidos no hay entre quiénes sortear al azar: esa opción va apagada
+ * diciendo por qué (regla 7), y queda elegida la otra.
+ */
+const canRandom = sold > 0;
+const manual = mode === 'manual' || !canRandom;
+const numberError = errors.number?.[0] ?? errors.mode?.[0];
+
+const randomHint = canRandom
+  ? `Elige uno al azar entre los ${sold} vendidos.`
+  : 'No hay vendidos entre los que elegir.';
+
+/**
+ * Una opción es el radio y su `<label>` lado a lado, no el radio adentro del
+ * label: la de «a mano» lleva además el campo del número, y un input adentro
+ * del label de otro input es un control con dos dueños.
+ */
+const option = [
+  'grid grid-cols-[auto_1fr] items-start gap-x-3.5 rounded-xl border-2 border-border p-4',
+  'has-checked:border-foreground has-checked:bg-background',
+  'has-disabled:opacity-55 has-disabled:[&_label]:cursor-not-allowed',
+];
+---
+
+<section
+  class="rounded-xl bg-card p-6 ring-2 ring-border"
+  aria-labelledby="draw-title"
+>
+  <h2 id="draw-title" class="text-[1.25rem]">El sorteo</h2>
+  <p class="mt-1 text-support text-subtle-foreground">
+    Cuando llegue el día, sorteá entre los vendidos o cargá el número que salió.
+  </p>
+
+  <Dialog defaultOpen={open}>
+    <DialogTrigger
+      class:list={[button({ variant: 'outline', size: 'md' }), 'mt-4 w-full']}
+    >
+      <Icon name="lucide:ticket" class="size-5" aria-hidden="true" />
+      Sortear el ganador
+    </DialogTrigger>
+
+    <DialogContent
+      class="max-h-[calc(100dvh-2rem)] max-w-[580px] overflow-y-auto rounded-3xl border-2 border-border bg-card p-6 sm:p-8"
+    >
+      <div class="text-center">
+        <span
+          class="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-warning"
+          aria-hidden="true"
+        >
+          <Icon name="lucide:ticket" class="size-8" />
+        </span>
+        <DialogTitle
+          class="font-display text-[1.625rem] leading-tight font-extrabold text-balance sm:text-[2rem]"
+        >
+          Sortear {raffle.title}
+        </DialogTitle>
+        <DialogDescription class="mt-2 text-body text-muted-foreground">
+          {
+            canRandom ? (
+              <>
+                Entran los{' '}
+                <strong class="text-foreground" data-numero>
+                  {sold} {sold === 1 ? 'número vendido' : 'números vendidos'}
+                </strong>
+                . Los que no se vendieron quedan afuera.
+              </>
+            ) : (
+              'Todavía no vendiste ningún número: sólo podés cargar el que salió.'
+            )
+          }
+        </DialogDescription>
+      </div>
+
+      <hr class="my-6 perforado" />
+
+      <form method="POST" action={actions.raffle.draw} novalidate data-draw>
+        <input type="hidden" name="id" value={raffle.id} />
+
+        {
+          error && (
+            <p
+              class="mb-5 flex items-start gap-2.5 rounded-lg bg-error/8 p-4 text-support font-bold text-error"
+              role="alert"
+            >
+              <Icon
+                name="lucide:circle-alert"
+                class="mt-0.5 size-5.5 shrink-0"
+              />
+              <span>{error}</span>
+            </p>
+          )
+        }
+
+        <fieldset class="flex flex-col gap-3">
+          <legend class="sr-only">Cómo se sortea</legend>
+
+          <div class:list={option}>
+            <input
+              type="radio"
+              id="draw-random"
+              name="mode"
+              value="random"
+              class="mt-1 size-5 accent-foreground"
+              checked={!manual}
+              disabled={!canRandom}
+            />
+            <label for="draw-random" class="cursor-pointer">
+              <span class="block text-body font-extrabold">
+                Que sortee rifate
+              </span>
+              <span class="block text-support text-muted-foreground">
+                {randomHint}
+              </span>
+            </label>
+          </div>
+
+          <div class:list={option}>
+            <input
+              type="radio"
+              id="draw-manual"
+              name="mode"
+              value="manual"
+              class="mt-1 size-5 accent-foreground"
+              checked={manual}
+              data-draw-manual
+            />
+            <label for="draw-manual" class="cursor-pointer">
+              <span class="block text-body font-extrabold">
+                Cargar el número a mano
+              </span>
+              <span class="block text-support text-muted-foreground">
+                Si ya lo sortearon con la lotería o delante de todos.
+              </span>
+            </label>
+
+            <div class="col-start-2">
+              <input
+                type="number"
+                name="number"
+                inputmode="numeric"
+                min={raffle.numberStart}
+                max={raffle.numberStart + raffle.totalNumbers - 1}
+                placeholder="Nº"
+                value={number}
+                aria-label="El número que salió"
+                aria-invalid={numberError ? 'true' : undefined}
+                aria-describedby={numberError ? 'draw-number-error' : undefined}
+                class="mt-3 h-12 w-36 rounded-lg border-2 border-input bg-background px-4 text-body font-bold aria-invalid:border-error"
+                data-numero
+                data-draw-number
+              />
+              {
+                numberError && (
+                  <p
+                    id="draw-number-error"
+                    class="mt-1.5 text-label font-bold text-error"
+                  >
+                    {numberError}
+                  </p>
+                )
+              }
+            </div>
+          </div>
+        </fieldset>
+
+        <p
+          class="mt-5 flex items-start gap-3 rounded-xl border-2 border-warning bg-warning/20 p-4 text-support"
+        >
+          <Icon
+            name="lucide:triangle-alert"
+            class="mt-0.5 size-5 shrink-0"
+            aria-hidden="true"
+          />
+          <span>
+            Esto <strong>cierra la rifa</strong>: no vas a poder vender ni
+            liberar más números, y el ganador no se cambia.
+          </span>
+        </p>
+
+        <Button type="submit" variant="primary" size="lg" class="mt-5 w-full">
+          <Icon name="lucide:sparkles" aria-hidden="true" />
+          Sortear ahora
+        </Button>
+      </form>
+
+      <DialogClose
+        class="mt-3 w-full rounded-lg py-2 text-support font-bold text-muted-foreground hover:text-foreground"
+      >
+        Volver
+      </DialogClose>
+    </DialogContent>
+  </Dialog>
+</section>
+
+<script>
+  /* Escribir el número es elegir «a mano»: sin esto, alguien tipea el 34,
+     deja tildado «al azar» y el sorteo sale con otro. */
+  for (const form of document.querySelectorAll<HTMLFormElement>(
+    '[data-draw]',
+  )) {
+    const manual = form.querySelector<HTMLInputElement>('[data-draw-manual]');
+    const number = form.querySelector<HTMLInputElement>('[data-draw-number]');
+
+    number?.addEventListener('focus', () => {
+      if (manual) manual.checked = true;
+    });
+  }
+</script>

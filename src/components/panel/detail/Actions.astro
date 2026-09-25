@@ -16,10 +16,12 @@
  *     diciendo el motivo (regla 7), y el único vermellón activo es el de la
  *     tarjeta «Antes de publicar». Con todo listo, el vermellón es este, y la
  *     tarjeta ya no repite el botón: el acto queda a la vista sin scrollear.
- *   · en venta / cerrada → compartir: el link, y la imagen del estado para el
- *     grupo. El vermellón es el de WhatsApp; la imagen va con borde.
- *   · sin grilla → NADA. Compartir el link de una rifa sin números manda a la
- *     gente a una página rota, y publicarla no tendría qué vender.
+ *   · en venta → compartir: el link, y la imagen del estado para el grupo.
+ *     El vermellón es el de WhatsApp; la imagen va con borde.
+ *   · sorteada → contar quién ganó: el link, y el vermellón pasa a ser
+ *     «Compartir quién ganó», con el número y el nombre ya escritos.
+ *   · cancelada y sin grilla → NADA. El link de una cancelada ya no abre, y
+ *     el de una rifa sin números manda a la gente a una página rota.
  */
 import { actions } from 'astro:actions';
 import { Icon } from 'astro-icon/components';
@@ -28,7 +30,11 @@ import { Button } from '@/components/starwind/button';
 import CopyLink from '@/components/ui/CopyLink.astro';
 import type { OwnerRaffle, PublicNumber } from '@/types/raffle';
 import type { EstadoDetalle } from '@/utils/frontmatter/detail';
-import { publishHint, shareImageInput } from '@/utils/frontmatter/detail';
+import {
+  publishHint,
+  shareImageInput,
+  winnerShareText,
+} from '@/utils/frontmatter/detail';
 
 import ShareImage from './ShareImage.astro';
 
@@ -47,6 +53,8 @@ const blocked = publishHint(raffle);
 /** Lo que acompaña al link y a la imagen cuando se comparten. */
 const shareText = `${raffle.title} 👉 ${publicUrl}`;
 const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+const winnerUrl = `https://wa.me/?text=${encodeURIComponent(winnerShareText(raffle, publicUrl))}`;
+const linkLabel = publicUrl.replace(/^https?:\/\//, '');
 ---
 
 {
@@ -96,13 +104,29 @@ const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 }
 
 {
-  (estado === 'en-venta' || estado === 'cerrada') && (
+  estado === 'cerrada' && (
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <CopyLink
+      <CopyLink class="w-full sm:w-auto" value={publicUrl} label={linkLabel} />
+
+      <Button
+        href={winnerUrl}
+        variant="primary"
+        size="md"
+        target="_blank"
+        rel="noopener"
         class="w-full sm:w-auto"
-        value={publicUrl}
-        label={publicUrl.replace(/^https?:\/\//, '')}
-      />
+      >
+        <Icon name="lucide:trophy" aria-hidden="true" />
+        Compartir quién ganó
+      </Button>
+    </div>
+  )
+}
+
+{
+  estado === 'en-venta' && (
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <CopyLink class="w-full sm:w-auto" value={publicUrl} label={linkLabel} />
 
       <ShareImage
         class="w-full sm:w-auto"

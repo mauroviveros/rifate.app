@@ -36,6 +36,8 @@ interface Props extends HTMLAttributes<'section'> {
   form?: string;
   /** Números ya tildados, para repoblar tras un error de validación. */
   selected?: number[];
+  /** El número que salió, en una rifa sorteada. Sólo en la de sólo mirar. */
+  winnerNumber?: number | null;
 }
 
 const {
@@ -47,6 +49,7 @@ const {
   dimmed = false,
   form,
   selected = [],
+  winnerNumber = null,
   class: className,
   ...rest
 } = Astro.props;
@@ -83,7 +86,12 @@ const picked = new Set(selected);
               checked={picked.has(number)}
             />
           ) : (
-            <Cell value={number} status={status} width={width} />
+            <Cell
+              value={number}
+              status={status}
+              width={width}
+              winner={number === winnerNumber}
+            />
           ),
         )
       }

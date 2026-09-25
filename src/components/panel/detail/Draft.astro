@@ -11,12 +11,14 @@
  * al fondo de la página, tres niveles más arriba: mover un bloque de lugar
  * rompía el otro sin que nada avisara.
  */
+import type { ComponentProps } from 'astro/types';
 import { Icon } from 'astro-icon/components';
 
 import { button } from '@/components/starwind/button/variants';
 import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
 import { pendingBeforePublish } from '@/utils/frontmatter/detail';
 
+import DangerZone from './danger/DangerZone.astro';
 import Checklist from './draft/Checklist.astro';
 import Summary from './draft/Summary.astro';
 import WhenPublished from './draft/WhenPublished.astro';
@@ -30,10 +32,19 @@ interface Props {
   phoneErrors?: string[];
   phoneError?: string | null;
   phoneValue?: string;
+  /** La franja de borrar: lo que dejó el intento anterior, si falló. */
+  danger: Omit<ComponentProps<typeof DangerZone>, 'raffle' | 'numbers'>;
 }
 
-const { raffle, numbers, publicUrl, phoneErrors, phoneError, phoneValue } =
-  Astro.props;
+const {
+  raffle,
+  numbers,
+  publicUrl,
+  phoneErrors,
+  phoneError,
+  phoneValue,
+  danger,
+} = Astro.props;
 
 const pending = pendingBeforePublish(raffle);
 
@@ -80,6 +91,8 @@ const needsPhone = raffle.contactPhone === null;
     <WhenPublished publicUrl={publicUrl} />
   </div>
 </div>
+
+<DangerZone raffle={raffle} numbers={numbers} {...danger} />
 
 {
   needsPhone && (

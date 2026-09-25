@@ -1,0 +1,184 @@
+---
+/**
+ * La rifa cancelada (artboard «Cancelada»).
+ *
+ * Lo importante de esta pantalla no es la rifa: es la gente que ya pagó.
+ * Cuánto hay que devolver, a quién y cómo avisarle. El talonario queda abajo
+ * con el sello ANULADA, como registro.
+ *
+ * Los avisos van de a uno, un link por comprador con el mensaje ya escrito.
+ * El canvas dibuja además un «Avisarles a todos», y no está: abrir un chat
+ * por persona de un solo toque son N ventanas nuevas, y el navegador bloquea
+ * todas menos la primera. Un botón que abre uno y dice que abrió nueve es
+ * peor que nueve links honestos.
+ */
+import { Icon } from 'astro-icon/components';
+
+import Stat from '@/components/panel/Stat.astro';
+import { Button } from '@/components/starwind/button';
+import type { OwnerNumber, OwnerRaffle } from '@/types/raffle';
+import { pesos } from '@/utils/format';
+import {
+  buyersOf,
+  phonesSentence,
+  refundNotice,
+  refundsOf,
+} from '@/utils/frontmatter/detail';
+import { numberLabel, numberWidth } from '@/utils/frontmatter/numbers';
+import { localPhone, waLink } from '@/utils/whatsapp';
+
+import EditLink from './EditLink.astro';
+import Grid from './grid/Grid.astro';
+
+interface Props {
+  raffle: OwnerRaffle;
+  numbers: OwnerNumber[];
+}
+
+const { raffle, numbers } = Astro.props;
+
+const { refunds, people, sold, cents, withPhone } = refundsOf(
+  buyersOf(numbers),
+  raffle.ticketPrice,
+);
+const width = numberWidth(raffle.numberStart, raffle.totalNumbers);
+const stub = (values: number[]) =>
+  values.map((n) => numberLabel(n, width)).join(' · ');
+---
+
+<div
+  class="mt-7 flex items-start gap-4 rounded-xl border-2 border-warning bg-warning/20 p-5 sm:p-6"
+>
+  <Icon
+    name="lucide:triangle-alert"
+    class="mt-1 size-6 shrink-0"
+    aria-hidden="true"
+  />
+  {
+    sold > 0 ? (
+      <div>
+        <p class="font-display text-[1.375rem] leading-tight font-extrabold">
+          Alcanzaste a vender{' '}
+          <span data-numero>
+            {sold} {sold === 1 ? 'número' : 'números'}
+          </span>{' '}
+          antes de cancelar.
+        </p>
+        <p class="mt-1 text-support">
+          Son <strong data-numero>{pesos(cents)}</strong> que cobraste y hay que
+          devolver. rifate no toca la plata: el arreglo con cada comprador lo
+          hacés vos.
+        </p>
+      </div>
+    ) : (
+      <p class="font-display text-[1.375rem] leading-tight font-extrabold">
+        No habías vendido ningún número: no hay nada que devolver.
+      </p>
+    )
+  }
+</div>
+
+<dl
+  class="mt-7 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4"
+  aria-label="Resumen de la rifa"
+>
+  <Stat label="Se habían vendido">
+    {sold}
+    &nbsp;
+    <span class="text-xl text-subtle-foreground sm:text-2xl">
+      de {numbers.length}
+    </span>
+  </Stat>
+  <Stat label="Compradores">{people}</Stat>
+  <Stat label="Tenés que devolver" tone="alert">{pesos(cents)}</Stat>
+  <Stat label="El link público">
+    <span class="flex items-center gap-2 text-xl whitespace-nowrap sm:text-2xl">
+      <Icon name="lucide:ban" class="size-6 shrink-0" aria-hidden="true" />
+      Ya no abre
+    </span>
+  </Stat>
+</dl>
+
+<div
+  class:list={[
+    'mt-7 grid gap-7',
+    'lg:grid-cols-[1fr_380px] lg:items-start lg:gap-7.5',
+  ]}
+>
+  <Grid
+    title="El talonario quedó anulado"
+    hint="No se puede vender, liberar ni volver a publicar. Se guarda como registro."
+    numbers={numbers}
+    numberStart={raffle.numberStart}
+    totalNumbers={raffle.totalNumbers}
+    dimmed
+  >
+    <p
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-7 rounded-2xl border-[5px] border-primary bg-background/85 px-8 py-3 font-display text-[2.5rem] font-extrabold tracking-[0.1em] text-primary sm:px-11 sm:text-[3.75rem]"
+      aria-hidden="true"
+    >
+      ANULADA
+    </p>
+  </Grid>
+
+  <div class="order-first flex flex-col gap-6 lg:sticky lg:top-24 lg:order-0">
+    {
+      people > 0 && (
+        <section
+          class="rounded-xl bg-card p-6 ring-2 ring-primary"
+          aria-labelledby="refunds-title"
+        >
+          <h2 id="refunds-title" class="text-[1.25rem]">
+            Avisales vos
+          </h2>
+          <p class="mt-1 text-support text-subtle-foreground">
+            Nadie les avisa por vos. {phonesSentence(people, withPhone)}
+          </p>
+
+          <hr class="my-5 perforado" />
+
+          <ul class="flex flex-col gap-2">
+            {refunds.map((refund) => (
+              <li class="flex items-center gap-3 rounded-lg border-2 border-border p-3.5">
+                <span class="min-w-0 flex-1">
+                  <span class="flex items-baseline justify-between gap-3">
+                    <span class="truncate font-bold">{refund.name}</span>
+                    <span class="shrink-0 text-label font-bold" data-numero>
+                      {pesos(refund.cents)}
+                    </span>
+                  </span>
+                  <span
+                    class="mt-0.5 block truncate text-label text-subtle-foreground"
+                    data-numero
+                  >
+                    {stub(refund.numbers)}
+                    {refund.phone === null
+                      ? ' · sin teléfono, avisale a mano'
+                      : ` · ${localPhone(refund.phone)}`}
+                  </span>
+                </span>
+
+                {refund.phone !== null && (
+                  <Button
+                    href={waLink(refund.phone, refundNotice(raffle, refund))}
+                    variant="outline"
+                    size="sm"
+                    target="_blank"
+                    rel="noopener"
+                    class="shrink-0"
+                    aria-label={`Avisarle a ${refund.name} por WhatsApp`}
+                  >
+                    <Icon name="lucide:message-circle" aria-hidden="true" />
+                    Avisar
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <EditLink raffleId={raffle.id} />
+  </div>
+</div>
